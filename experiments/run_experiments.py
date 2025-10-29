@@ -546,15 +546,6 @@ def main(
                     train_fn = training.train_sequential_model
                 else:
                     train_fn = training.train_end_to_end_model
-                # --- ADD THESE LINES BEFORE THE CALL ---
-                print(f"--- DEBUG: Inspecting train_fn before call ---")
-                print(f"Function object: {train_fn}")
-                try:
-                    signature = inspect.signature(train_fn)
-                    print(f"Expected parameters: {list(signature.parameters.keys())}")
-                except Exception as e:
-                    print(f"Could not get signature: {e}")
-                print(f"--- End Inspect ---")
                 # --- END ADDITION ---
                 # Train the model and get testing and validation results
                 model, model_results = train_fn(
@@ -562,6 +553,8 @@ def main(
                     task_class_weights=task_class_weights,
                     accelerator=accelerator,
                     devices=devices,
+                    use_adversarial=run_config["use_adversarial"],
+                    adversarial_delay=run_config["adversarial_delay"],
                     n_concepts=run_config["n_concepts"],
                     n_tasks=run_config["n_tasks"],
                     config=run_config,
@@ -580,9 +573,7 @@ def main(
                         0,
                     ),
                     single_frequency_epochs=single_frequency_epochs,
-                    activation_freq=activation_freq,
-                    use_adversarial=run_config["use_adversarial"],
-                    adversarial_delay=run_config["adversarial_delay"]
+                    activation_freq=activation_freq
                 )
                 training.update_statistics(
                     aggregate_results=results[f"{split}"][run_name],
