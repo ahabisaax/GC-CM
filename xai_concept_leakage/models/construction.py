@@ -9,6 +9,7 @@ from torchvision.models import resnet18, resnet34, resnet50, densenet121
 
 import xai_concept_leakage.models.cem as models_cem
 import xai_concept_leakage.models.cbm as models_cbm
+import xai_concept_leakage.models.crcbm as models_crcbm
 import xai_concept_leakage.models.intcbm as models_intcbm
 import xai_concept_leakage.train.utils as utils
 
@@ -146,6 +147,31 @@ def construct_model(
             "int_model_use_bn": config.get("int_model_use_bn", False),
             "num_rollouts": config.get("num_rollouts", 1),
         }
+    elif "CriticRegularisedConceptBottleneckModel" in config['architecture']:
+        model_cls = models_crcbm.CriticRegularisedConceptBottleneckModel
+        extra_params = {
+            "bool": config["bool"],
+            "extra_dims": config["extra_dims"],
+            "sigmoidal_extra_capacity": config.get(
+                "sigmoidal_extra_capacity",
+                True,
+            ),
+            "sigmoidal_prob": config.get("sigmoidal_prob", True),
+            "intervention_policy": intervention_policy,
+            "bottleneck_nonlinear": config.get("bottleneck_nonlinear", None),
+            "active_intervention_values": active_intervention_values,
+            "inactive_intervention_values": inactive_intervention_values,
+            "x2c_model": x2c_model,
+            "c2y_model": c2y_model,
+            "c2y_layers": config.get("c2y_layers", []),
+            "adversarial_delay": config.get("adversarial_delay"),
+            "adversarial_lambda": config.get("adversarial_lambda"),
+            "use_adversarial": config.get("use_adversarial", True),
+            "cbm_optimizer": config["cbm_optimizer"],
+            "adversarial_optimizer":  config.get("adv_optimizer"),
+            "cbm_learning_rate": config.get("cbm_learning_rate"),
+            "adv_learning_rate": config.get("adv_learning_rate")
+        }
     elif "ConceptBottleneckModel" in config["architecture"]:
         model_cls = models_cbm.ConceptBottleneckModel
         extra_params = {
@@ -182,30 +208,54 @@ def construct_model(
         c_extractor_arch = config["c_extractor_arch"]
 
     # Create model
-    return model_cls(
-        n_concepts=n_concepts,
-        n_tasks=n_tasks,
-        weight_loss=(
-            torch.FloatTensor(imbalance)
-            if config["weight_loss"] and (imbalance is not None)
-            else None
-        ),
-        task_class_weights=(
-            torch.FloatTensor(task_class_weights)
-            if (task_class_weights is not None)
-            else None
-        ),
-        concept_loss_weight=config["concept_loss_weight"],
-        task_loss_weight=task_loss_weight,
-        learning_rate=config["learning_rate"],
-        weight_decay=config["weight_decay"],
-        c_extractor_arch=utils.wrap_pretrained_model(c_extractor_arch),
-        optimizer=config["optimizer"],
-        top_k_accuracy=config.get("top_k_accuracy"),
-        output_latent=output_latent,
-        output_interventions=output_interventions,
-        **extra_params,
-    )
+    if model_cls ==  models_crcbm.CriticRegularisedConceptBottleneckModel:
+        return model_cls(
+            n_concepts=n_concepts,
+            n_tasks=n_tasks,
+            weight_loss=(
+                torch.FloatTensor(imbalance)
+                if config["weight_loss"] and (imbalance is not None)
+                else None
+            ),
+            task_class_weights=(
+                torch.FloatTensor(task_class_weights)
+                if (task_class_weights is not None)
+                else None
+            ),
+            concept_loss_weight=config["concept_loss_weight"],
+            task_loss_weight=task_loss_weight,
+            weight_decay=config["weight_decay"],
+            c_extractor_arch=utils.wrap_pretrained_model(c_extractor_arch),
+            top_k_accuracy=config.get("top_k_accuracy"),
+            output_latent=output_latent,
+            output_interventions=output_interventions,
+            **extra_params,
+        )
+    else:
+        return model_cls(
+            n_concepts=n_concepts,
+            n_tasks=n_tasks,
+            weight_loss=(
+                torch.FloatTensor(imbalance)
+                if config["weight_loss"] and (imbalance is not None)
+                else None
+            ),
+            task_class_weights=(
+                torch.FloatTensor(task_class_weights)
+                if (task_class_weights is not None)
+                else None
+            ),
+            concept_loss_weight=config["concept_loss_weight"],
+            task_loss_weight=task_loss_weight,
+            learning_rate=config["learning_rate"],
+            weight_decay=config["weight_decay"],
+            c_extractor_arch=utils.wrap_pretrained_model(c_extractor_arch),
+            optimizer=config["optimizer"],
+            top_k_accuracy=config.get("top_k_accuracy"),
+            output_latent=output_latent,
+            output_interventions=output_interventions,
+            **extra_params,
+        )
 
 
 def construct_sequential_models(

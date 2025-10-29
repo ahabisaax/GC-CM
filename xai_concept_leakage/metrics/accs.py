@@ -103,10 +103,12 @@ def compute_accuracy(
         )
     y_accuracy = sklearn.metrics.accuracy_score(y_true, y_pred)
     try:
+        y_probs_positive_class = y_probs[:, 1]
+
+        # Calculate AUC without the multi_class argument
         y_auc = sklearn.metrics.roc_auc_score(
             y_true,
-            y_probs,
-            multi_class="ovo",
+            y_probs_positive_class
         )
     except Exception as e:
         y_auc = 0.0

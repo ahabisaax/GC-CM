@@ -1,5 +1,6 @@
 import joblib
 import logging
+import warnings
 import multiprocessing
 import numpy as np
 import os
@@ -11,6 +12,8 @@ import torch.nn as nn
 
 from pathlib import Path
 from torchvision.models import densenet121
+
+import xai_concept_leakage.metrics.mutual_information as mutual_information
 
 
 def extract_dims(train_dl):
@@ -49,6 +52,9 @@ def save_train_val_scores_n_losses(save_path_monitoring, cb_loss):
     np.save(save_path_monitoring + "_val_y_acc", cb_loss.val_y_accuracies)
     np.save(save_path_monitoring + "_train_c_acc", cb_loss.train_c_accuracies)
     np.save(save_path_monitoring + "_val_c_acc", cb_loss.val_c_accuracies)
+    if not cb_loss.black_box:
+        np.save(save_path_monitoring + '_val_ctl', cb_loss.val_ctl)
+        np.save(save_path_monitoring + '_val_icl', cb_loss.val_icl)
 
 
 def save_train_val_scores_n_losses_indep(
@@ -71,9 +77,13 @@ def save_train_val_scores_n_losses_indep(
 
 
 class LossTracker(Callback):
-    def __init__(self, black_box=False):
+    def __init__(self, use_adversarial,
+                 adversarial_delay,
+                 black_box=False):
         super().__init__()
         self.black_box = black_box
+        self.use_adversarial = use_adversarial
+        self.adversarial_delay = adversarial_delay
 
         self.train_loss_temp = []
         self.train_y_accuracy_temp = []
@@ -91,17 +101,46 @@ class LossTracker(Callback):
             self.train_c_accuracies = []
             self.val_c_accuracies = []
 
+            # needed for CTL and ICL tracking
+            self.val_c_learnt_temp = []
+            self.val_c_true_temp = []
+            self.val_y_true_temp = []
+            self.val_ctl = []
+            self.val_icl= []
+
+        self.train_critic_loss_temp = []
+        self.train_critic_acc_temp = []
+        self.train_critic_losses = []
+        self.train_critic_accs = []
+
     def _avg_of_empty(self, vec):
         if vec == []:
             return 1.0
         else:
             return np.mean(vec)
 
-    def on_train_batch_end(self, trainer, module, outputs, batch, batch_idx):
-        self.train_loss_temp.append(outputs["loss"].item())
-        self.train_y_accuracy_temp.append(outputs["log"]["y_accuracy"])
-        if not self.black_box:
-            self.train_c_accuracy_temp.append(outputs["log"]["c_accuracy"])
+    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
+
+        if isinstance(outputs, list):
+            critic_output = outputs[0]
+            if "loss" in critic_output:
+                self.train_critic_loss_temp.append(critic_output["loss"].item())
+
+            # To get critic_acc, you must return it from the training_step
+            if "critic_acc" in critic_output:
+                self.train_critic_acc_temp.append(critic_output["critic_acc"])
+
+            if self.use_adversarial and trainer.current_epoch > self.adversarial_delay:
+                cbm_output = outputs[1]
+            else:
+                # no adversary so only one item in list which is cbms
+                cbm_output = outputs[0]
+            if "loss" in cbm_output:
+                self.train_loss_temp.append(cbm_output["loss"].item())
+
+        elif outputs and ("loss" in outputs):
+            self.train_loss_temp.append(outputs["loss"].item())
+
 
     def on_validation_batch_end(
         self, trainer, module, outputs, batch, batch_idx, another_id
@@ -110,6 +149,13 @@ class LossTracker(Callback):
         self.val_y_accuracy_temp.append(outputs["val_y_accuracy"])
         if not self.black_box:
             self.val_c_accuracy_temp.append(outputs["val_c_accuracy"])
+
+        if "c_learnt" in outputs:
+            self.val_c_learnt_temp.append(outputs["c_learnt"])
+        if "c_true" in outputs:
+            self.val_c_true_temp.append(outputs["c_true"])
+        if "y_true" in outputs:
+            self.val_y_true_temp.append(outputs["y_true"])
 
     def on_train_epoch_end(self, trainer, pl_module):
         #         print("self.train_y_accuracy_temp:")
@@ -127,6 +173,11 @@ class LossTracker(Callback):
             self.train_c_accuracies.append(mean_c_accuracy)
             self.train_c_accuracy_temp = []
 
+        self.train_critic_losses.append(self._avg_of_empty(self.train_critic_loss_temp))
+        self.train_critic_accs.append(self._avg_of_empty(self.train_critic_acc_temp))
+        self.train_critic_loss_temp = []
+        self.train_critic_acc_temp = []
+
     def on_validation_epoch_end(self, trainer, pl_module):
         mean_loss_epoch = self._avg_of_empty(self.val_loss_temp)
         self.val_losses.append(mean_loss_epoch)
@@ -141,11 +192,43 @@ class LossTracker(Callback):
             self.val_c_accuracies.append(mean_c_accuracy)
             self.val_c_accuracy_temp = []
 
+            # compute CTL
+            all_c_learnt = torch.cat(self.val_c_learnt_temp).detach().cpu().numpy()
+            all_c_true = torch.cat(self.val_c_true_temp).detach().cpu().numpy()
+            all_y_true = torch.cat(self.val_y_true_temp).detach().cpu().numpy()
+
+            mi_true = mutual_information.estimate_MI_concepts_task(all_c_true,
+                                                                   all_y_true)
+            mi_pred = mutual_information.estimate_MI_concepts_task(all_c_learnt,
+                                                                   all_y_true)
+            mi_diff = mi_pred - mi_true
+            ctl_i_vector = np.maximum(0, mi_diff)
+            ctl = np.mean(ctl_i_vector)
+            print(f"\n CONCEPT TASK LEAKAGE: {ctl.item()}")
+
+            # Compute ICL
+            true_interconcept_mi = mutual_information.estimate_MI_interconcept(all_c_true,
+                                                                               flatten=True)
+            pred_interconcept_mi = mutual_information.estimate_MI_interconcept(all_c_learnt,
+                                                                               flatten=True)
+            n_concepts = all_c_true.shape[1]
+            icl_mi_diff = pred_interconcept_mi - true_interconcept_mi
+            icl_tril_non_negative = np.maximum(0, icl_mi_diff)
+            icl_matrix = mutual_information.matrix_from_tril(icl_tril_non_negative)
+            sum_leakage_per_concept = icl_matrix.sum(axis=1)
+            avg_leakage_per_concept = sum_leakage_per_concept / (n_concepts - 1) if n_concepts > 1 else np.zeros(
+                n_concepts)
+            icl = np.mean(avg_leakage_per_concept)
+            print(f"INTERCONCEPT LEAKAGE: {icl.item()}")
+
+            self.val_icl.append(icl)
+            pl_module.log('val_icl', icl)
+            self.val_ctl.append(ctl)
+            pl_module.log("val_ctl", ctl)
 
 ################################################################################
 ## HELPER FUNCTIONS
 ################################################################################
-
 
 def _save_result(fun, kwargs, output_filepath):
     result = fun(**kwargs)

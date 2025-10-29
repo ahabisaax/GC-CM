@@ -6,6 +6,7 @@ import os
 import pytorch_lightning as pl
 import time
 import torch
+import inspect
 
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
@@ -52,6 +53,8 @@ def _evaluate_cbm(
                 eval_results[f"test_y_auc"],
                 eval_results[f"test_c_f1"],
                 eval_results[f"test_y_f1"],
+                eval_results[f'test_ctl_average'],
+                eval_results[f'test_icl_average']
             ]
             top_k_vals = []
             for key, val in eval_results.items():
@@ -73,6 +76,8 @@ def _evaluate_cbm(
             f"{dl_name}_auc_y",
             f"{dl_name}_f1_c",
             f"{dl_name}_f1_y",
+            f'{dl_name}_test_ctl_average',
+            f'{dl_name}_test_icl_average'
         ]
         if "top_k_accuracy" in config:
             top_k_args = config["top_k_accuracy"]
@@ -98,7 +103,6 @@ def _evaluate_cbm(
 ## MODEL TRAINING
 ################################################################################
 
-
 def train_end_to_end_model(
     n_concepts,
     n_tasks,
@@ -123,7 +127,10 @@ def train_end_to_end_model(
     enable_checkpointing=False,
     accelerator="auto",
     devices="auto",
+    use_adversarial=True,
+    adversarial_delay=0
 ):
+    print(f"--- DEBUG: Executing train_end_to_end_model from file: {inspect.getfile(train_end_to_end_model)} ---")
     if seed is not None:
         seed_everything(seed)
 
@@ -175,7 +182,8 @@ def train_end_to_end_model(
             project=project_name, name=full_run_name, config=config, reinit=True
         ) as run:
             model_saved_path = os.path.join(result_dir, f"{full_run_name}.pt")
-            cb_loss = utils.LossTracker()
+            cb_loss = utils.LossTracker(use_adversarial=use_adversarial,
+                                        adversarial_delay=adversarial_delay)
             trainer = pl.Trainer(
                 accelerator=accelerator,
                 devices=devices,
@@ -307,6 +315,8 @@ def train_end_to_end_model(
                             sorted(top_k_vals, key=lambda x: x[0]),
                         )
                     )
+                    output.append(test_results.get("test_ctl_average", np.nan))
+                    output.append(test_results.get("test_icl_average", np.nan))
                     return output
 
                 keys = [
@@ -316,6 +326,8 @@ def train_end_to_end_model(
                     "test_auc_y",
                     "test_f1_c",
                     "test_f1_y",
+                    "test_ctl_average",
+                    "test_icl_average"
                 ]
                 if "top_k_accuracy" in config:
                     top_k_args = config["top_k_accuracy"]
@@ -346,7 +358,8 @@ def train_end_to_end_model(
             else:
                 test_results = None
     else:
-        cb_loss = utils.LossTracker()
+        cb_loss = utils.LossTracker(use_adversarial=use_adversarial,
+                                    adversarial_delay=adversarial_delay)
         callbacks = [
             EarlyStopping(
                 monitor=config["early_stopping_monitor"],
@@ -446,26 +459,26 @@ def train_end_to_end_model(
                 config_copy,
                 os.path.join(result_dir, f"{run_name}_experiment_config.joblib"),
             )
-        eval_results = _evaluate_cbm(
-            model=model,
-            trainer=trainer,
-            config=config,
-            run_name=run_name,
-            old_results=old_results,
-            rerun=rerun,
-            test_dl=test_dl,
-            val_dl=val_dl,
+    eval_results = _evaluate_cbm(
+        model=model,
+        trainer=trainer,
+        config=config,
+        run_name=run_name,
+        old_results=old_results,
+        rerun=rerun,
+        test_dl=test_dl,
+        val_dl=val_dl,
+    )
+    eval_results["training_time"] = training_time
+    eval_results["num_epochs"] = num_epochs
+    if test_dl is not None:
+        print(
+            f'c_acc: {eval_results["test_acc_c"]*100:.2f}%, '
+            f'y_acc: {eval_results["test_acc_y"]*100:.2f}%, '
+            f'c_auc: {eval_results["test_auc_c"]*100:.2f}%, '
+            f'y_auc: {eval_results["test_auc_y"]*100:.2f}% with '
+            f"{num_epochs} epochs in {training_time:.2f} seconds"
         )
-        eval_results["training_time"] = training_time
-        eval_results["num_epochs"] = num_epochs
-        if test_dl is not None:
-            print(
-                f'c_acc: {eval_results["test_acc_c"]*100:.2f}%, '
-                f'y_acc: {eval_results["test_acc_y"]*100:.2f}%, '
-                f'c_auc: {eval_results["test_auc_c"]*100:.2f}%, '
-                f'y_auc: {eval_results["test_auc_y"]*100:.2f}% with '
-                f"{num_epochs} epochs in {training_time:.2f} seconds"
-            )
     return model, eval_results
 
 

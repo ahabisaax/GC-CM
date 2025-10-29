@@ -73,6 +73,7 @@ import re
 import sys
 import torch
 import yaml
+import inspect
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 from collections import defaultdict
@@ -394,7 +395,7 @@ def main(
     filter_in_regex=None,
     model_selection_metrics=None,
     model_selection_groups=None,
-    fast_run=False,
+    fast_run=False
 ):
     # seed_everything(42)
     # parameters for data, model, and training
@@ -545,7 +546,16 @@ def main(
                     train_fn = training.train_sequential_model
                 else:
                     train_fn = training.train_end_to_end_model
-
+                # --- ADD THESE LINES BEFORE THE CALL ---
+                print(f"--- DEBUG: Inspecting train_fn before call ---")
+                print(f"Function object: {train_fn}")
+                try:
+                    signature = inspect.signature(train_fn)
+                    print(f"Expected parameters: {list(signature.parameters.keys())}")
+                except Exception as e:
+                    print(f"Could not get signature: {e}")
+                print(f"--- End Inspect ---")
+                # --- END ADDITION ---
                 # Train the model and get testing and validation results
                 model, model_results = train_fn(
                     run_name=run_name,
@@ -571,6 +581,8 @@ def main(
                     ),
                     single_frequency_epochs=single_frequency_epochs,
                     activation_freq=activation_freq,
+                    use_adversarial=run_config["use_adversarial"],
+                    adversarial_delay=run_config["adversarial_delay"]
                 )
                 training.update_statistics(
                     aggregate_results=results[f"{split}"][run_name],
@@ -977,6 +989,8 @@ def _build_arg_parser():
 ################################################################################
 
 if __name__ == "__main__":
+    import os
+    print(os.getcwd())
     # Build our arg parser first
     parser = _build_arg_parser()
     args = parser.parse_args()
@@ -1046,7 +1060,7 @@ if __name__ == "__main__":
         result_dir=(
             args.output_dir if args.output_dir else loaded_config["results_dir"]
         ),
-        project_name=args.project_name,
+        project_name=loaded_config['shared_params']["project_name"],
         num_workers=args.num_workers,
         global_params=args.param,
         accelerator=(
@@ -1060,5 +1074,5 @@ if __name__ == "__main__":
         model_selection_metrics=model_selection_metrics,
         model_selection_groups=model_selection_groups,
         summary_table_metrics=summary_table_metrics,
-        fast_run=args.fast_run,
+        fast_run=args.fast_run
     )

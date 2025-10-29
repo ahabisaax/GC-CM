@@ -25,7 +25,7 @@ shared_params:
 
 
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
-  max_epochs: 200
+  max_epochs: 1
   concept_loss_weight: 1
   learning_rate: 0.001
   bool: False
@@ -50,12 +50,16 @@ shared_params:
   scheduler_step: 20
   weight_decay: 0
   c_extractor_arch: tabulartoy_extractor
-  optimizer: adam
+  cbm_optimizer: adam
+  cbm_learning_rate: 0.001
+  adv_learning_rate: 0.001
+  adv_optimizer: adam
   early_stopping_monitor: val_loss
   early_stopping_mode: min
   early_stopping_delta: 0.0
   check_val_every_n_epoch: 1
   momentum: 0.9
+  project_name: "wandbts"
 
 
 
@@ -68,20 +72,20 @@ runs:
     #   sigmoidal_extra_capacity: False
     #   sigmoidal_prob: True
 
- # SOFT:
-    - architecture: 'ConceptBottleneckModel'
-      run_name: "CBM_Sigmoid_01"
-      bool: False
-      extra_dims: 0
-      sigmoidal_prob: True
-      concept_loss_weight: 0.1
-
-    - architecture: 'ConceptBottleneckModel'
-      run_name: "CBM_Sigmoid_5"
-      bool: False
-      extra_dims: 0
-      sigmoidal_prob: True
-      concept_loss_weight: 10.
+# # SOFT:
+#    - architecture: 'ConceptBottleneckModel'
+#      run_name: "CBM_Sigmoid_01"
+#      bool: False
+#      extra_dims: 0
+#      sigmoidal_prob: True
+#      concept_loss_weight: 0.1
+#
+#    - architecture: 'ConceptBottleneckModel'
+#      run_name: "CBM_Sigmoid_5"
+#      bool: False
+#      extra_dims: 0
+#      sigmoidal_prob: True
+#      concept_loss_weight: 10.
 
 # LOGITS:
     # - architecture: 'ConceptBottleneckModel'
@@ -99,3 +103,16 @@ runs:
     #   training_intervention_prob: 0.25
     #   embedding_activation: "leakyrelu"
     #   concept_loss_weight: 10
+
+
+ # CR-CBM:
+    - architecture: 'CriticRegularisedConceptBottleneckModel'
+      run_name: "testrun"
+      bool: False
+      extra_dims: 0
+      sigmoidal_prob: True
+      concept_loss_weight: 0.1
+      use_adversarial: True
+      adversarial_lambda: 1.0
+      adversarial_delay: 10
+
