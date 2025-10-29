@@ -546,35 +546,63 @@ def main(
                     train_fn = training.train_sequential_model
                 else:
                     train_fn = training.train_end_to_end_model
-                # --- END ADDITION ---
                 # Train the model and get testing and validation results
-                model, model_results = train_fn(
-                    run_name=run_name,
-                    task_class_weights=task_class_weights,
-                    accelerator=accelerator,
-                    devices=devices,
-                    use_adversarial=run_config["use_adversarial"],
-                    adversarial_delay=run_config["adversarial_delay"],
-                    n_concepts=run_config["n_concepts"],
-                    n_tasks=run_config["n_tasks"],
-                    config=run_config,
-                    train_dl=train_dl,
-                    val_dl=val_dl,
-                    test_dl=test_dl,
-                    split=split,
-                    result_dir=result_dir,
-                    rerun=current_rerun,
-                    project_name=project_name,
-                    seed=None,  # (42 + split),
-                    imbalance=imbalance,
-                    old_results=old_results,
-                    gradient_clip_val=run_config.get(
-                        "gradient_clip_val",
-                        0,
-                    ),
-                    single_frequency_epochs=single_frequency_epochs,
-                    activation_freq=activation_freq
-                )
+
+                if run_config.get("use_adversarial", False):
+                    model, model_results = train_fn(
+                        run_name=run_name,
+                        task_class_weights=task_class_weights,
+                        accelerator=accelerator,
+                        devices=devices,
+                        use_adversarial=run_config["use_adversarial"],
+                        adversarial_delay=run_config["adversarial_delay"],
+                        n_concepts=run_config["n_concepts"],
+                        n_tasks=run_config["n_tasks"],
+                        config=run_config,
+                        train_dl=train_dl,
+                        val_dl=val_dl,
+                        test_dl=test_dl,
+                        split=split,
+                        result_dir=result_dir,
+                        rerun=current_rerun,
+                        project_name=project_name,
+                        seed=None,  # (42 + split),
+                        imbalance=imbalance,
+                        old_results=old_results,
+                        gradient_clip_val=run_config.get(
+                            "gradient_clip_val",
+                            0,
+                        ),
+                        single_frequency_epochs=single_frequency_epochs,
+                        activation_freq=activation_freq
+                    )
+                else:
+                    model, model_results = train_fn(
+                        run_name=run_name,
+                        task_class_weights=task_class_weights,
+                        accelerator=accelerator,
+                        devices=devices,
+                        n_concepts=run_config["n_concepts"],
+                        n_tasks=run_config["n_tasks"],
+                        config=run_config,
+                        train_dl=train_dl,
+                        val_dl=val_dl,
+                        test_dl=test_dl,
+                        split=split,
+                        result_dir=result_dir,
+                        rerun=current_rerun,
+                        project_name=project_name,
+                        seed=None,  # (42 + split),
+                        imbalance=imbalance,
+                        old_results=old_results,
+                        gradient_clip_val=run_config.get(
+                            "gradient_clip_val",
+                            0,
+                        ),
+                        single_frequency_epochs=single_frequency_epochs,
+                        activation_freq=activation_freq
+                    )
+
                 training.update_statistics(
                     aggregate_results=results[f"{split}"][run_name],
                     run_config=run_config,

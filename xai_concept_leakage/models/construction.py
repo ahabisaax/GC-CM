@@ -250,7 +250,7 @@ def construct_model(
             learning_rate=config["learning_rate"],
             weight_decay=config["weight_decay"],
             c_extractor_arch=utils.wrap_pretrained_model(c_extractor_arch),
-            optimizer=config["optimizer"],
+            optimizer=config["cbm_optimizer"],
             top_k_accuracy=config.get("top_k_accuracy"),
             output_latent=output_latent,
             output_interventions=output_interventions,

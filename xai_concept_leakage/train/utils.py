@@ -79,11 +79,13 @@ def save_train_val_scores_n_losses_indep(
 class LossTracker(Callback):
     def __init__(self, use_adversarial,
                  adversarial_delay,
-                 black_box=False):
+                 black_box=False,
+                 track_leakage=True):
         super().__init__()
         self.black_box = black_box
         self.use_adversarial = use_adversarial
         self.adversarial_delay = adversarial_delay
+        self.track_leakage = track_leakage
 
         self.train_loss_temp = []
         self.train_y_accuracy_temp = []
@@ -102,11 +104,12 @@ class LossTracker(Callback):
             self.val_c_accuracies = []
 
             # needed for CTL and ICL tracking
-            self.val_c_learnt_temp = []
-            self.val_c_true_temp = []
-            self.val_y_true_temp = []
-            self.val_ctl = []
-            self.val_icl= []
+            if self.track_leakage:
+                self.val_c_learnt_temp = []
+                self.val_c_true_temp = []
+                self.val_y_true_temp = []
+                self.val_ctl = []
+                self.val_icl= []
 
         self.train_critic_loss_temp = []
         self.train_critic_acc_temp = []
@@ -193,38 +196,39 @@ class LossTracker(Callback):
             self.val_c_accuracy_temp = []
 
             # compute CTL
-            all_c_learnt = torch.cat(self.val_c_learnt_temp).detach().cpu().numpy()
-            all_c_true = torch.cat(self.val_c_true_temp).detach().cpu().numpy()
-            all_y_true = torch.cat(self.val_y_true_temp).detach().cpu().numpy()
+            if self.track_leakage:
+                all_c_learnt = torch.cat(self.val_c_learnt_temp).detach().cpu().numpy()
+                all_c_true = torch.cat(self.val_c_true_temp).detach().cpu().numpy()
+                all_y_true = torch.cat(self.val_y_true_temp).detach().cpu().numpy()
 
-            mi_true = mutual_information.estimate_MI_concepts_task(all_c_true,
-                                                                   all_y_true)
-            mi_pred = mutual_information.estimate_MI_concepts_task(all_c_learnt,
-                                                                   all_y_true)
-            mi_diff = mi_pred - mi_true
-            ctl_i_vector = np.maximum(0, mi_diff)
-            ctl = np.mean(ctl_i_vector)
-            print(f"\n CONCEPT TASK LEAKAGE: {ctl.item()}")
+                mi_true = mutual_information.estimate_MI_concepts_task(all_c_true,
+                                                                       all_y_true)
+                mi_pred = mutual_information.estimate_MI_concepts_task(all_c_learnt,
+                                                                       all_y_true)
+                mi_diff = mi_pred - mi_true
+                ctl_i_vector = np.maximum(0, mi_diff)
+                ctl = np.mean(ctl_i_vector)
+                print(f"\n CONCEPT TASK LEAKAGE: {ctl.item()}")
 
-            # Compute ICL
-            true_interconcept_mi = mutual_information.estimate_MI_interconcept(all_c_true,
-                                                                               flatten=True)
-            pred_interconcept_mi = mutual_information.estimate_MI_interconcept(all_c_learnt,
-                                                                               flatten=True)
-            n_concepts = all_c_true.shape[1]
-            icl_mi_diff = pred_interconcept_mi - true_interconcept_mi
-            icl_tril_non_negative = np.maximum(0, icl_mi_diff)
-            icl_matrix = mutual_information.matrix_from_tril(icl_tril_non_negative)
-            sum_leakage_per_concept = icl_matrix.sum(axis=1)
-            avg_leakage_per_concept = sum_leakage_per_concept / (n_concepts - 1) if n_concepts > 1 else np.zeros(
-                n_concepts)
-            icl = np.mean(avg_leakage_per_concept)
-            print(f"INTERCONCEPT LEAKAGE: {icl.item()}")
+                # Compute ICL
+                true_interconcept_mi = mutual_information.estimate_MI_interconcept(all_c_true,
+                                                                                   flatten=True)
+                pred_interconcept_mi = mutual_information.estimate_MI_interconcept(all_c_learnt,
+                                                                                   flatten=True)
+                n_concepts = all_c_true.shape[1]
+                icl_mi_diff = pred_interconcept_mi - true_interconcept_mi
+                icl_tril_non_negative = np.maximum(0, icl_mi_diff)
+                icl_matrix = mutual_information.matrix_from_tril(icl_tril_non_negative)
+                sum_leakage_per_concept = icl_matrix.sum(axis=1)
+                avg_leakage_per_concept = sum_leakage_per_concept / (n_concepts - 1) if n_concepts > 1 else np.zeros(
+                    n_concepts)
+                icl = np.mean(avg_leakage_per_concept)
+                print(f"INTERCONCEPT LEAKAGE: {icl.item()}")
 
-            self.val_icl.append(icl)
-            pl_module.log('val_icl', icl)
-            self.val_ctl.append(ctl)
-            pl_module.log("val_ctl", ctl)
+                self.val_icl.append(icl)
+                pl_module.log('val_icl', icl)
+                self.val_ctl.append(ctl)
+                pl_module.log("val_ctl", ctl)
 
 ################################################################################
 ## HELPER FUNCTIONS

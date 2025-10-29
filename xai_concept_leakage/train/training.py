@@ -1037,7 +1037,10 @@ def train_independent_model(
     else:
         enter_obj = utils.EmptyEnter()
     with enter_obj as run:
-        cb_loss = utils.LossTracker()
+        # no leakage so ctl, icl=0
+        cb_loss = utils.LossTracker(use_adversarial=False,
+                                    adversarial_delay=-1,
+                                    track_leakage=False)
         trainer = pl.Trainer(
             accelerator=accelerator,
             devices=devices,
@@ -1153,7 +1156,9 @@ def train_independent_model(
 
             # Train the independent concept to label model
             print("[Training independent concept to label model]")
-            cb_loss = utils.LossTracker(black_box=True)
+            cb_loss = utils.LossTracker(use_adversarial=False,
+                                        adversarial_delay=-1,
+                                        black_box=True)
             ind_c2y_trainer = pl.Trainer(
                 accelerator=accelerator,
                 devices=devices,
