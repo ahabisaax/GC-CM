@@ -303,7 +303,7 @@ def construct_sequential_models(
         ),
         learning_rate=config["learning_rate"],
         weight_decay=config["weight_decay"],
-        optimizer=config["optimizer"],
+        optimizer=config["cbm_optimizer"],
         binary_output=True,
         sigmoidal_output=True,
     )
@@ -318,7 +318,7 @@ def construct_sequential_models(
         model=torch.nn.Sequential(*layers),
         learning_rate=config["learning_rate"],
         weight_decay=config["weight_decay"],
-        optimizer=config["optimizer"],
+        optimizer=config["cbm_optimizer"],
         top_k_accuracy=config.get("top_k_accuracy"),
         binary_output=False,
         sigmoidal_output=False,
