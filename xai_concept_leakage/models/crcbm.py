@@ -14,6 +14,9 @@ from xai_concept_leakage.metrics.accs import compute_accuracy
 ## BASELINE MODEL
 ################################################################################
 
+# We only have an adversarial loss when there we meet two conditions: use_adversarial and current_epoch > adversarial delay
+#we have a lambda weight scheduler which is either linear so there is a three stages:
+# 1: lambda is zero until adversarial delay then we linearly increase for a warmup period and then remain at the max
 
 class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
     def __init__(
@@ -21,7 +24,9 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         n_concepts,
         n_tasks,
         adversarial_delay,
-        adversarial_lambda,
+        max_adversarial_lambda=1,
+        adversarial_scheduler = "None",
+        adversarial_lambda_scheduler_warmup=100,
         use_adversarial=True,
         concept_loss_weight=0.01,
         task_loss_weight=1,
@@ -40,6 +45,8 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         momentum=0.9,
         cbm_learning_rate=0.01,
         adv_learning_rate=0.01,
+        adaptive_lambda_beta = 0.99,
+        adaptive_lambda_scale = 0.5,
         weight_decay=4e-05,
         weight_loss=None,
         task_class_weights=None,
@@ -226,10 +233,24 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             else torch.nn.BCEWithLogitsLoss(pos_weight=task_class_weights)
         )
         self.loss_adversarial = self.loss_task
-        self.adversarial_delay = adversarial_delay
+        self.adversarial_scheduler = adversarial_scheduler
+
+        if self.use_adversarial:
+            if self.adversarial_scheduler is None:
+                self.adversarial_delay = adversarial_delay
+                self.max_adversarial_loss_weight = max_adversarial_lambda
+
+            elif self.adversarial_scheduler == 'adaptive':
+                self.lambda_scheduler = AdaptiveLambdaScheduler(
+                    beta = adaptive_lambda_beta,
+                    scale_factor=adaptive_lambda_scale,
+                    max_lambda=1
+                )
+
+            #Specific to linear scheduler period over which we increase the weighting
+            self.adversarial_warmup_epochs = adversarial_lambda_scheduler_warmup
 
         self.bool = bool
-        self.adversarial_loss_weight = adversarial_lambda
         self.concept_loss_weight = concept_loss_weight
         self.task_loss_weight = task_loss_weight
         self.momentum = momentum
@@ -324,6 +345,18 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         intervention_idxs = intervention_idxs.to(dtype=torch.bool)
         return intervention_idxs
 
+
+    def get_adversarial_lambda_linear(self
+                                  ) -> float:
+        if not self.use_adversarial or self.current_epoch < self.adversarial_delay:
+            return 0.0
+
+        current_adv_epoch = self.current_epoch - self.adversarial_delay
+        warmup_fraction = min(1, current_adv_epoch/self.adversarial_warmup_epochs)
+
+        current_adversarial_loss_weight = warmup_fraction * self.adversarial_loss_weight
+        return current_adversarial_loss_weight
+
     def _extra_losses(
         self,
         x,
@@ -337,14 +370,16 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         y_adv_pred=None
     ):
         if self.use_adversarial and self.current_epoch >= self.adversarial_delay:
-            adversarial_loss = - self.adversarial_loss_weight * (self.loss_adversarial(
+            adversarial_loss = (self.loss_adversarial(
                 y_adv_pred if y_adv_pred.shape[-1] > 1 else y_adv_pred.reshape(-1),
                 y,))
+
             adversarial_loss_scalar = adversarial_loss.detach()
         else:
             adversarial_loss = torch.tensor(0.0, device=self.device)
             adversarial_loss_scalar = 0
         return adversarial_loss, adversarial_loss_scalar
+
 
     def _prior_int_distribution(
         self,
@@ -633,6 +668,18 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                     competencies=competencies,
                     prev_interventions=prev_interventions,
                 )
+
+        if self.adversarial_scheduler == 'linear':
+            adversarial_loss_weight = self.get_adversarial_lambda_linear()
+        elif self.adversarial_scheduler == "adaptive":
+            adversarial_loss_weight = self.adversarial_scheduler.update(task_loss_scalar, adversarial_loss_scalar)
+
+        else:
+            adversarial_loss_weight = self.max_adversarial_loss_weight
+
+        adversarial_loss = - adversarial_loss_weight * adversarial_loss
+        self.log('current_adv_lambda', adversarial_loss_weight, on_step=False, on_epoch=True)
+
         if self.concept_loss_weight != 0:
             # We separate this so that we are allowed to
             # use arbitrary activations (i.e., not necessarily in [0, 1])
@@ -935,3 +982,46 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                 "lr_scheduler": lr_scheduler,
                 "monitor": "loss",
             }
+
+
+class AdaptiveLambdaScheduler:
+    """A smoothed dynamic scheduler for the weighing of our adversarial loss by tracking the EMA of the (classifier_loss - adversarial_loss)/adversarial_loss ratio
+    That's a fair question. My last answer was very theoretical. You're asking "What does this look like in practice?" and "How do I actually call this?"
+
+    This acts like a PID controller by:
+    1. Tracking the 'gap' (the error signal).
+    2. Using the 'loss_task' to auto-scale the gain (auto-warmup).
+    3. Using Exponential Moving Average (EMA) to smooth the signal.
+    """
+    def __init__(self,
+                 beta,
+                 scale_factor,
+                 max_lambda):
+        self.beta = beta
+        self.scale_factor = scale_factor
+        self.max_lambda = max_lambda
+        self.ema_loss_task = None
+        self.ema_loss_adv = None
+        self.current_lambda = 0
+
+    def update(self, current_task_loss,
+            current_adversarial_loss):
+
+        if self.ema_loss_task is None:
+            self.ema_loss_task = current_task_loss
+            self.ema_loss_adv = current_adversarial_loss
+
+        else:
+            self.ema_loss_task = (self.beta * self.ema_loss_task) + (1- self.beta) * current_task_loss
+            self.ema_loss_adv = (self.beta * self.ema_loss_adv) + (1- self.beta) * current_adversarial_loss
+
+        epsilon = 1e-8
+        ema_gap = self.ema_loss_task - self.ema_loss_adv
+        error_signal = min(0, ema_gap)/self.ema_loss_task
+
+        scaled_lambda = error_signal * self.scale_factor
+        self.current_lambda = np.clip(scaled_lambda, 0, self.max_lambda)
+        return self.current_lambda
+
+    def get_lambda(self):
+        return self.current_lambda
