@@ -25,7 +25,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         n_tasks,
         adversarial_delay,
         max_adversarial_lambda=1,
-        adversarial_scheduler = "None",
+        adversarial_scheduler = None,
         adversarial_lambda_scheduler_warmup=100,
         use_adversarial=True,
         concept_loss_weight=0.01,
@@ -246,9 +246,9 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                     scale_factor=adaptive_lambda_scale,
                     max_lambda=1
                 )
-
-            #Specific to linear scheduler period over which we increase the weighting
-            self.adversarial_warmup_epochs = adversarial_lambda_scheduler_warmup
+            else:
+                #Specific to linear scheduler period over which we increase the weighting
+                self.adversarial_warmup_epochs = adversarial_lambda_scheduler_warmup
 
         self.bool = bool
         self.concept_loss_weight = concept_loss_weight
@@ -673,11 +673,10 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             adversarial_loss_weight = self.get_adversarial_lambda_linear()
         elif self.adversarial_scheduler == "adaptive":
             adversarial_loss_weight = self.adversarial_scheduler.update(task_loss_scalar, adversarial_loss_scalar)
-
         else:
             adversarial_loss_weight = self.max_adversarial_loss_weight
 
-        adversarial_loss = - adversarial_loss_weight * adversarial_loss
+        adversarial_loss = - (adversarial_loss_weight * adversarial_loss)
         self.log('current_adv_lambda', adversarial_loss_weight, on_step=False, on_epoch=True)
 
         if self.concept_loss_weight != 0:
