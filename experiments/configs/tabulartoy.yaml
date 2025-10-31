@@ -36,7 +36,7 @@ shared_params:
 
   learning_rate_c2y: 0.1
   optimizer_c2y: sgd
-  c2y_max_epochs: 20
+  c2y_max_epochs: 1
   linear_c2y: True
 
   n_hidden: 64
@@ -106,13 +106,17 @@ runs:
 
 
  # CR-CBM:
-    - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "testrun"
-      bool: False
-      extra_dims: 0
-      sigmoidal_prob: True
-      concept_loss_weight: 0.1
-      use_adversarial: True
-      adversarial_lambda: 1.0
-      adversarial_delay: 10
+#    - architecture: 'CriticRegularisedConceptBottleneckModel'
+#      run_name: "testrun"
+#      bool: False
+#      extra_dims: 0
+#      sigmoidal_prob: True
+#      concept_loss_weight: 0.1
+#      use_adversarial: True
+#      adversarial_lambda: 1.0
+#      adversarial_delay: 10
+#      adversarial_lambda_scheduler_warmup:
+#      adversarial_scheduler: None
+#      adaptive_lambda_beta: 0.99
+#      adaptive_lambda_scale: 0.5
 
