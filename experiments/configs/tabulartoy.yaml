@@ -106,17 +106,17 @@ runs:
 
 
  # CR-CBM:
-#    - architecture: 'CriticRegularisedConceptBottleneckModel'
-#      run_name: "testrun"
-#      bool: False
-#      extra_dims: 0
-#      sigmoidal_prob: True
-#      concept_loss_weight: 0.1
-#      use_adversarial: True
-#      adversarial_lambda: 1.0
-#      adversarial_delay: 10
-#      adversarial_lambda_scheduler_warmup:
-#      adversarial_scheduler: None
-#      adaptive_lambda_beta: 0.99
-#      adaptive_lambda_scale: 0.5
+    - architecture: 'CriticRegularisedConceptBottleneckModel'
+      run_name: "testrun2"
+      bool: False
+      extra_dims: 0
+      sigmoidal_prob: True
+      concept_loss_weight: 0.1
+      use_adversarial: True
+      max_adversarial_lambda: 1.0
+      adversarial_delay: 0
+      adversarial_lambda_scheduler_warmup:
+      adversarial_scheduler: "sigmoid"
+      adaptive_lambda_beta: 0.99
+      adaptive_lambda_scale: 0.5
 
