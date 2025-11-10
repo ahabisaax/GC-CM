@@ -165,13 +165,18 @@ def construct_model(
             "c2y_model": c2y_model,
             "c2y_layers": config.get("c2y_layers", []),
             "adversarial_delay": config.get("adversarial_delay"),
-            "adversarial_lambda": config.get("adversarial_lambda"),
+            "max_adversarial_lambda": config.get("max_adversarial_lambda"),
             "use_adversarial": config.get("use_adversarial", True),
             "cbm_optimizer": config["cbm_optimizer"],
             "adversarial_optimizer":  config.get("adv_optimizer"),
             "cbm_learning_rate": config.get("cbm_learning_rate"),
-            "adv_learning_rate": config.get("adv_learning_rate")
+            "adv_learning_rate": config.get("adv_learning_rate"),
+            "adversarial_lambda_scheduler_warmup": config.get("adversarial_lambda_scheduler_warmup"),
+            "adversarial_scheduler": config.get("adversarial_scheduler"),
+            "adaptive_lambda_beta": config.get("adaptive_lambda_beta"),
+            "adaptive_lambda_scale": config.get("adaptive_lambda_scale")
         }
+
     elif "ConceptBottleneckModel" in config["architecture"]:
         model_cls = models_cbm.ConceptBottleneckModel
         extra_params = {
