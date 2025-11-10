@@ -28,6 +28,9 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         adversarial_scheduler = None,
         adversarial_lambda_scheduler_warmup=100,
         use_adversarial=True,
+        adv_learning_rate=0.01,
+        adaptive_lambda_beta=0.99,
+        adaptive_lambda_scale=0.5,
         concept_loss_weight=0.01,
         task_loss_weight=1,
         extra_dims=0,
@@ -44,9 +47,6 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         adversarial_optimizer="adam",
         momentum=0.9,
         cbm_learning_rate=0.01,
-        adv_learning_rate=0.01,
-        adaptive_lambda_beta = 0.99,
-        adaptive_lambda_scale = 0.5,
         weight_decay=4e-05,
         weight_loss=None,
         task_class_weights=None,
@@ -63,6 +63,21 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
 
         :param int n_concepts: The number of concepts given at training time.
         :param int n_tasks: The number of output classes of the CBM.
+        :param int adversarial_delay: Number of epochs after which adversary is introduced.
+        :param float max_adversarial_lambda: The maximum weighting we apply to the critic
+            in the CBM loss function.
+        :param float adversarial_scheduler: A function that takes the current epoch and returns the current adversarial
+            weight (lambda_adv). Defaults to None can be one of ['adaptive', 'linear', 'sigmoid'].
+        :param int adversarial_lambda_scheduler_warmup: Number of epochs over which the penalty ramps up if we have
+            a linear scheduler.
+        :param bool use_adversarial: If True, enables the adversarial critic and its loss. If False,
+            the model trains as a standard CBM. Defaults to True.
+        :param float adv_learning_rate: The learning rate for the adversarial
+            critic's optimizer. Defaults to 0.01.
+        :param float adaptive_lambda_beta: The momentum parameter (beta) for any dynamic/adaptive lambda scheduling,
+            often used to smooth the loss signal. Defaults to 0.99.
+        :param float adaptive_lambda_scale: A scaling factor to control the magnitude of the change
+            in any dynamic/adaptive lambda scheduling. Defaults to 0.5.
         :param float concept_loss_weight: Weight to be used for the final loss'
             component corresponding to the concept classification loss. Default
             is 0.01.
@@ -354,8 +369,24 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         current_adv_epoch = self.current_epoch - self.adversarial_delay
         warmup_fraction = min(1, current_adv_epoch/self.adversarial_warmup_epochs)
 
-        current_adversarial_loss_weight = warmup_fraction * self.adversarial_loss_weight
+        current_adversarial_loss_weight = warmup_fraction * self.max_adversarial_loss_weight
         return current_adversarial_loss_weight
+
+    def get_adversarial_lambda_sigmoid(self
+                                       ) -> float:
+        if not self.use_adversarial or self.current_epoch < self.adversarial_delay:
+            return 0.0
+
+        current_adv_epoch = self.current_epoch - self.adversarial_delay
+        total_ramp_up = self.trainer.max_epochs
+        ratio = current_adv_epoch/total_ramp_up
+        ramp_up_speed = 10
+        sigmoid_input = (ratio * 2 - 1) * (ramp_up_speed / 2)
+
+        # Calculate the sigmoid value (which ranges from 0 to 1)
+        current_adversarial_loss_weight = self.max_adversarial_loss_weight / (1 + np.exp(-sigmoid_input))
+        return current_adversarial_loss_weight
+
 
     def _extra_losses(
         self,
@@ -673,6 +704,8 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             adversarial_loss_weight = self.get_adversarial_lambda_linear()
         elif self.adversarial_scheduler == "adaptive":
             adversarial_loss_weight = self.adversarial_scheduler.update(task_loss_scalar, adversarial_loss_scalar)
+        elif self.adversarial_scheduler == 'sigmoid':
+            adversarial_loss_weight = self.get_adversarial_lambda_sigmoid()
         else:
             adversarial_loss_weight = self.max_adversarial_loss_weight
 
