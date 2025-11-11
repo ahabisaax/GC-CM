@@ -26,7 +26,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         adversarial_delay,
         max_adversarial_lambda=1,
         adversarial_scheduler = None,
-        adversarial_lambda_scheduler_warmup=100,
+        adversarial_lambda_scheduler_warmup=None,
         use_adversarial=True,
         adv_learning_rate=0.01,
         adaptive_lambda_beta=0.99,
@@ -251,17 +251,16 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         self.adversarial_scheduler = adversarial_scheduler
 
         if self.use_adversarial:
-            if self.adversarial_scheduler is None:
-                self.adversarial_delay = adversarial_delay
-                self.max_adversarial_loss_weight = max_adversarial_lambda
+            self.adversarial_delay = adversarial_delay
+            self.max_adversarial_loss_weight = max_adversarial_lambda
 
-            elif self.adversarial_scheduler == 'adaptive':
+            if self.adversarial_scheduler == 'adaptive':
                 self.lambda_scheduler = AdaptiveLambdaScheduler(
                     beta = adaptive_lambda_beta,
                     scale_factor=adaptive_lambda_scale,
-                    max_lambda=1
+                    max_lambda=self.max_adversarial_loss_weight
                 )
-            else:
+            if self.adversarial_scheduler == "linear":
                 #Specific to linear scheduler period over which we increase the weighting
                 self.adversarial_warmup_epochs = adversarial_lambda_scheduler_warmup
 
