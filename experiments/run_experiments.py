@@ -1037,7 +1037,12 @@ if __name__ == "__main__":
         loaded_config["results_dir"] = args.output_dir
     if args.debug:
         print(json.dumps(loaded_config, sort_keys=True, indent=4))
-    logging.info(f"Results will be dumped in {loaded_config['results_dir']}")
+
+    run_name = loaded_config['runs'][0]['run_name']
+    run_specific_dir = os.path.join(loaded_config['results_dir'], run_name)
+    os.makedirs(run_specific_dir, exist_ok=True)
+
+    logging.info(f"Results will be dumped in {run_specific_dir}")
     Path(loaded_config["results_dir"]).mkdir(parents=True, exist_ok=True)
     # Write down the actual command executed
     # And the configuration file
@@ -1046,7 +1051,7 @@ if __name__ == "__main__":
     dt_string = now.strftime("%Y_%m_%d_%H_%M")
     loaded_config["time_last_called"] = now.strftime("%Y/%m/%d at %H:%M:%S")
     with open(
-        os.path.join(loaded_config["results_dir"], f"command_{dt_string}.txt"),
+        os.path.join(run_specific_dir, f"command_{dt_string}.txt"),
         "w",
     ) as f:
         command_args = [arg if " " not in arg else f'"{arg}"' for arg in sys.argv]
@@ -1055,7 +1060,7 @@ if __name__ == "__main__":
     # Also save the current experiment configuration
     with open(
         os.path.join(
-            loaded_config["results_dir"], f"experiment_{dt_string}_config.yaml"
+            run_specific_dir, f"experiment_{dt_string}_config.yaml"
         ),
         "w",
     ) as f:
@@ -1074,11 +1079,16 @@ if __name__ == "__main__":
     if args.model_selection_metrics:
         model_selection_metrics = args.model_selection_metrics
 
+    if args.output_dir:
+        results_dir = args.output_dir
+    else:
+        results_dir = loaded_config["results_dir"]
+
+    run_specific_dir = os.path.join(results_dir, run_name)
+
     main(
         rerun=args.rerun,
-        result_dir=(
-            args.output_dir if args.output_dir else loaded_config["results_dir"]
-        ),
+        result_dir=run_specific_dir,
         project_name=loaded_config['shared_params']["project_name"],
         num_workers=args.num_workers,
         global_params=args.param,
