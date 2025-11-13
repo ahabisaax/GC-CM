@@ -6,6 +6,8 @@ import numpy as np
 
 import xai_concept_leakage.train.utils as utils
 from xai_concept_leakage.metrics.accs import compute_accuracy
+import xai_concept_leakage.metrics.mutual_information as mutual_information
+from xai_concept_leakage.metrics.mutual_information import normalised_interconcept_leakage
 
 ################################################################################
 ## BASELINE MODEL
@@ -533,6 +535,11 @@ class ConceptBottleneckModel(pl.LightningModule):
             latent=latent,
         )
 
+    def setup(self, stage: str):
+        if stage == 'test':
+            print("--- Initializing list for test step outputs ---")
+            self._test_step_outputs = []
+
     def predict_step(
         self,
         batch,
@@ -695,13 +702,92 @@ class ConceptBottleneckModel(pl.LightningModule):
                 prog_bar = ("c_auc" in name) or ("y_accuracy" in name)
             self.log("val_" + name, val, prog_bar=prog_bar)
         result = {"val_" + key: val for key, val in result.items()}
+        x, y, (c, competencies, prev_interventions) = self._unpack_batch(batch)
+        outputs = self._forward(x)
+        c_sem = outputs[0]
+
+        result["c_learnt"] = c_sem
+        result["c_true"] = c
+        result["y_true"] = y
         return result
 
     def test_step(self, batch, batch_no):
         loss, result = self._run_step(batch, batch_no, train=False)
         for name, val in result.items():
             self.log("test_" + name, val, prog_bar=True)
-        return result["loss"]
+        x, y, (c, competencies, prev_interventions) = self._unpack_batch(batch)
+        outputs = self._forward(x)
+        c_sem = outputs[0]
+
+        result["c_learnt"] = c_sem
+        result["c_true"] = c
+        result["y_true"] = y
+
+        self._test_step_outputs.append(result)
+        return result
+
+    def on_test_epoch_end(self):
+        all_c_learnt = torch.cat([out['c_learnt'] for out in self._test_step_outputs]).detach().cpu().numpy()
+        all_c_truth = torch.cat([out['c_true'] for out in self._test_step_outputs]).detach().cpu().numpy()
+        all_y_true = torch.cat([out['y_true'] for out in self._test_step_outputs]).detach().cpu().numpy()
+
+        n_concepts = all_c_truth.shape[1]
+
+        I_learnt_ctl = mutual_information.estimate_MI_concepts_task(all_c_learnt, all_y_true, normalise=False)
+        I_learnt_ctl_normalised = I_learnt_ctl/mutual_information.mutual_info_score(all_y_true, all_y_true)
+
+        I_ground_truth_ctl = mutual_information.estimate_MI_concepts_task(all_c_truth, all_y_true, normalise=False)
+        I_ground_truth_ctl_normalised = I_learnt_ctl/mutual_information.mutual_info_score(all_y_true, all_y_true)
+        ctl_i_vector = np.maximum(0, I_learnt_ctl - I_ground_truth_ctl)
+        ctl_average = np.mean(ctl_i_vector)
+
+        ctl_normalised_i_vector = np.maximum(0, I_learnt_ctl_normalised - I_ground_truth_ctl_normalised)
+        ctl_normalised_average = np.mean(ctl_normalised_i_vector)
+
+        true_interconcept_tril = mutual_information.estimate_MI_interconcept(all_c_truth, flatten=True, normalise=False)
+        normalised_true_interconcept_tril = mutual_information.estimate_MI_interconcept(all_c_truth, flatten=True, normalise=True)
+        #normalised_true_interconcept_tril = normalised_interconcept_leakage(I=true_interconcept_tril, c=all_c_truth, flatten=True)
+
+        pred_interconcept_tril = mutual_information.estimate_MI_interconcept(all_c_learnt, flatten=True, normalise=False)
+        #normalised_pred_interconcept_tril = normalised_interconcept_leakage(I=pred_interconcept_tril, c=all_c_learnt, flatten=True)
+        normalised_pred_interconcept_tril = mutual_information.estimate_MI_interconcept(all_c_learnt, flatten=True, normalise=True)
+        icl_mi_diff_tril = pred_interconcept_tril - true_interconcept_tril
+
+        true_cmi_interconcept_tril = mutual_information.estimate_cmi_interconcept(all_c_truth, all_y_true)
+        pred_cmi_interconcept_tril = mutual_information.estimate_cmi_interconcept(all_c_learnt, all_y_true)
+        icl_cmi_diff_tril = pred_cmi_interconcept_tril-true_cmi_interconcept_tril
+        icl_cmi_tril_non_negative  = np.maximum(0, icl_cmi_diff_tril)
+
+        icl_tril_non_negative = np.maximum(0, icl_mi_diff_tril)
+
+        icl_task_tril_non_negative = np.maximum(0, icl_tril_non_negative- icl_cmi_tril_non_negative)
+
+        icl_cmi_matrix = mutual_information.matrix_from_tril(icl_cmi_tril_non_negative)
+        avg_cmi_leakage_per_concept = icl_cmi_matrix.sum(axis=1) / (n_concepts - 1) if n_concepts > 1 else np.zeros(n_concepts)
+        cmi_icl_average = np.mean(avg_cmi_leakage_per_concept)
+
+        icl_task_matrix = mutual_information.matrix_from_tril(icl_task_tril_non_negative)
+        avg_task_icl_leakage_per_concept = icl_task_matrix.sum(axis=1) / (n_concepts - 1) if n_concepts > 1 else np.zeros(n_concepts)
+        task_icl_average = np.mean(avg_task_icl_leakage_per_concept)
+
+        icl_matrix = mutual_information.matrix_from_tril(icl_tril_non_negative)
+        avg_leakage_per_concept = icl_matrix.sum(axis=1) / (n_concepts - 1) if n_concepts > 1 else np.zeros(n_concepts)
+        icl_average = np.mean(avg_leakage_per_concept)
+
+        icl_tril_non_negative_normalised = np.maximum(0, normalised_pred_interconcept_tril-normalised_true_interconcept_tril)
+        icl_normalised_matrix = mutual_information.matrix_from_tril(icl_tril_non_negative_normalised)
+        avg_normalised_leakage_per_concept = icl_normalised_matrix.sum(axis=1) / (n_concepts - 1) if n_concepts > 1 else np.zeros(n_concepts)
+        icl_normalised_average = np.mean(avg_normalised_leakage_per_concept)
+
+        task_icl_ratio = task_icl_average/(task_icl_average+ cmi_icl_average)
+
+        self.log('test_ctl_average', ctl_average)
+        self.log('test_normalised_ctl_average', ctl_normalised_average)
+        self.log('test_normalised_icl_average', icl_normalised_average)
+        self.log('test_icl_average', icl_average)
+        self.log('test_icl_task', task_icl_average)
+        self.log('test_icl_cmi', cmi_icl_average)
+        self.log('ratio_task_related_icl', task_icl_ratio)
 
     def configure_optimizers(self):
         if self.optimizer_name.lower() == "adam":
