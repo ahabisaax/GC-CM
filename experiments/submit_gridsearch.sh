@@ -39,7 +39,7 @@ for current_config in config["runs"]:
     trial_config = copy.deepcopy(shared_params)
     trial_config.update(current_config)
     # This function correctly expands any hyperparameter lists
-    for run_config in experiment_utils.generate_hyperparamter_configs(trial_config):
+    for run_config in experiment_utils.generate_hyperparameter_configs(trial_config):
         all_runs.append(run_config)
 print(len(all_runs))
 EOF
