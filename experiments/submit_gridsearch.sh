@@ -15,8 +15,8 @@ import yaml
 import copy
 import sys
 # Add the project root to the path to find your utils
-sys.path.insert(0, "$PROJECT_ROOT")
-from experiments import experiment_utils
+#sys.path.insert(0, "$PROJECT_ROOT")
+#from experiments import experiment_utils
 
 try:
     with open("$EXPERIMENT_CONFIG", "r") as f:
@@ -24,24 +24,31 @@ try:
 except FileNotFoundError:
     print(f"Error: Config file not found at {EXPERIMENT_CONFIG}", file=sys.stderr)
     sys.exit(1)
-except ImportError as e:
-    print(f"Error: Could not import experiment_utils. Make sure PROJECT_ROOT is correct.", file=sys.stderr)
-    print(e, file=sys.stderr)
-    sys.exit(1)
 
 shared_params = config.get("shared_params", {})
-all_runs = []
 if "runs" not in config:
     print(f"Error: 'runs' key not found in {EXPERIMENT_CONFIG}", file=sys.stderr)
     sys.exit(1)
 
+total_runs = 0
 for current_config in config["runs"]:
-    trial_config = copy.deepcopy(shared_params)
-    trial_config.update(current_config)
-    # This function correctly expands any hyperparameter lists
-    for run_config in experiment_utils.generate_hyperparameter_configs(trial_config):
-        all_runs.append(run_config)
-print(len(all_runs))
+    run_config = copy.deepcopy(shared_params)
+    run_config.update(current_config)
+
+    # This is a lightweight re-implementation of generate_hyperatemer_configs
+    # It finds all keys that have a list as a value
+    list_params = {k: v for k, v in run_config.items() if isinstance(v, list)}
+
+    if not list_params:
+        total_runs += 1
+    else:
+        # Calculate the total number of permutations (the grid search)
+        permutations = 1
+        for v in list_params.values():
+            permutations *= len(v)
+        total_runs += permutations
+
+print(total_runs)
 EOF
 )
 
