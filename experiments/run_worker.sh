@@ -30,6 +30,7 @@
 echo "Loading modules..."
 module purge
 module load python3/3.11  # Or your preferred Python module
+module load compilers/gnu/10.2.0
 module load gcc-libs/10.2.0
 module load nvidia/525.125.06 # Or the appropriate CUDA/NVIDIA driver
 
