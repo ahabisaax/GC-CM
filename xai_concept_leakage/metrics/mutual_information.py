@@ -214,6 +214,52 @@ def compute_mi_cd(c, d, n_neighbors):
     return max(0, mi)
 
 
+def compute_cmi_cd(c_1, c_2, d, n_neighbors):
+    """
+    Computes the Conditional Mutual Information I(c_1, c_2 | y_discrete)
+    for continuous c_1, c_2 and discrete y_discrete.
+
+    This is calculated as the expected value of I(c_1, c_2 | Y=y)
+    over all classes y.
+
+    Parameters
+    ----------
+    c_1, c_2 : ndarray, shape (n_samples, n_features)
+        Samples of two continuous random variables.
+    d : ndarray, shape (n_samples,)
+        Samples of a discrete conditioning variable.
+    n_neighbours : int
+        Number of nearest neighbors for the KSG estimator.
+
+    Returns
+    -------
+    cmi : float
+        Estimated conditional mutual information in nat units.
+    """
+    total_samples = len(d)
+    unique_samples = np.unique(d)
+    total_cmi = 0
+
+    for yval in unique_samples:
+        indices = np.where(d==yval)[0]
+        p_y = len(indices)/total_samples
+
+        if p_y == 0:
+            continue
+
+        c_i_subset = c_1[indices]
+        c_j_subset = c_2[indices]
+
+        if len(c_i_subset) <= n_neighbors:
+            continue
+
+        mi_subset = compute_mi_cc(c_i_subset, c_j_subset, n_neighbors)
+
+        total_cmi += p_y * mi_subset
+    return total_cmi
+
+
+
 ##################################################################################################
 ### Wrapper functions for MI estimators:
 ##################################################################################################
@@ -265,6 +311,99 @@ def estimate_MI_interconcept(
     for ii in range(n_concepts):
         for jj in range(ii + 1, n_concepts):
             I[ii, jj] = compute_mi(c[:, ii], c[:, jj])
+    if normalise:
+        diag_sqrt_MI = np.sqrt(
+            [compute_mi(c[:, ii], c[:, ii]) for ii in range(n_concepts)]
+        )
+        I /= np.tensordot(diag_sqrt_MI, diag_sqrt_MI, axes=0) + 1e-10
+    if flatten:
+        output = extract_tril(I)
+    else:
+        output = I + I.T
+    return output
+
+def normalised_interconcept_leakage(I, c, n_neighbors=3, n_concepts=None, flatten=True):
+    n_samples = c.shape[0]
+    c = to_numpy(c)
+    if n_concepts is None:
+        n_concepts = c.shape[1]
+    c = c.reshape(n_samples, n_concepts, -1)
+
+    if isinteger(c):
+
+        def compute_mi(x, y):
+            return mutual_info_score(x.squeeze(-1), y.squeeze(-1))
+
+    else:
+
+        def compute_mi(x, y):
+            # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+            noise_x = 1e-10 * np.mean(x) * np.random.randn(*x.shape)
+            noise_y = 1e-10 * np.mean(y) * np.random.randn(*y.shape)
+            return np.float64(
+                compute_mi_cc(x + noise_x, y + noise_y, n_neighbors=n_neighbors)
+            ).item()
+
+    diag_sqrt_MI = np.sqrt(
+        [compute_mi(c[:, ii], c[:, ii]) for ii in range(n_concepts)]
+    )
+    norm_matrix = np.tensordot(diag_sqrt_MI, diag_sqrt_MI, axes=0) + 1e-10
+    tril_indices = np.tril_indices(n_concepts, k=-1)
+    norm_vector = norm_matrix[tril_indices]
+
+    I_normalized = I / norm_vector
+
+    if flatten:
+        return I_normalized
+    else:
+        output_matrix = np.zeros((n_concepts, n_concepts))
+        output_matrix[tril_indices] = I_normalized
+        return output_matrix + output_matrix.T
+
+
+def estimate_cmi_interconcept(c, d, n_concepts=None, flatten=True, n_neighbors=3, normalise=False):
+    """
+     Computes the conditional interconcept mutual information matrix for a set of concept representations.
+     Parameters:
+     - c :  numpy array or torch tensor of shape (n_samples, n_concepts, emb_dim)
+         or (n_samples, n_concepts*emb_dim). In the latter case, n_concepts must be specified.
+         emb_dim can be 1 (e.g. in CBM) or >1 (e.g. in CEMs).
+     - n_concepts : int.
+     - flatten : bool.
+         If True, it flattens the lower-triangular part of the output to a 1D array of length
+         n_concepts*(n_concepts-1)/2.
+     - n_neighbors : int.
+         Number of nearest neighbors to use for the MI estimation.
+         This is only used if the input is continuous.
+     - normalise : bool.
+         If True, normalises the MI matrix by dividing by the sqrt of the concept entropies.
+     """
+    n_samples = c.shape[0]
+    if n_concepts is None:
+        n_concepts = c.shape[1]
+    c = to_numpy(c)
+    c = c.reshape(n_samples, n_concepts, -1)
+
+    if isinteger(c):
+
+        def compute_mi(x, y):
+            return mutual_info_score(x.squeeze(-1), y.squeeze(-1))
+
+    else:
+
+        def compute_mi(x, y):
+            # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+            noise_x = 1e-10 * np.mean(x) * np.random.randn(*x.shape)
+            noise_y = 1e-10 * np.mean(y) * np.random.randn(*y.shape)
+            return np.float64(
+                compute_mi_cc(x + noise_x, y + noise_y, n_neighbors=n_neighbors)
+            ).item()
+
+    I = np.zeros((n_concepts, n_concepts))
+    for ii in range(n_concepts):
+        for jj in range(ii + 1, n_concepts):
+            I[ii, jj] = compute_cmi_cd(c[:, ii], c[:, jj], d, n_neighbors=n_neighbors)
+    # shouldn't normalise
     if normalise:
         diag_sqrt_MI = np.sqrt(
             [compute_mi(c[:, ii], c[:, ii]) for ii in range(n_concepts)]
