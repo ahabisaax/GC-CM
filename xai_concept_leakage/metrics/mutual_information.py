@@ -517,6 +517,94 @@ def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=Tr
     return I
 
 
+def compute_MI_score_model_training(
+        c_pred,
+        c_true,
+        y_true,
+        apply_max=True,
+        score_type="interconcept",
+        wrt_true=True,
+        n_neighbors=3,
+        normalise=True,
+        n_concepts=None):
+    if score_type == "interconcept":
+        pred_mi = estimate_MI_interconcept(
+            c_pred,
+            n_concepts=n_concepts,
+            flatten=True,
+            n_neighbors=n_neighbors,
+            normalise=normalise,
+        )
+        if wrt_true:
+            true_mi = estimate_MI_interconcept(
+                c_true,
+                n_concepts=n_concepts,
+                flatten=True,
+                n_neighbors=n_neighbors,
+                normalise=normalise,
+            )
+            if apply_max:
+                out = np.maximum(0, pred_mi - true_mi)
+            else:
+                out = pred_mi - true_mi
+        else:
+            out = pred_mi
+    # cmi shouldnt be normalised
+    elif score_type == "interconcept_cmi":
+        pred_mi = estimate_cmi_interconcept(
+            c_pred,
+            y_true,
+            n_concepts=n_concepts,
+            flatten=True,
+            n_neighbors=n_neighbors,
+            normalise=False,
+        )
+        if wrt_true:
+            true_mi = estimate_cmi_interconcept(
+                c_true,
+                y_true,
+                n_concepts=n_concepts,
+                flatten=True,
+                n_neighbors=n_neighbors,
+                normalise=False,
+            )
+            if apply_max:
+                out = np.maximum(0, pred_mi - true_mi)
+            else:
+                out = pred_mi - true_mi
+        else:
+            out = pred_mi
+
+    elif score_type == "concepts_task":
+        pred_mi = estimate_MI_concepts_task(
+            c_pred,
+            y_true,
+            n_concepts=n_concepts,
+            n_neighbors=n_neighbors,
+            normalise=normalise,
+        )
+        if wrt_true:
+            true_mi = estimate_MI_concepts_task(
+                c_true,
+                y_true,
+                n_concepts=n_concepts,
+                n_neighbors=n_neighbors,
+                normalise=normalise,
+            )
+            if apply_max:
+                out = np.maximum(0, pred_mi - true_mi)
+            else:
+                out = pred_mi - true_mi
+        else:
+            out = pred_mi
+
+    else:
+        raise ValueError(f"Unknown score_type: {score_type}")
+
+    return out
+
+
+
 def repeat_estimate_MI_concepts_task(
     c, y, repeats=1, return_avg=True, n_concepts=None, n_neighbors=3, normalise=True
 ):

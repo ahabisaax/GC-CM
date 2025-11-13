@@ -13,7 +13,7 @@ import torch.nn as nn
 from pathlib import Path
 from torchvision.models import densenet121
 
-import xai_concept_leakage.metrics.mutual_information as mutual_information
+from  xai_concept_leakage.metrics.mutual_information import compute_MI_score_model_training, matrix_from_tril
 
 
 def extract_dims(train_dl):
@@ -210,97 +210,102 @@ class LossTracker(Callback):
                 all_y_true = torch.cat(self.val_y_true_temp).detach().cpu().numpy()
                 n_concepts = all_c_truth.shape[1]
 
-                # --- 2. CTL Calculation (Normalized, as before) ---
-                # This calculation remains normalized as per your original code.
-                mi_true_ctl = mutual_information.estimate_MI_concepts_task(all_c_truth, all_y_true, normalise=False)
-                mi_pred_ctl = mutual_information.estimate_MI_concepts_task(all_c_learnt, all_y_true, normalise=False)
-                mi_diff_ctl = mi_pred_ctl - mi_true_ctl
-                ctl_i_vector = np.maximum(0, mi_diff_ctl)
-                ctl = np.mean(ctl_i_vector)
+                norm_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
+                                                           c_true=all_c_truth,
+                                                           y_true=all_y_true,
+                                                           score_type="interconcept",
+                                                           wrt_true=True,
+                                                           n_neighbors=3,
+                                                           normalise=True,
+                                                           n_concepts=n_concepts
+                                                           )
 
-                norm_mi_true_ctl = mutual_information.estimate_MI_concepts_task(all_c_truth, all_y_true, normalise=True)
-                norm_mi_pred_ctl = mutual_information.estimate_MI_concepts_task(all_c_learnt, all_y_true, normalise=True)
-                norm_mi_diff_ctl = norm_mi_pred_ctl - norm_mi_true_ctl
-                norm_ctl_i_vector = np.maximum(0, norm_mi_diff_ctl)
-                norm_ctl = np.mean(norm_ctl_i_vector)
+                mean_norm_icl_i = matrix_from_tril(norm_icl).sum(axis=1) / (n_concepts - 1)
+                mean_norm_icl = mean_norm_icl_i.sum() / len(mean_norm_icl_i)
 
-                print(f"\n CONCEPT TASK LEAKAGE (unnormalized): {ctl.item():.4f}")
-                self.val_ctl.append(ctl)
-                self.val_norm_ctl.append(norm_ctl)
-                pl_module.log("val_ctl", ctl)
-                pl_module.log("normalised_val_ctl",norm_ctl)
+                norm_ctl_vec = compute_MI_score_model_training(c_pred=all_c_learnt,
+                                                               c_true=all_c_truth,
+                                                               y_true=all_y_true,
+                                                               score_type="concepts_task",
+                                                               wrt_true=True,
+                                                               n_neighbors=3,
+                                                               normalise=True,
+                                                               n_concepts=n_concepts
+                                                               )
 
+                mean_norm_ctl = norm_ctl_vec.sum() / len(norm_ctl_vec)
 
-                true_total_icl_tril = mutual_information.estimate_MI_interconcept(all_c_truth,
-                                                                                  flatten=True,
-                                                                                  normalise=False)
-                pred_total_icl_tril = mutual_information.estimate_MI_interconcept(all_c_learnt,
-                                                                                  flatten=True,
-                                                                                  normalise=False)
+                # this is the interconcept leakage which is independent of the task
+                task_independent_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
+                                                                       c_true=all_c_truth,
+                                                                       y_true=all_y_true,
+                                                                       score_type="interconcept_cmi",
+                                                                       wrt_true=True,
+                                                                       apply_max=False,
+                                                                       n_neighbors=3,
+                                                                       normalise=False,
+                                                                       n_concepts=n_concepts
+                                                                       )
 
-                norm_true_total_icl_tril = mutual_information.estimate_MI_interconcept(all_c_truth,
-                                                                                  flatten=True,
-                                                                                  normalise=True)
-                norm_pred_total_icl_tril = mutual_information.estimate_MI_interconcept(all_c_learnt,
-                                                                                  flatten=True,
-                                                                                  normalise=True)
-                total_icl_tril = pred_total_icl_tril - true_total_icl_tril
-                normalised_icl_tril = norm_pred_total_icl_tril - norm_true_total_icl_tril
+                task_independent_icl_i = matrix_from_tril(task_independent_icl).sum(axis=1) / (n_concepts - 1)
+                task_independent_icl = task_independent_icl_i.sum() / len(task_independent_icl_i)
 
-                # I(ĉi, ĉj | Y) - I(ci, cj | Y)
-                true_input_icl_tril = mutual_information.estimate_cmi_interconcept(all_c_truth, all_y_true,
-                                                                                   flatten=True,
-                                                                                   normalise=False)
-                pred_input_icl_tril = mutual_information.estimate_cmi_interconcept(all_c_learnt, all_y_true,
-                                                                                   flatten=True,
-                                                                                   normalise=False)
+                unnormalised_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
+                                                                   c_true=all_c_truth,
+                                                                   y_true=all_y_true,
+                                                                   score_type="interconcept",
+                                                                   wrt_true=True,
+                                                                   apply_max=False,
+                                                                   n_neighbors=3,
+                                                                   normalise=False,
+                                                                   n_concepts=n_concepts
+                                                                   )
 
-                input_spurious_icl_tril = pred_input_icl_tril - true_input_icl_tril
+                unnormalised_icl_i = matrix_from_tril(unnormalised_icl).sum(axis=1) / (n_concepts - 1)
+                unnormalised_icl = unnormalised_icl_i.sum() / len(unnormalised_icl_i)
 
+                unnormalised_ctl_vec = compute_MI_score_model_training(c_pred=all_c_learnt,
+                                                                       c_true=all_c_truth,
+                                                                       y_true=all_y_true,
+                                                                       score_type="concepts_task",
+                                                                       wrt_true=True,
+                                                                       n_neighbors=3,
+                                                                       normalise=False,
+                                                                       n_concepts=n_concepts
+                                                                       )
+                mean_unnorm_ctl = unnormalised_ctl_vec.sum() / len(unnormalised_ctl_vec)
 
-                #Task-Confounded Spurious ICL
-                # [Total Spurious] - [Input-Confounded Spurious]
-                #task_spurious_icl_tril = np.maximum(0, total_icl_tril - input_spurious_icl_tril)
+                # note we are already applying the max operation before this subtraction
+                task_dependent_icl = unnormalised_icl - task_independent_icl
 
-
-                def get_average_from_tril(tril_vector, n_concepts):
-                    if n_concepts <= 1:
-                        return 0.0
-                    matrix = mutual_information.matrix_from_tril(tril_vector)
-                    avg_leakage_per_concept = matrix.sum(axis=1) / (n_concepts - 1)
-                    return np.mean(avg_leakage_per_concept)
-
-                total_icl_average = get_average_from_tril(total_icl_tril, n_concepts)
-                normalised_total_icl_average = get_average_from_tril(normalised_icl_tril, n_concepts)
-                input_icl_average = get_average_from_tril(input_spurious_icl_tril, n_concepts)
-                task_icl_average = get_average_from_tril(total_icl_tril - input_spurious_icl_tril, n_concepts)
-
-                # --- 5. Calculate Proportional Ratio ---
-                total_for_ratio = task_icl_average + input_icl_average
-                if total_for_ratio > 1e-6:  # Avoid division by zero
-                    task_icl_ratio = task_icl_average / total_for_ratio
+                if unnormalised_icl <= 0 or task_dependent_icl < 0:
+                    task_icl_ratio = 0
                 else:
-                    task_icl_ratio = 0.0  # No ICL, so ratio is 0
+                    task_icl_ratio = task_dependent_icl / unnormalised_icl
 
                 # --- 6. Logging ---
-                print(f"INTERCONCEPT LEAKAGE (Total Avg. Nats): {total_icl_average.item():.4f}")
-                print(f"  - Input-Confounded: {input_icl_average.item():.4f} (Adversary is blind to this)")
-                print(f"  - Task-Confounded:  {task_icl_average.item():.4f} (Adversary attacks this)")
+                print(f"INTERCONCEPT LEAKAGE (Total Avg. Nats): {unnormalised_icl.item():.4f}")
+                print(f"  - Input-Confounded: {task_independent_icl.item():.4f} (Adversary is blind to this)")
+                print(f"  - Task-Confounded:  {task_dependent_icl.item():.4f} (Adversary attacks this)")
                 print(f"  - Task-Confounded Ratio: {task_icl_ratio:.2%}")
 
-                self.val_norm_icl.append(normalised_total_icl_average)
-                self.val_icl.append(total_icl_average)
-                self.val_task_icl.append(task_icl_average)
-                self.val_input_icl.append(input_icl_average)
-                pl_module.log('val_icl_total_nats', total_icl_average)
-                pl_module.log('normalised_val_total_icl', normalised_total_icl_average)
+                print(f"INTERCONCEPT LEAKAGE Normalsed: {mean_norm_icl.item():.4f}")
+                print(f'CTL: {mean_norm_ctl}')
+                self.val_ctl.append(mean_unnorm_ctl)
+                self.val_norm_ctl.append(mean_norm_ctl)
+                self.val_norm_icl.append(mean_norm_icl)
+                self.val_icl.append(unnormalised_icl)
+                self.val_task_icl.append(task_dependent_icl)
+                self.val_input_icl.append(task_independent_icl)
+                pl_module.log('val_icl_total_nats', unnormalised_icl)
+                pl_module.log('normalised_val_total_icl',mean_norm_icl)
 
                 # Log the new decomposed metrics
-                pl_module.log('val_icl_cmi_nats', input_icl_average)
-                pl_module.log('val_icl_task_nats', task_icl_average)
+                pl_module.log('val_icl_cmi_nats', task_independent_icl)
+                pl_module.log('val_icl_task_nats', task_dependent_icl)
                 pl_module.log('val_icl_task_ratio', task_icl_ratio)
 
-                # we don't apply the maximum here with zerp but it should be applied technically for leakage
+                # we don't apply the maximum here with zer0 but it should be applied technically for leakage
 
 ################################################################################
 ## HELPER FUNCTIONS
