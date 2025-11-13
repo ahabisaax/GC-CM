@@ -9,6 +9,8 @@ import numpy as np
 import xai_concept_leakage.train.utils as utils
 import xai_concept_leakage.metrics.mutual_information as mutual_information
 from xai_concept_leakage.metrics.accs import compute_accuracy
+from xai_concept_leakage.metrics.mutual_information import normalised_interconcept_leakage
+
 
 ################################################################################
 ## BASELINE MODEL
@@ -613,7 +615,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         if output_embeddings:
             tail_results.append(pos_embeddings)
             tail_results.append(neg_embeddings)
-        return tuple([c_sem, c_pred, y, y_adv_pred] + tail_results)
+        return tuple([c_sem, c_pred, y] + tail_results)
 
     def forward(
         self,
@@ -676,7 +678,13 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             competencies=competencies,
             prev_interventions=prev_interventions,
         )
-        c_sem, c_logits, y_logits, y_adv_logits = outputs[0], outputs[1], outputs[2], outputs[3]
+        c_sem, c_logits, y_logits = outputs[0], outputs[1], outputs[2]
+        y_adv_pred = None
+        if self.use_adversarial and self.current_epoch >= self.adversarial_delay:
+            if self.bool:
+                y_adv_pred = self.critic((c_logits > 0.5).float())
+            else:
+                y_adv_pred = self.critic(c_logits)
         if self.task_loss_weight != 0:
             task_loss = self.loss_task(
                 y_logits if y_logits.shape[-1] > 1 else y_logits.reshape(-1),
@@ -694,7 +702,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                     c_sem=c_sem,
                     c_pred=c_logits,
                     y_pred=y_logits,
-                    y_adv_pred = y_adv_logits,
+                    y_adv_pred = y_adv_pred,
                     competencies=competencies,
                     prev_interventions=prev_interventions,
                 )
@@ -702,7 +710,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         if self.adversarial_scheduler == 'linear':
             adversarial_loss_weight = self.get_adversarial_lambda_linear()
         elif self.adversarial_scheduler == "adaptive":
-            adversarial_loss_weight = self.adversarial_scheduler.update(task_loss_scalar, adversarial_loss_scalar)
+            adversarial_loss_weight = self.lambda_scheduler.update(task_loss_scalar, adversarial_loss_scalar)
         elif self.adversarial_scheduler == 'sigmoid':
             adversarial_loss_weight = self.get_adversarial_lambda_sigmoid()
         else:
@@ -938,23 +946,68 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
 
         n_concepts = all_c_truth.shape[1]
 
-        I_learnt_ctl = mutual_information.estimate_MI_concepts_task(all_c_learnt, all_y_true, normalise=True)
-        I_ground_truth_ctl = mutual_information.estimate_MI_concepts_task(all_c_truth, all_y_true, normalise=True)
+        I_learnt_ctl = mutual_information.estimate_MI_concepts_task(all_c_learnt, all_y_true, normalise=False)
+        I_learnt_ctl_normalised = I_learnt_ctl / mutual_information.mutual_info_score(all_y_true, all_y_true)
+
+        I_ground_truth_ctl = mutual_information.estimate_MI_concepts_task(all_c_truth, all_y_true, normalise=False)
+        I_ground_truth_ctl_normalised = I_learnt_ctl / mutual_information.mutual_info_score(all_y_true, all_y_true)
         ctl_i_vector = np.maximum(0, I_learnt_ctl - I_ground_truth_ctl)
         ctl_average = np.mean(ctl_i_vector)
 
-        true_interconcept_tril = mutual_information.estimate_MI_interconcept(all_c_truth, flatten=True)
-        pred_interconcept_tril = mutual_information.estimate_MI_interconcept(all_c_learnt, flatten=True)
+        ctl_normalised_i_vector = np.maximum(0, I_learnt_ctl_normalised - I_ground_truth_ctl_normalised)
+        ctl_normalised_average = np.mean(ctl_normalised_i_vector)
+
+        true_interconcept_tril = mutual_information.estimate_MI_interconcept(all_c_truth, flatten=True, normalise=False)
+        normalised_true_interconcept_tril = mutual_information.estimate_MI_interconcept(all_c_truth, flatten=True,
+                                                                                        normalise=True)
+        # normalised_true_interconcept_tril = normalised_interconcept_leakage(I=true_interconcept_tril, c=all_c_truth, flatten=True)
+
+        pred_interconcept_tril = mutual_information.estimate_MI_interconcept(all_c_learnt, flatten=True,
+                                                                             normalise=False)
+        # normalised_pred_interconcept_tril = normalised_interconcept_leakage(I=pred_interconcept_tril, c=all_c_learnt, flatten=True)
+        normalised_pred_interconcept_tril = mutual_information.estimate_MI_interconcept(all_c_learnt, flatten=True,
+                                                                                        normalise=True)
         icl_mi_diff_tril = pred_interconcept_tril - true_interconcept_tril
+
+        true_cmi_interconcept_tril = mutual_information.estimate_cmi_interconcept(all_c_truth, all_y_true)
+        pred_cmi_interconcept_tril = mutual_information.estimate_cmi_interconcept(all_c_learnt, all_y_true)
+        icl_cmi_diff_tril = pred_cmi_interconcept_tril - true_cmi_interconcept_tril
+        icl_cmi_tril_non_negative = np.maximum(0, icl_cmi_diff_tril)
+
         icl_tril_non_negative = np.maximum(0, icl_mi_diff_tril)
+
+        icl_task_tril_non_negative = np.maximum(0, icl_tril_non_negative - icl_cmi_tril_non_negative)
+
+        icl_cmi_matrix = mutual_information.matrix_from_tril(icl_cmi_tril_non_negative)
+        avg_cmi_leakage_per_concept = icl_cmi_matrix.sum(axis=1) / (n_concepts - 1) if n_concepts > 1 else np.zeros(
+            n_concepts)
+        cmi_icl_average = np.mean(avg_cmi_leakage_per_concept)
+
+        icl_task_matrix = mutual_information.matrix_from_tril(icl_task_tril_non_negative)
+        avg_task_icl_leakage_per_concept = icl_task_matrix.sum(axis=1) / (
+                    n_concepts - 1) if n_concepts > 1 else np.zeros(n_concepts)
+        task_icl_average = np.mean(avg_task_icl_leakage_per_concept)
 
         icl_matrix = mutual_information.matrix_from_tril(icl_tril_non_negative)
         avg_leakage_per_concept = icl_matrix.sum(axis=1) / (n_concepts - 1) if n_concepts > 1 else np.zeros(n_concepts)
         icl_average = np.mean(avg_leakage_per_concept)
 
-        self.log('test_ctl_average', ctl_average)
-        self.log('test_icl_average', icl_average)
+        icl_tril_non_negative_normalised = np.maximum(0,
+                                                      normalised_pred_interconcept_tril - normalised_true_interconcept_tril)
+        icl_normalised_matrix = mutual_information.matrix_from_tril(icl_tril_non_negative_normalised)
+        avg_normalised_leakage_per_concept = icl_normalised_matrix.sum(axis=1) / (
+                    n_concepts - 1) if n_concepts > 1 else np.zeros(n_concepts)
+        icl_normalised_average = np.mean(avg_normalised_leakage_per_concept)
 
+        task_icl_ratio = task_icl_average / (task_icl_average + cmi_icl_average)
+
+        self.log('test_ctl_average', ctl_average)
+        self.log('test_normalised_ctl_average', ctl_normalised_average)
+        self.log('test_normalised_icl_average', icl_normalised_average)
+        self.log('test_icl_average', icl_average)
+        self.log('test_icl_task', task_icl_average)
+        self.log('test_icl_cmi', cmi_icl_average)
+        self.log('ratio_task_related_icl', task_icl_ratio)
 
     def configure_optimizers(self):
         if self.use_adversarial:
@@ -1047,8 +1100,8 @@ class AdaptiveLambdaScheduler:
             self.ema_loss_adv = (self.beta * self.ema_loss_adv) + (1- self.beta) * current_adversarial_loss
 
         epsilon = 1e-8
-        ema_gap = self.ema_loss_task - self.ema_loss_adv
-        error_signal = min(0, ema_gap)/self.ema_loss_task
+        ema_gap = self.ema_loss_adv - self.ema_loss_task
+        error_signal = max(0, ema_gap) / (self.ema_loss_adv + 1e-8)
 
         scaled_lambda = error_signal * self.scale_factor
         self.current_lambda = np.clip(scaled_lambda, 0, self.max_lambda)
