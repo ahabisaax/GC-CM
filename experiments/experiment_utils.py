@@ -528,7 +528,7 @@ def initialize_result_directory(results_dir):
     ).mkdir(parents=True, exist_ok=True)
 
 
-def generate_hyperatemer_configs(config):
+def generate_hyperparameter_configs(config):
     if "grid_variables" not in config:
         # Then nothing to see here so we will return
         # a singleton set with this config in it

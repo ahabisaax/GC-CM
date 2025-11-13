@@ -439,7 +439,7 @@ def main(
             trial_config = copy.deepcopy(shared_params)
             trial_config.update(current_config)
             # Time to try as many seeds as requested
-            for run_config in experiment_utils.generate_hyperatemer_configs(
+            for run_config in experiment_utils.generate_hyperparameter_configs(
                 trial_config
             ):
                 run_config = copy.deepcopy(run_config)
