@@ -220,6 +220,7 @@ def train_end_to_end_model(
                             name=full_run_name,
                             project=project_name,
                             save_dir=os.path.join(result_dir, "logs"),
+                            experiment=run
                         )
                         if rerun or (not os.path.exists(model_saved_path))
                         else False
@@ -368,6 +369,26 @@ def train_end_to_end_model(
                 )
             else:
                 test_results = None
+            eval_results = _evaluate_cbm(
+                model=model,
+                trainer=trainer,
+                config=config,
+                run_name=run_name,
+                old_results=old_results,
+                rerun=rerun,
+                test_dl=test_dl,
+                val_dl=val_dl,
+            )
+            eval_results["training_time"] = training_time
+            eval_results["num_epochs"] = num_epochs
+            if test_dl is not None:
+                print(
+                    f'c_acc: {eval_results["test_acc_c"] * 100:.2f}%, '
+                    f'y_acc: {eval_results["test_acc_y"] * 100:.2f}%, '
+                    f'c_auc: {eval_results["test_auc_c"] * 100:.2f}%, '
+                    f'y_auc: {eval_results["test_auc_y"] * 100:.2f}% with '
+                    f"{num_epochs} epochs in {training_time:.2f} seconds"
+                )
     else:
         cb_loss = utils.LossTracker(use_adversarial=use_adversarial,
                                     adversarial_delay=adversarial_delay)
@@ -470,26 +491,26 @@ def train_end_to_end_model(
                 config_copy,
                 os.path.join(result_dir, f"{run_name}_experiment_config.joblib"),
             )
-    eval_results = _evaluate_cbm(
-        model=model,
-        trainer=trainer,
-        config=config,
-        run_name=run_name,
-        old_results=old_results,
-        rerun=rerun,
-        test_dl=test_dl,
-        val_dl=val_dl,
-    )
-    eval_results["training_time"] = training_time
-    eval_results["num_epochs"] = num_epochs
-    if test_dl is not None:
-        print(
-            f'c_acc: {eval_results["test_acc_c"]*100:.2f}%, '
-            f'y_acc: {eval_results["test_acc_y"]*100:.2f}%, '
-            f'c_auc: {eval_results["test_auc_c"]*100:.2f}%, '
-            f'y_auc: {eval_results["test_auc_y"]*100:.2f}% with '
-            f"{num_epochs} epochs in {training_time:.2f} seconds"
+        eval_results = _evaluate_cbm(
+            model=model,
+            trainer=trainer,
+            config=config,
+            run_name=run_name,
+            old_results=old_results,
+            rerun=rerun,
+            test_dl=test_dl,
+            val_dl=val_dl,
         )
+        eval_results["training_time"] = training_time
+        eval_results["num_epochs"] = num_epochs
+        if test_dl is not None:
+            print(
+                f'c_acc: {eval_results["test_acc_c"]*100:.2f}%, '
+                f'y_acc: {eval_results["test_acc_y"]*100:.2f}%, '
+                f'c_auc: {eval_results["test_auc_c"]*100:.2f}%, '
+                f'y_auc: {eval_results["test_auc_y"]*100:.2f}% with '
+                f"{num_epochs} epochs in {training_time:.2f} seconds"
+            )
     return model, eval_results
 
 
@@ -1048,10 +1069,25 @@ def train_independent_model(
     else:
         enter_obj = utils.EmptyEnter()
     with enter_obj as run:
-        # no leakage so ctl, icl=0
+        # we do track  leakage as icl in x2c training
+        #also use adversarial and delay are only to check if critic is involved for output type not leakage tracking
         cb_loss = utils.LossTracker(use_adversarial=False,
                                     adversarial_delay=-1,
-                                    track_leakage=False)
+                                    track_leakage=True)
+
+        if project_name and (rerun or (not chpt_exists)):
+            # Create ONE logger.
+            # CRITICAL: Pass 'experiment=run' to tell the logger
+            # "Log to this run, but DO NOT finish it."
+            my_logger = WandbLogger(
+                name=full_run_name,
+                project=project_name,
+                save_dir=os.path.join(result_dir, "logs"),
+                experiment=run  # <--- This is the key fix
+            )
+        else:
+            # If we are not logging, set the logger to False.
+            my_logger = False
         trainer = pl.Trainer(
             accelerator=accelerator,
             devices=devices,
@@ -1069,18 +1105,7 @@ def train_independent_model(
                 cb_loss,
             ],
             # Only use the wandb logger when it is a fresh run
-            logger=(
-                logger
-                or (
-                    WandbLogger(
-                        name=full_run_name,
-                        project=project_name,
-                        save_dir=os.path.join(result_dir, "logs"),
-                    )
-                    if project_name and (rerun or (not chpt_exists))
-                    else False
-                )
-            ),
+            logger=my_logger
         )
         if activation_freq:
             raise ValueError(
@@ -1193,18 +1218,7 @@ def train_independent_model(
                     cb_loss,
                 ],
                 # Only use the wandb logger when it is a fresh run
-                logger=(
-                    logger
-                    or (
-                        WandbLogger(
-                            name=full_run_name,
-                            project=project_name,
-                            save_dir=os.path.join(result_dir, "logs"),
-                        )
-                        if project_name and (rerun or (not chpt_exists))
-                        else False
-                    )
-                ),
+                logger=my_logger
             )
             start_time = time.time()
             ind_c2y_trainer.fit(
@@ -1271,16 +1285,16 @@ def train_independent_model(
                     model_saved_path.replace(".pt", "_training_times.npy"),
                     np.array([ind_training_time, ind_num_epochs]),
                 )
-    eval_results = _evaluate_cbm(
-        model=model,
-        trainer=trainer,
-        config=config,
-        run_name=run_name,
-        old_results=old_results,
-        rerun=rerun,
-        test_dl=test_dl,
-        val_dl=val_dl,
-    )
+        eval_results = _evaluate_cbm(
+            model=model,
+            trainer=trainer,
+            config=config,
+            run_name=run_name,
+            old_results=old_results,
+            rerun=rerun,
+            test_dl=test_dl,
+            val_dl=val_dl,
+        )
     eval_results["training_time"] = training_time
     eval_results["num_epochs"] = num_epochs
     if test_dl is not None:
