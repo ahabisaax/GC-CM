@@ -29,17 +29,16 @@
 # --- 2. LOAD MODULES & ENVIRONMENT ---
 echo "Loading modules..."
 module purge
-module load python3/3.11  # Or your preferred Python module
-module load compilers/gnu/10.2.0
-module load gcc-libs/10.2.0
+module load python/miniconda3/4.10.3
 module load nvidia/525.125.06 # Or the appropriate CUDA/NVIDIA driver
+
+echo "Activating conda env..."
+conda activate xai_env
 
 export CC=$(which gcc)
 export CXX=$(which g++)
 
-# Activate your virtual environment
-echo "Activating venv..."
-source ~/xai-concept-leakage/venv/bin/activate
+
 
 # --- 3. SET PARALLELISM ---
 # $NSLOTS is the SGE variable for the number of cores requested
