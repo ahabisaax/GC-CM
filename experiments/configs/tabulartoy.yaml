@@ -25,7 +25,7 @@ shared_params:
 
 
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
-  max_epochs: 1
+  max_epochs: 200
   concept_loss_weight: 1
   learning_rate: 0.001
   bool: False
@@ -59,27 +59,27 @@ shared_params:
   early_stopping_delta: 0.0
   check_val_every_n_epoch: 1
   momentum: 0.9
-  project_name: "wandbts"
+  project_name: "fixinginterventions"
 
 
 
 runs:
 # HARD:
-#     - architecture: 'SequentialConceptBottleneckModel'
-#       run_name: "CBM_Sequential"
+#     - architecture: 'IndependentConceptBottleneckModel'
+#       run_name: "independent2"
 #       bool: True
 #       extra_dims: 0
 #       sigmoidal_extra_capacity: False
 #       sigmoidal_prob: True
 
 # # SOFT:
-#    - architecture: 'ConceptBottleneckModel'
-#      run_name: "CBM_Sigmoid_01"
-#      bool: False
-#      extra_dims: 0
-#      sigmoidal_prob: True
-#      concept_loss_weight: 0.1
-#
+    - architecture: 'ConceptBottleneckModel'
+      run_name: "softcbm1"
+      bool: False
+      extra_dims: 0
+      sigmoidal_prob: True
+      concept_loss_weight: 0.1
+
 #    - architecture: 'ConceptBottleneckModel'
 #      run_name: "CBM_Sigmoid_5"
 #      bool: False
@@ -106,17 +106,17 @@ runs:
 
 
  # CR-CBM:
-    - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "testrun2"
-      bool: False
-      extra_dims: 0
-      sigmoidal_prob: True
-      concept_loss_weight: 0.1
-      use_adversarial: True
-      max_adversarial_lambda: 1.0
-      adversarial_delay: 0
-      adversarial_lambda_scheduler_warmup:
-      adversarial_scheduler: "sigmoid"
-      adaptive_lambda_beta: 0.99
-      adaptive_lambda_scale: 0.5
+#    - architecture: 'CriticRegularisedConceptBottleneckModel'
+#      run_name: "critic1"
+#      bool: False
+#      extra_dims: 0
+#      sigmoidal_prob: True
+#      concept_loss_weight: 0.1
+#      use_adversarial: True
+#      max_adversarial_lambda: 1.0
+#      adversarial_delay: 0
+#      adversarial_lambda_scheduler_warmup:
+#      adversarial_scheduler: "adaptive"
+#      adaptive_lambda_beta: 0.99
+#      adaptive_lambda_scale: 0.5
 
