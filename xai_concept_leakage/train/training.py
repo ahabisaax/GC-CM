@@ -54,8 +54,15 @@ def _evaluate_cbm(
                 eval_results[f"test_c_f1"],
                 eval_results[f"test_y_f1"],
                 eval_results[f'test_ctl_average'],
-                eval_results[f'test_icl_average']
-            ]
+                eval_results[f'test_icl_average'],
+                # Get the unnormalized "nats" values
+                eval_results.get(f'test_normalised_ctl_average', np.nan),
+                eval_results.get(f'test_normalised_icl_average', np.nan),
+                eval_results.get(f'test_icl_input_avg_nats', np.nan),
+                eval_results.get(f'test_icl_task', np.nan),
+                eval_results.get(f'test_icl_cmi', np.nan)
+                ]
+
             top_k_vals = []
             for key, val in eval_results.items():
                 if f"test_y_top" in key:
@@ -76,8 +83,12 @@ def _evaluate_cbm(
             f"{dl_name}_auc_y",
             f"{dl_name}_f1_c",
             f"{dl_name}_f1_y",
-            f'{dl_name}_test_ctl_average',
-            f'{dl_name}_test_icl_average'
+            f'{dl_name}_ctl_average',
+            f'{dl_name}_icl_average',
+            f'{dl_name}_normalised_ctl',
+            f'{dl_name}_normalised_icl',
+            f'{dl_name}_icl_task',
+            f'{dl_name}_icl_cmi'
         ]
         if "top_k_accuracy" in config:
             top_k_args = config["top_k_accuracy"]

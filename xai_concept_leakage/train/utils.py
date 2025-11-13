@@ -52,9 +52,13 @@ def save_train_val_scores_n_losses(save_path_monitoring, cb_loss):
     np.save(save_path_monitoring + "_val_y_acc", cb_loss.val_y_accuracies)
     np.save(save_path_monitoring + "_train_c_acc", cb_loss.train_c_accuracies)
     np.save(save_path_monitoring + "_val_c_acc", cb_loss.val_c_accuracies)
-    if not cb_loss.black_box:
+    if not cb_loss.black_box and cb_loss.track_leakage:
         np.save(save_path_monitoring + '_val_ctl', cb_loss.val_ctl)
         np.save(save_path_monitoring + '_val_icl', cb_loss.val_icl)
+        np.save(save_path_monitoring + '_norm_val_ctl', cb_loss.val_norm_ctl)
+        np.save(save_path_monitoring + '_norm_val_icl', cb_loss.val_norm_icl)
+        np.save(save_path_monitoring + '_val_task_icl', cb_loss.val_task_icl)
+        np.save(save_path_monitoring + '_val_input_icl', cb_loss.val_input_icl)
 
 
 def save_train_val_scores_n_losses_indep(
