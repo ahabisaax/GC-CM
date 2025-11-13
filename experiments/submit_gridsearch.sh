@@ -5,7 +5,7 @@
 PROJECT_ROOT=~/xai-concept-leakage
 
 # Set the path to your main YAML config file
-EXPERIMENT_CONFIG=$PROJECT_ROOT/experiments/your_config_file.yaml
+EXPERIMENT_CONFIG=$PROJECT_ROOT/experiments/configs/tabulartoy.yaml
 
 # --- 2. COUNT TASKS ---
 # This Python script reads your YAML and counts how many individual
