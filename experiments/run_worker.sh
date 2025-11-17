@@ -13,7 +13,7 @@
 module purge
 module unload compilers mpi gcc-libs
 
-module load python3/3.11
+module load python3/3.9-gnu-10.2.0
 module load gcc-libs/10.2.0
 
 #pytorch
