@@ -7,7 +7,6 @@
 #$ -l mem_free=42G
 #$ -wd /home/ucakais/xai-concept-leakage
 #$ -l gpu=1
-#$ -acallow=ucakais
 
 # --- 1. LOAD MODULES ---
 module purge
