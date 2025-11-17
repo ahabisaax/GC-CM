@@ -19,7 +19,7 @@ module load gcc-libs/10.2.0
 #pytorch
 module load cuda/11.3.1/gnu-10.2.0
 module load cudnn/8.2.1.32/cuda-11.3
-module load pytorch/1.11.0/gpu
+module load pytorch/2.1.0/gpu
 
 export CC=$(which gcc)
 export CXX=$(which g++)
