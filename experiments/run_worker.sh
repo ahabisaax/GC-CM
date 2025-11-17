@@ -11,8 +11,21 @@
 
 # --- 1. LOAD MODULES ---
 module purge
-module load pytorch/2.1.0/gpu
+module unload compilers mpi gcc-libs
+
+module load python3/3.11
 module load gcc-libs/10.2.0
+
+#pytorch
+module load cuda/11.3.1/gnu-10.2.0
+module load cudnn/8.2.1.32/cuda-11.3
+module load pytorch/1.11.0/gpu
+
+export CC=$(which gcc)
+export CXX=$(which g++)
+
+
+conda activate xai_test
 
 # --- 2. SET THREADING ---
 export XLA_FLAGS="--xla_cpu_multi_thread_eigen=true intra_op_parallelism_threads=${NSLOTS}"
@@ -22,18 +35,11 @@ export MKL_NUM_THREADS=$NSLOTS
 # --- 3. PATHS ---
 PROJECT_ROOT=~/xai-concept-leakage
 RESULTS_DIR=$PROJECT_ROOT/results
-CONFIG_PATH=$1
-TASK_ID=$SGE_TASK_ID
+CONFIG_PATH=$PROJECT_ROOT/experiments/configs/tabulartoy.yaml
 
-# --- 4. PYTHON BINARY ---
-PYTHON_BIN=/shared/ucl/apps/python/3.9.6/gnu-10.2.0/bin/python3.9
-
-echo "Running task $TASK_ID with Python: $($PYTHON_BIN --version)"
+echo "Running task with Python: $(which python --version)"
 
 # --- 5. RUN PYTHON WORKER ---
 $PYTHON_BIN -u $PROJECT_ROOT/experiments/run_worker.py \
     --config $CONFIG_PATH \
-    --task-id $TASK_ID \
     --output-dir $RESULTS_DIR
-
-echo "Task $TASK_ID complete."
