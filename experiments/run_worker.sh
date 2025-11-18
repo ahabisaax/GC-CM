@@ -1,11 +1,11 @@
 #!/bin/bash -l
 #$ -N CBM_Leakage_Run
-#$ -o ~/xai-concept-leakage/logs/job_$JOB_ID_$TASK_ID.out
-#$ -e ~/xai-concept-leakage/logs/job_$JOB_ID_$TASK_ID.err
+#$ -o ~/Scratch/xai-concept-leakage/logs/test_run.out
+#$ -e ~/Scratch/xai-concept-leakage/logs/test_run.err
 #$ -pe smp 4
 #$ -l h_rt=42:00:00
 #$ -l mem_free=42G
-#$ -wd /home/ucakais/xai-concept-leakage
+#$ -wd /home/ucakais/Scratch/xai-concept-leakage
 #$ -l gpu=1
 
 # --- 1. LOAD MODULES ---
@@ -32,13 +32,14 @@ export OMP_NUM_THREADS=$NSLOTS
 export MKL_NUM_THREADS=$NSLOTS
 
 # --- 3. PATHS ---
-PROJECT_ROOT=~/xai-concept-leakage
+PROJECT_ROOT=~/Scratch/xai-concept-leakage
 RESULTS_DIR=$PROJECT_ROOT/results
 CONFIG_PATH=$PROJECT_ROOT/experiments/configs/tabulartoy.yaml
 
-echo "Running task with Python: $(which python --version)"
 
 # --- 5. RUN PYTHON WORKER ---
-$PYTHON_BIN -u $PROJECT_ROOT/experiments/run_worker.py \
+python3 -u $PROJECT_ROOT/experiments/run_experiments.py \
     --config $CONFIG_PATH \
+    --project_name "Myriad Test Run" \
     --output-dir $RESULTS_DIR
+
