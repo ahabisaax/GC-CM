@@ -1,11 +1,11 @@
 #!/bin/bash -l
 #$ -N CBM_Leakage_Run
-#$ -o ~/Scratch/xai-concept-leakage/logs/test_run.out
-#$ -e ~/Scratch/xai-concept-leakage/logs/test_run.err
+#$ -o ~/Scratch/xai-crccbm/logs/test_run.out
+#$ -e ~/Scratch/xai-crcbm/logs/test_run.err
 #$ -pe smp 4
 #$ -l h_rt=42:00:00
 #$ -l mem_free=42G
-#$ -wd /home/ucakais/Scratch/xai-concept-leakage
+#$ -wd /home/ucakais/Scratch/xai-crcbm
 #$ -l gpu=1
 
 # --- 1. LOAD MODULES ---
@@ -32,7 +32,7 @@ export OMP_NUM_THREADS=$NSLOTS
 export MKL_NUM_THREADS=$NSLOTS
 
 # --- 3. PATHS ---
-PROJECT_ROOT=~/Scratch/xai-concept-leakage
+PROJECT_ROOT=~/Scratch/xai-crcbm
 RESULTS_DIR=$PROJECT_ROOT/results
 CONFIG_PATH=$PROJECT_ROOT/experiments/configs/tabulartoy.yaml
 
