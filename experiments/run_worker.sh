@@ -23,8 +23,9 @@ module load pytorch/2.1.0/gpu
 export CC=$(which gcc)
 export CXX=$(which g++)
 
-
-conda activate xai_test
+echo "Sourcing conda setup..."
+source $UCL_CONDA_PATH/etc/profile.d/conda.sh
+conda activate xai
 
 # --- 2. SET THREADING ---
 export XLA_FLAGS="--xla_cpu_multi_thread_eigen=true intra_op_parallelism_threads=${NSLOTS}"
