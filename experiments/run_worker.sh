@@ -1,10 +1,10 @@
 #!/bin/bash -l
 #$ -N CBM_Leakage_Run
-#$ -o ~/Scratch/xai-crccbm/logs/test_run.out
+#$ -o ~/Scratch/xai-crcbm/logs/test_run.out
 #$ -e ~/Scratch/xai-crcbm/logs/test_run.err
 #$ -pe smp 4
-#$ -l h_rt=42:00:00
-#$ -l mem_free=42G
+#$ -l h_rt=0:20:00
+#$ -l mem=8G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
 #$ -l gpu=1
 

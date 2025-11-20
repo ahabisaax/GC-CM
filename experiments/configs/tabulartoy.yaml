@@ -1,4 +1,4 @@
-trials: 5
+trials: 2
 results_dir: results/tabulartoy_25_10k_models/
 
 shared_params:
@@ -25,7 +25,7 @@ shared_params:
 
 
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
-  max_epochs: 200
+  max_epochs: 1
   concept_loss_weight: 1
   learning_rate: 0.001
   bool: False
@@ -59,7 +59,7 @@ shared_params:
   early_stopping_delta: 0.0
   check_val_every_n_epoch: 1
   momentum: 0.9
-  project_name: "fixinginterventions"
+  project_name: "myriad"
 
 
 
