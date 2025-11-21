@@ -25,7 +25,7 @@ export CXX=$(which g++)
 
 echo "Sourcing conda setup..."
 source $UCL_CONDA_PATH/etc/profile.d/conda.sh
-conda activate xai
+conda activate xai2
 
 # --- 2. SET THREADING ---
 export XLA_FLAGS="--xla_cpu_multi_thread_eigen=true intra_op_parallelism_threads=${NSLOTS}"

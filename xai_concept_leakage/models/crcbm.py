@@ -595,12 +595,6 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         else:
             y = self.c2y_model(c_pred)
 
-        y_adv_pred = None
-        if self.use_adversarial:
-            if self.bool:
-                y_adv_pred = self.critic((c_pred > 0.5).float())
-            else:
-                y_adv_pred = self.critic(c_pred)
 
         tail_results = []
         if output_interventions:
@@ -725,7 +719,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             # Will only compute the concept loss for concepts whose certainty
             # values are fully given
             concept_loss = self.loss_concept(c_sem, c)
-            concept_loss_scalar = concept_loss.detach()
+            concept_loss_scalar = concept_loss.detach().item()
             loss = (
                 self.concept_loss_weight * concept_loss
                 + task_loss + adversarial_loss)

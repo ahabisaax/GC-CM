@@ -304,8 +304,10 @@ class LossTracker(Callback):
                 pl_module.log('val_icl_cmi_nats', task_independent_icl)
                 pl_module.log('val_icl_task_nats', task_dependent_icl)
                 pl_module.log('val_icl_task_ratio', task_icl_ratio)
+                pl_module.log('val_ctl_unnormalised', mean_unnorm_ctl)
+                pl_module.log('val_ctl_normalised', mean_norm_ctl)
 
-                # we don't apply the maximum here with zer0 but it should be applied technically for leakage
+                # we don't apply the maximum here with zero but it should be applied technically for leakage
 
 ################################################################################
 ## HELPER FUNCTIONS
