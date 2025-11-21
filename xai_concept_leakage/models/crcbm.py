@@ -255,8 +255,8 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             self.adversarial_delay = adversarial_delay
             self.max_adversarial_loss_weight = max_adversarial_lambda
 
-            if self.adversarial_scheduler == 'adaptive':
-                self.lambda_scheduler = AdaptiveLambdaScheduler(
+            if self.adversarial_scheduler == 'proportional':
+                self.lambda_scheduler = ProportionalLambdaScheduler(
                     beta = adaptive_lambda_beta,
                     scale_factor=adaptive_lambda_scale,
                     max_lambda=self.max_adversarial_loss_weight
@@ -264,6 +264,8 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             if self.adversarial_scheduler == "linear":
                 #Specific to linear scheduler period over which we increase the weighting
                 self.adversarial_warmup_epochs = adversarial_lambda_scheduler_warmup
+            if self.adversarial_scheduler == "lagrange":
+                self.lambda_scheduler = LagrangianLambdaScheduler(lr_lambda=0.05)
 
         self.bool = bool
         self.concept_loss_weight = concept_loss_weight
@@ -702,7 +704,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
 
         if self.adversarial_scheduler == 'linear':
             adversarial_loss_weight = self.get_adversarial_lambda_linear()
-        elif self.adversarial_scheduler == "adaptive":
+        elif self.adversarial_scheduler in ['lagrange', 'proportional']:
             adversarial_loss_weight = self.lambda_scheduler.update(task_loss_scalar, adversarial_loss_scalar)
         elif self.adversarial_scheduler == 'sigmoid':
             adversarial_loss_weight = self.get_adversarial_lambda_sigmoid()
@@ -1013,7 +1015,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
 
         self.log('test_ctl_average', mean_unnorm_ctl)
         self.log('test_normalised_ctl_average', mean_norm_ctl)
-        self.log('test_normalised_icl_average', norm_icl)
+        self.log('test_normalised_icl_average', mean_norm_icl)
         self.log('test_icl_average', unnormalised_icl)
         self.log('test_icl_task', task_dependent_icl)
         self.log('test_icl_cmi', task_independent_icl)
@@ -1078,9 +1080,8 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             }
 
 
-class AdaptiveLambdaScheduler:
+class ProportionalLambdaScheduler:
     """A smoothed dynamic scheduler for the weighing of our adversarial loss by tracking the EMA of the (classifier_loss - adversarial_loss)/adversarial_loss ratio
-    That's a fair question. My last answer was very theoretical. You're asking "What does this look like in practice?" and "How do I actually call this?"
 
     This acts like a PID controller by:
     1. Tracking the 'gap' (the error signal).
@@ -1109,11 +1110,43 @@ class AdaptiveLambdaScheduler:
             self.ema_loss_task = (self.beta * self.ema_loss_task) + (1- self.beta) * current_task_loss
             self.ema_loss_adv = (self.beta * self.ema_loss_adv) + (1- self.beta) * current_adversarial_loss
 
-        ema_gap = self.ema_loss_adv - self.ema_loss_task
-        error_signal = max(0, ema_gap) / (self.ema_loss_adv + 1e-8)
+        ema_gap = self.ema_loss_task - self.ema_loss_adv
+        error_signal = max(0, ema_gap) / (self.ema_loss_task + 1e-8)
 
         scaled_lambda = error_signal * self.scale_factor
         self.current_lambda = np.clip(scaled_lambda, 0, self.max_lambda)
+        return self.current_lambda
+
+    def get_lambda(self):
+        return self.current_lambda
+
+
+
+class LagrangianLambdaScheduler:
+    """A smoothed dynamic scheduler for the weighing of our adversarial loss using Integral Controller based principles.
+    Lambda is a learnable Lagrangian multiplier.
+    lambda_{t+1} = lambda_t + lr * Gap_t
+    This acts like a PID controller by:
+    1. Tracking the 'gap' (the error signal).
+    2. Using the 'loss_task' to auto-scale the gain (auto-warmup).
+    3. Using Exponential Moving Average (EMA) to smooth the signal.
+    """
+    def __init__(self,
+                 init_lambda=0.0,
+                 lr_lambda = 0.01,
+                 target_margin = 0.0):
+        self.current_lambda = init_lambda
+        self.lr = lr_lambda
+        self.target_margin = target_margin
+        self.log_lambda = torch.Parameter(torch.tensor(np.log(max(1e-6, init_lambda))))
+        self.log_lambda.requires_grad = False
+
+    def update(self, current_task_loss,
+            current_adversarial_loss):
+
+        loss_gap = (current_task_loss + self.target_margin) - current_adversarial_loss
+        with torch.no_grad():
+            self.current_lambda += self.lr * loss_gap
         return self.current_lambda
 
     def get_lambda(self):
