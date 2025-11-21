@@ -1019,7 +1019,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         self.log('test_icl_average', unnormalised_icl)
         self.log('test_icl_task', task_dependent_icl)
         self.log('test_icl_cmi', task_independent_icl)
-        self.log('ratio_task_related_icl', task_icl_ratio)
+        self.log('test_ratio_task_related_icl', task_icl_ratio)
 
     def configure_optimizers(self):
         if self.use_adversarial:
