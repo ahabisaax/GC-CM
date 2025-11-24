@@ -265,7 +265,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                 #Specific to linear scheduler period over which we increase the weighting
                 self.adversarial_warmup_epochs = adversarial_lambda_scheduler_warmup
             if self.adversarial_scheduler == "lagrange":
-                self.lambda_scheduler = LagrangianLambdaScheduler(lr_lambda=0.05)
+                self.lambda_scheduler = LagrangianLambdaScheduler(lr_lambda=0.3)
 
         self.bool = bool
         self.concept_loss_weight = concept_loss_weight
@@ -1138,7 +1138,7 @@ class LagrangianLambdaScheduler:
         self.current_lambda = init_lambda
         self.lr = lr_lambda
         self.target_margin = target_margin
-        self.log_lambda = torch.Parameter(torch.tensor(np.log(max(1e-6, init_lambda))))
+        self.log_lambda = torch.nn.Parameter(torch.tensor(np.log(max(1e-6, init_lambda))))
         self.log_lambda.requires_grad = False
 
     def update(self, current_task_loss,
