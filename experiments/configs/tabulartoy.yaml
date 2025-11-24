@@ -25,7 +25,7 @@ shared_params:
 
 
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
-  max_epochs: 1
+  max_epochs: 500
   concept_loss_weight: 1
   learning_rate: 0.001
   bool: False
@@ -74,11 +74,11 @@ runs:
 
 # # SOFT:
 #    - architecture: 'ConceptBottleneckModel'
-#      run_name: "softcbm1"
+#      run_name: "softcbmnew_lambda1"
 #      bool: False
 #      extra_dims: 0
 #      sigmoidal_prob: True
-#      concept_loss_weight: 0.1
+#      concept_loss_weight: 1
 
 #    - architecture: 'ConceptBottleneckModel'
 #      run_name: "CBM_Sigmoid_5"
@@ -107,16 +107,16 @@ runs:
 
  # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "critic_delay_90"
+      run_name: "critic_lagrange-c0.1-l0.1"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
       concept_loss_weight: 0.1
       use_adversarial: True
-      max_adversarial_lambda: 1.0
-      adversarial_delay: 90
+      max_adversarial_lambda: 1.1
+      adversarial_delay: 0
       adversarial_lambda_scheduler_warmup: None
-      adversarial_scheduler: "none"
+      adversarial_scheduler: "lagrange"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
       adaptive_lambda_beta: 0.99
       adaptive_lambda_scale: 0.5
 
