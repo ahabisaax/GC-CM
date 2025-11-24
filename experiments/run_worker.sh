@@ -39,8 +39,8 @@ CONFIG_PATH=$PROJECT_ROOT/experiments/configs/tabulartoy.yaml
 
 
 # --- 5. RUN PYTHON WORKER ---
-python3 -u $PROJECT_ROOT/experiments/run_experiments.py \
+$CONDA_PREFIX/bin/python -u $PROJECT_ROOT/experiments/run_experiments.py \
     --config $CONFIG_PATH \
     --project_name "Myriad Test Run" \
-    --output-dir $RESULTS_DIR
+    --output_dir $RESULTS_DIR
 
