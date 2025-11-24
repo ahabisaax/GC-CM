@@ -15,16 +15,10 @@ module unload compilers mpi gcc-libs
 module load python3/3.9-gnu-10.2.0
 module load gcc-libs/10.2.0
 
-#pytorch
-module load cuda/11.8.0/gnu-10.2.0
-module load cudnn/9.2.0.82/cuda-11
-module load pytorch/2.1.0/gpu
-
 export CC=$(which gcc)
 export CXX=$(which g++)
 
 echo "Sourcing conda setup..."
-source $UCL_CONDA_PATH/etc/profile.d/conda.sh
 conda activate xai2
 
 # --- 2. SET THREADING ---
@@ -37,7 +31,7 @@ PROJECT_ROOT=~/Scratch/xai-crcbm
 RESULTS_DIR=$PROJECT_ROOT/results
 CONFIG_PATH=$PROJECT_ROOT/experiments/configs/tabulartoy.yaml
 
-
+export PYTHONPATH=$PROJECT_ROOT:$PYTHONPATH
 # --- 5. RUN PYTHON WORKER ---
 $CONDA_PREFIX/bin/python -u $PROJECT_ROOT/experiments/run_experiments.py \
     --config $CONFIG_PATH \
