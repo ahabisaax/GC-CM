@@ -3,7 +3,7 @@
 #$ -o ~/Scratch/xai-crcbm/logs/test_run.out
 #$ -e ~/Scratch/xai-crcbm/logs/test_run.err
 #$ -pe smp 4
-#$ -l h_rt=0:20:00
+#$ -l h_rt=03:00:00
 #$ -l mem=8G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
 #$ -l gpu=1
