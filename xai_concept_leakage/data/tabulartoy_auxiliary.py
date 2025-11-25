@@ -160,7 +160,8 @@ def TT_dataloaders(
     )
     y = y.argmax(dim=-1).cpu().detach()
     train_dl = torch.utils.data.DataLoader(
-        list(zip(x, y, c)), batch_size=batch_size, num_workers=num_workers
+        list(zip(x, y, c)), batch_size=batch_size, num_workers=num_workers,
+        pin_memory=True
     )
 
     x = torch.FloatTensor(x_val.to_numpy())
@@ -172,7 +173,8 @@ def TT_dataloaders(
     )
     y = y.argmax(dim=-1).cpu().detach()
     val_dl = torch.utils.data.DataLoader(
-        list(zip(x, y, c)), batch_size=batch_size, num_workers=num_workers
+        list(zip(x, y, c)), batch_size=batch_size, num_workers=num_workers,
+        pin_memory=True
     )
 
     x = torch.FloatTensor(x_test.to_numpy())
@@ -184,6 +186,7 @@ def TT_dataloaders(
     )
     y = y.argmax(dim=-1).cpu().detach()
     test_dl = torch.utils.data.DataLoader(
-        list(zip(x, y, c)), batch_size=batch_size, num_workers=num_workers
+        list(zip(x, y, c)), batch_size=batch_size, num_workers=num_workers,
+        pin_memory=True
     )
     return train_dl, val_dl, test_dl
