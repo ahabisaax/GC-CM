@@ -107,7 +107,7 @@ runs:
 
  # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "critic_lagrange-c0.1-l0.1"
+      run_name: "critic_lagrange-c0.1-l0.6"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
