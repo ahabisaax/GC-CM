@@ -204,7 +204,10 @@ class LossTracker(Callback):
             self.val_c_accuracy_temp = []
 
             # compute CTL
-            if self.track_leakage:
+            if self.track_leakage and (
+                (trainer.current_epoch % 10 == 0) or
+                (trainer.current_epoch == trainer.max_epochs - 1)
+            ):
                 all_c_learnt = torch.cat(self.val_c_learnt_temp).detach().cpu().numpy()
                 all_c_truth = torch.cat(self.val_c_true_temp).detach().cpu().numpy()
                 all_y_true = torch.cat(self.val_y_true_temp).detach().cpu().numpy()
