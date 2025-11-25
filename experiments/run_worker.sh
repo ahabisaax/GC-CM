@@ -5,6 +5,7 @@
 #$ -pe smp 4
 #$ -l h_rt=03:00:00
 #$ -l mem=8G
+#$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
 #$ -l gpu=1
 
@@ -31,10 +32,17 @@ PROJECT_ROOT=~/Scratch/xai-crcbm
 RESULTS_DIR=$PROJECT_ROOT/results
 CONFIG_PATH=$PROJECT_ROOT/experiments/configs/tabulartoy.yaml
 
+TEMP_RESULTS_DIR=$TMPDIR/results
+mkdir -p $TEMP_RESULTS_DIR
+
+cd $TMPDIR
+echo "Changed working directory to $TMPDIR"
+
 export PYTHONPATH=$PROJECT_ROOT:$PYTHONPATH
 # --- 5. RUN PYTHON WORKER ---
 $CONDA_PREFIX/bin/python -u $PROJECT_ROOT/experiments/run_experiments.py \
     --config $CONFIG_PATH \
     --project_name "Myriad Test Run" \
-    --output_dir $RESULTS_DIR
+    --output_dir $TEMP_RESULTS_DIR
 
+rsync -a --recursive $TEMP_RESULTS_DIR/ $FINAL_RESULTS_DIR/
