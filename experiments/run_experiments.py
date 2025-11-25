@@ -1085,7 +1085,20 @@ if __name__ == "__main__":
         results_dir = loaded_config["results_dir"]
 
     run_specific_dir = os.path.join(results_dir, run_name)
-
+    if not args.force_cpu:
+        if not torch.cuda.is_available():
+            # THROW FATAL ERROR instead of switching to CPU
+            raise RuntimeError(
+                "⛔ FATAL ERROR: GPU requested but torch.cuda.is_available() is False! "
+                "Stopping job to prevent slow CPU training."
+            )
+        accelerator = "gpu"
+        devices = 1
+        print
+    else:
+        accelerator = "cpu"
+        devices = "auto"
+    print(f"DEBUG: Final Selection -> Accelerator: {accelerator}, Devices: {devices}")
     main(
         rerun=args.rerun,
         result_dir=run_specific_dir,
