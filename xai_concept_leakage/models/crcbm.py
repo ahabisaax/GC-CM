@@ -701,17 +701,20 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                     competencies=competencies,
                     prev_interventions=prev_interventions,
                 )
+        if self.use_adversarial:
+            if self.adversarial_scheduler == 'linear':
+                adversarial_loss_weight = self.get_adversarial_lambda_linear()
+            elif self.adversarial_scheduler in ['lagrange', 'proportional']:
+                adversarial_loss_weight = self.lambda_scheduler.update(task_loss_scalar, adversarial_loss_scalar)
+            elif self.adversarial_scheduler == 'sigmoid':
+                adversarial_loss_weight = self.get_adversarial_lambda_sigmoid()
+            else:
+                adversarial_loss_weight = self.max_adversarial_loss_weight
 
-        if self.adversarial_scheduler == 'linear':
-            adversarial_loss_weight = self.get_adversarial_lambda_linear()
-        elif self.adversarial_scheduler in ['lagrange', 'proportional']:
-            adversarial_loss_weight = self.lambda_scheduler.update(task_loss_scalar, adversarial_loss_scalar)
-        elif self.adversarial_scheduler == 'sigmoid':
-            adversarial_loss_weight = self.get_adversarial_lambda_sigmoid()
+            adversarial_loss = - (adversarial_loss_weight * adversarial_loss)
         else:
-            adversarial_loss_weight = self.max_adversarial_loss_weight
-
-        adversarial_loss = - (adversarial_loss_weight * adversarial_loss)
+            adversarial_loss = 0
+            adversarial_loss_weight = 0
         self.log('current_adv_lambda', adversarial_loss_weight, on_step=False, on_epoch=True)
 
         if self.concept_loss_weight != 0:
