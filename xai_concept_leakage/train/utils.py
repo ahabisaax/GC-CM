@@ -162,11 +162,11 @@ class LossTracker(Callback):
             self.val_c_accuracy_temp.append(outputs["val_c_accuracy"])
         if self.track_leakage:
             if "c_learnt" in outputs:
-                self.val_c_learnt_temp.append(outputs["c_learnt"])
+                self.val_c_learnt_temp.append(outputs["c_learnt"].detach().cpu())
             if "c_true" in outputs:
-                self.val_c_true_temp.append(outputs["c_true"])
+                self.val_c_true_temp.append(outputs["c_true"].detach().cpu())
             if "y_true" in outputs:
-                self.val_y_true_temp.append(outputs["y_true"])
+                self.val_y_true_temp.append(outputs["y_true"].detach().cpu())
 
     def on_train_epoch_end(self, trainer, pl_module):
         #         print("self.train_y_accuracy_temp:")
@@ -208,9 +208,9 @@ class LossTracker(Callback):
                 (trainer.current_epoch % 20 == 0) or
                 (trainer.current_epoch == trainer.max_epochs - 1)
             ):
-                all_c_learnt = torch.cat(self.val_c_learnt_temp).detach().cpu().numpy()
-                all_c_truth = torch.cat(self.val_c_true_temp).detach().cpu().numpy()
-                all_y_true = torch.cat(self.val_y_true_temp).detach().cpu().numpy()
+                all_c_learnt = torch.cat(self.val_c_learnt_temp).numpy()
+                all_c_truth = torch.cat(self.val_c_true_temp).numpy()
+                all_y_true = torch.cat(self.val_y_true_temp).numpy()
                 n_concepts = all_c_truth.shape[1]
 
                 norm_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
@@ -311,7 +311,10 @@ class LossTracker(Callback):
                 pl_module.log('val_ctl_normalised', mean_norm_ctl)
 
                 # we don't apply the maximum here with zero but it should be applied technically for leakage
-
+            if self.track_leakage:
+                self.val_c_learnt_temp.clear()
+                self.val_c_true_temp.clear()
+                self.val_y_true_temp.clear()
 ################################################################################
 ## HELPER FUNCTIONS
 ################################################################################
