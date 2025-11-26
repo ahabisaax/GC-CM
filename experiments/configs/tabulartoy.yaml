@@ -74,11 +74,11 @@ runs:
 
 # # SOFT:
     - architecture: 'ConceptBottleneckModel'
-      run_name: "softcbm/lambda_c0.1/lr0.01"
+      run_name: "softcbm/lambda_c1/lr0.01"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
-      concept_loss_weight: 0.1
+      concept_loss_weight: 1
 
 #    - architecture: 'ConceptBottleneckModel'
 #      run_name: "CBM_Sigmoid_5"
