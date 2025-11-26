@@ -74,7 +74,7 @@ runs:
 
 # # SOFT:
     - architecture: 'ConceptBottleneckModel'
-      run_name: "softcbm/lambdac0.1/lr0.01"
+      run_name: "softcbm/lambda_c0.1/lr0.01"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
