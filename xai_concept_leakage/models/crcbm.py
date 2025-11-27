@@ -723,6 +723,8 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             # whenever no concept supervision is provided
             # Will only compute the concept loss for concepts whose certainty
             # values are fully given
+
+            #TODO ReLU this and check behaviour
             concept_loss = self.loss_concept(c_sem, c)
             concept_loss_scalar = concept_loss.detach().item()
             loss = (
