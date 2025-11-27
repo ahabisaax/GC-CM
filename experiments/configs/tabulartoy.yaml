@@ -27,7 +27,7 @@ shared_params:
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
   max_epochs: 500
   #concept_loss_weight: 1
-  learning_rate: 0.1
+  learning_rate: 0.05
   bool: False
   sigmoidal_prob: False
   hidden_size: 64
@@ -51,8 +51,8 @@ shared_params:
   weight_decay: 0
   c_extractor_arch: tabulartoy_extractor
   cbm_optimizer: adam
-  cbm_learning_rate: 0.1
-  adv_learning_rate: 0.1
+  cbm_learning_rate: 0.05
+  adv_learning_rate: 0.05
   adv_optimizer: adam
   early_stopping_monitor: val_loss
   early_stopping_mode: min
