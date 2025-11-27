@@ -107,7 +107,7 @@ def compute_mi_cc(x, y, n_neighbors):
     xy = np.hstack((x, y))
 
     # Here we rely on NearestNeighbors to select the fastest algorithm.
-    nn = NearestNeighbors(metric="chebyshev", n_neighbors=n_neighbors, n_jobs=-1)
+    nn = NearestNeighbors(metric="chebyshev", n_neighbors=n_neighbors)
 
     nn.fit(xy)
     radius = nn.kneighbors()[0]
@@ -179,7 +179,7 @@ def compute_mi_cd(c, d, n_neighbors):
     radius = np.empty(n_samples)
     label_counts = np.empty(n_samples)
     k_all = np.empty(n_samples)
-    nn = NearestNeighbors(n_jobs=-1)
+    nn = NearestNeighbors()
     for label in np.unique(d):
         mask = d == label
         count = np.sum(mask)
