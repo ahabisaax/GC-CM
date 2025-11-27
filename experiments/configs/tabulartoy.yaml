@@ -51,8 +51,8 @@ shared_params:
   weight_decay: 0
   c_extractor_arch: tabulartoy_extractor
   cbm_optimizer: adam
-  cbm_learning_rate: 0.02
-  adv_learning_rate: 0.05
+  cbm_learning_rate: 0.03
+  adv_learning_rate: 0.03
   adv_optimizer: adam
   early_stopping_monitor: val_loss
   early_stopping_mode: min
