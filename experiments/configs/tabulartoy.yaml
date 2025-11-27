@@ -45,7 +45,7 @@ shared_params:
   weight_loss: True
   top_k_accuracy: null
   save_model: True
-  patience: 15
+  patience: 3000
   extra_dims: 0
   scheduler_step: 20
   weight_decay: 0
