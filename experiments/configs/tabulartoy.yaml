@@ -27,7 +27,7 @@ shared_params:
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
   max_epochs: 400
   #concept_loss_weight: 1
-  learning_rate: 0.08
+  learning_rate: 0.09
   bool: False
   sigmoidal_prob: False
   hidden_size: 64
@@ -51,8 +51,8 @@ shared_params:
   weight_decay: 0
   c_extractor_arch: tabulartoy_extractor
   cbm_optimizer: adam
-  cbm_learning_rate: 0.08
-  adv_learning_rate: 0.08
+  cbm_learning_rate: 0.09
+  adv_learning_rate: 0.09
   adv_optimizer: adam
   early_stopping_monitor: val_loss
   early_stopping_mode: min
@@ -107,7 +107,7 @@ runs:
 
  # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "critic_0delay_lambdac0.1_lambda_adv1_lr0.08"
+      run_name: "critic_0delay_lambdac0.1_lambda_adv1_lr0.09"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
