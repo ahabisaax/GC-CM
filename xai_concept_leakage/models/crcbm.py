@@ -726,7 +726,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
 
             concept_loss = self.loss_concept(c_sem, c)
             concept_loss_scalar = concept_loss.detach().item()
-            raw_gap = task_loss - adversarial_loss
+            raw_gap = adversarial_loss - task_loss
             hinge_penalty = torch.clamp(raw_gap, min=0)
             adversarial_term = adversarial_loss_weight * hinge_penalty
 
