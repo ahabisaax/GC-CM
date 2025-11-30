@@ -711,7 +711,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             else:
                 adversarial_loss_weight = self.max_adversarial_loss_weight
 
-            adversarial_loss = - (adversarial_loss_weight * adversarial_loss)
+            #adversarial_loss = - (adversarial_loss_weight * adversarial_loss)
         else:
             adversarial_loss = 0
             adversarial_loss_weight = 0
@@ -724,7 +724,6 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             # Will only compute the concept loss for concepts whose certainty
             # values are fully given
 
-            #TODO ReLU this and check behaviour
             concept_loss = self.loss_concept(c_sem, c)
             concept_loss_scalar = concept_loss.detach().item()
             raw_gap = task_loss - adversarial_loss
