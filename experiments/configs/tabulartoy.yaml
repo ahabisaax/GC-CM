@@ -1,4 +1,4 @@
-trials: 1
+trials: 5
 results_dir: results/tabulartoy_25_10k_models/
 
 shared_params:
@@ -107,7 +107,7 @@ runs:
 
  # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "critic_0delay_lambdac0.1_lambda_adv1_lr_0.05_fold_2"
+      run_name: "critic_0delay_lambdac0.1_lambda_adv1_lr_0.05"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
