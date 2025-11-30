@@ -733,7 +733,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
 
             loss = (
                 self.concept_loss_weight * concept_loss
-                + (1-adversarial_loss_weight)*task_loss + adversarial_term)
+                + task_loss + adversarial_term)
         else:
             loss = task_loss + adversarial_loss
             concept_loss_scalar = 0.0
