@@ -73,12 +73,12 @@ runs:
 #       sigmoidal_prob: True
 
 # # SOFT:
-#    - architecture: 'ConceptBottleneckModel'
-#      run_name: "softcbm/lambda_c1/lr0.01"
-#      bool: False
-#      extra_dims: 0
-#      sigmoidal_prob: True
-#      concept_loss_weight: 1
+    - architecture: 'ConceptBottleneckModel'
+      run_name: "softcbm_lambda_c0.1/lr0.05"
+      bool: False
+      extra_dims: 0
+      sigmoidal_prob: True
+      concept_loss_weight: 0.1
 
 #    - architecture: 'ConceptBottleneckModel'
 #      run_name: "CBM_Sigmoid_5"
@@ -106,17 +106,17 @@ runs:
 
 
  # CR-CBM:
-    - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "critic_0delay_lambdac0.1_lambda_adv1_lr_0.05"
-      bool: False
-      extra_dims: 0
-      sigmoidal_prob: True
-      concept_loss_weight: 0.1
-      use_adversarial: True
-      max_adversarial_lambda: 1
-      adversarial_delay: 0
-      adversarial_lambda_scheduler_warmup: None
-      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
-      adaptive_lambda_beta: 0.99
-      adaptive_lambda_scale: 0.5
+#    - architecture: 'CriticRegularisedConceptBottleneckModel'
+#      run_name: "critic_0delay_lambdac0.1_lambda_adv1_lr_0.05"
+#      bool: False
+#      extra_dims: 0
+#      sigmoidal_prob: True
+#      concept_loss_weight: 0.1
+#      use_adversarial: True
+#      max_adversarial_lambda: 1
+#      adversarial_delay: 0
+#      adversarial_lambda_scheduler_warmup: None
+#      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
+#      adaptive_lambda_beta: 0.99
+#      adaptive_lambda_scale: 0.5
 
