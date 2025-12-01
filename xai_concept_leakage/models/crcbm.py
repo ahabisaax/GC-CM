@@ -265,7 +265,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                 #Specific to linear scheduler period over which we increase the weighting
                 self.adversarial_warmup_epochs = adversarial_lambda_scheduler_warmup
             if self.adversarial_scheduler == "lagrange":
-                self.lambda_scheduler = LagrangianLambdaScheduler(lr_lambda=0.01)
+                self.lambda_scheduler = LagrangianLambdaScheduler(lr_lambda=0.1)
 
         self.bool = bool
         self.concept_loss_weight = concept_loss_weight
