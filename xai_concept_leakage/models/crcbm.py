@@ -710,8 +710,6 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                 adversarial_loss_weight = self.get_adversarial_lambda_sigmoid()
             else:
                 adversarial_loss_weight = self.max_adversarial_loss_weight
-
-            #adversarial_loss = - (adversarial_loss_weight * adversarial_loss)
         else:
             adversarial_loss = 0
             adversarial_loss_weight = 0
