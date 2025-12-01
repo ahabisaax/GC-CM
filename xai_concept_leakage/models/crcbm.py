@@ -1139,7 +1139,7 @@ class LagrangianLambdaScheduler:
     3. Using Exponential Moving Average (EMA) to smooth the signal.
     """
     def __init__(self,
-                 init_lambda=0.0,
+                 init_lambda=1,
                  lr_lambda = 0.01,
                  target_margin = 0.0):
         self.current_lambda = init_lambda
