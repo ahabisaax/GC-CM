@@ -107,7 +107,7 @@ runs:
 
  # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "critic_0delay_lambdac0.1_lagrange_scheduler1_lr0.05"
+      run_name: "critic_0delay_lambdac0.1_lagrange_scheduler0.1_lr0.05"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
