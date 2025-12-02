@@ -1,12 +1,12 @@
-trials: 5
+trials: 1
 results_dir: results/dsprites_dep_0_models/
 
 shared_params:
   # Dataset Configuration
   dataset_config:
     dataset: dsprites
-    batch_size: 32
-    num_workers: 8
+    batch_size: 128
+    num_workers: 4
     root_dir: data/dsprites/dsprites_dep_0.npz # this is where you find the pre-sampled dataset
     sampling_percent: 1
     test_subsampling: 1
@@ -24,12 +24,13 @@ shared_params:
 
 
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
-  max_epochs: 200
-  concept_loss_weight: 1
+  max_epochs: 500
+  #concept_loss_weight: 1
   learning_rate: 0.001
   bool: False
   sigmoidal_prob: False
-  dropout_prob: 0.
+  dropout_prob: 0.2
+  all_dropout: False
 
   learning_rate_c2y: 0.001
   optimizer_c2y: adam
@@ -44,17 +45,21 @@ shared_params:
   use_task_class_weights: False #False weighting of the task in loss
   top_k_accuracy: null
   save_model: True
-  patience: 15
+  patience: 1000
   extra_dims: 0
   scheduler_step: 20
   weight_decay: 0
   c_extractor_arch: dsprites_extractor
-  optimizer: adam
+  cbm_optimizer: adam
+  cbm_learning_rate: 0.05
+  adv_learning_rate: 0.05
+  adv_optimizer: adam
   early_stopping_monitor: val_loss
   early_stopping_mode: min
   early_stopping_delta: 0.0
   check_val_every_n_epoch: 1
   momentum: 0.9
+  project_name: "dspirites"
 
 
 
@@ -68,12 +73,12 @@ runs:
     #   sigmoidal_prob: True
 
  # SOFT:
-    - architecture: 'ConceptBottleneckModel'
-      run_name: "CBM_Sigmoid_1"
-      bool: False
-      extra_dims: 0
-      sigmoidal_prob: True
-      concept_loss_weight: 1.
+#    - architecture: 'ConceptBottleneckModel'
+#      run_name: "CBM_Sigmoid_1"
+#      bool: False
+#      extra_dims: 0
+#      sigmoidal_prob: True
+#      concept_loss_weight: 1.
 
 # LOGITS:
     # - architecture: 'ConceptBottleneckModel'
@@ -91,3 +96,19 @@ runs:
     #   training_intervention_prob: 0.25
     #   embedding_activation: "leakyrelu"
     #   concept_loss_weight: 10
+
+
+ # CR-CBM:
+    - architecture: 'CriticRegularisedConceptBottleneckModel'
+      run_name: "critic_0delay_lambdac0.1_lambda_adv_1"
+      bool: False
+      extra_dims: 0
+      sigmoidal_prob: True
+      concept_loss_weight: 0.1
+      use_adversarial: True
+      max_adversarial_lambda: 1
+      adversarial_delay: 0
+      adversarial_lambda_scheduler_warmup: None
+      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
+      adaptive_lambda_beta: 0.99
+      adaptive_lambda_scale: 0.5
