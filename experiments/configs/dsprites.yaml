@@ -5,7 +5,7 @@ shared_params:
   # Dataset Configuration
   dataset_config:
     dataset: dsprites
-    batch_size: 128
+    batch_size: 512
     num_workers: 4
     root_dir: data/dsprites/dsprites_dep_0.npz # this is where you find the pre-sampled dataset
     sampling_percent: 1
@@ -51,13 +51,13 @@ shared_params:
   weight_decay: 0
   c_extractor_arch: dsprites_extractor
   cbm_optimizer: adam
-  cbm_learning_rate: 0.05
-  adv_learning_rate: 0.05
+  cbm_learning_rate: 0.005
+  adv_learning_rate: 0.005
   adv_optimizer: adam
   early_stopping_monitor: val_loss
   early_stopping_mode: min
   early_stopping_delta: 0.0
-  check_val_every_n_epoch: 1
+  check_val_every_n_epoch: 5
   momentum: 0.9
   project_name: "dspirites"
 
