@@ -26,7 +26,7 @@ shared_params:
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
   max_epochs: 500
   #concept_loss_weight: 1
-  learning_rate: 0.005
+  learning_rate: 0.0001
   bool: False
   sigmoidal_prob: False
   dropout_prob: 0.2
@@ -73,12 +73,12 @@ runs:
     #   sigmoidal_prob: True
 
  # SOFT:
-#    - architecture: 'ConceptBottleneckModel'
-#      run_name: "CBM_Sigmoid_1"
-#      bool: False
-#      extra_dims: 0
-#      sigmoidal_prob: True
-#      concept_loss_weight: 0.1
+    - architecture: 'ConceptBottleneckModel'
+      run_name: "CBM_Sigmoid_lr0.0001"
+      bool: False
+      extra_dims: 0
+      sigmoidal_prob: True
+      concept_loss_weight: 0.1
 
 # LOGITS:
     # - architecture: 'ConceptBottleneckModel'
@@ -100,7 +100,7 @@ runs:
 
  # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "critic_0delay_lambdac0.1_lambda_adv_1_lr0.0001_bs_4096_attempt2"
+      run_name: "critic_0delay_lambdac0.1_lambda_adv_1_lr0.0001_bs_4096_attempt3"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
