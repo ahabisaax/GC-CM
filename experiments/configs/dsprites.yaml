@@ -5,7 +5,7 @@ shared_params:
   # Dataset Configuration
   dataset_config:
     dataset: dsprites
-    batch_size: 512
+    batch_size: 2048
     num_workers: 4
     root_dir: data/dsprites/dsprites_dep_0.npz # this is where you find the pre-sampled dataset
     sampling_percent: 1
@@ -100,7 +100,7 @@ runs:
 
  # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "critic_0delay_lambdac0.1_lambda_adv_1"
+      run_name: "critic_0delay_lambdac0.1_lambda_adv_1_fix2"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
