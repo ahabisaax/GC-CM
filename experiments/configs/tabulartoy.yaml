@@ -25,7 +25,7 @@ shared_params:
 
 
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
-  max_epochs: 700
+  max_epochs: 500
   #concept_loss_weight: 1
   learning_rate: 0.05
   bool: False
