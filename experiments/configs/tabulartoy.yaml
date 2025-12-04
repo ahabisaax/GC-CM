@@ -107,7 +107,7 @@ runs:
 
  # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "critic_0delay_lambdac0.1_lambda_adv1_lr0.035_reattempt"
+      run_name: "critic_0delay_lambdac0.1_lambda_adv1_lr0.035_reattempt2"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
