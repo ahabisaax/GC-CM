@@ -52,7 +52,7 @@ shared_params:
   c_extractor_arch: dsprites_extractor
   cbm_optimizer: adam
   cbm_learning_rate: 0.001
-  adv_learning_rate: 0.002
+  adv_learning_rate: 0.003
   adv_optimizer: adam
   early_stopping_monitor: val_loss
   early_stopping_mode: min
