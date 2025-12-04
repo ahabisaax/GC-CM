@@ -26,13 +26,13 @@ shared_params:
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
   max_epochs: 500
   #concept_loss_weight: 1
-  learning_rate: 0.05
+  learning_rate: 0.005
   bool: False
   sigmoidal_prob: False
   dropout_prob: 0.2
   all_dropout: False
 
-  learning_rate_c2y: 0.001
+  learning_rate_c2y: 0.01
   optimizer_c2y: adam
   c2y_max_epochs: 10
   c2y_layers: [64, 64]
@@ -51,8 +51,8 @@ shared_params:
   weight_decay: 0
   c_extractor_arch: dsprites_extractor
   cbm_optimizer: adam
-  cbm_learning_rate: 0.05
-  adv_learning_rate: 0.05
+  cbm_learning_rate: 0.01
+  adv_learning_rate: 0.01
   adv_optimizer: adam
   early_stopping_monitor: val_loss
   early_stopping_mode: min
@@ -100,7 +100,7 @@ runs:
 
  # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "critic_0delay_lambdac0.1_lambda_adv_1_lr0.05_bs_4096"
+      run_name: "critic_0delay_lambdac0.1_lambda_adv_1_lr0.01_bs_4096"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
