@@ -1,4 +1,4 @@
-trials: 1
+trials: 2
 results_dir: results/dsprites_dep_0_models/
 
 shared_params:
