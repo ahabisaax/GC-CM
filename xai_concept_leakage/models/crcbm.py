@@ -4,6 +4,7 @@ import sklearn.metrics
 import torch
 import pytorch_lightning as pl
 from torchvision.models import resnet50, densenet121
+from torch.nn.utils import spectral_norm
 import numpy as np
 
 import xai_concept_leakage.train.utils as utils
@@ -199,7 +200,20 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
 
         self.cbm_params = list(self.x2c_model.parameters()) + list(self.c2y_model.parameters())
         if self.use_adversarial:
-            self.critic = copy.deepcopy(self.c2y_model)
+            critic_units = [n_concepts + extra_dims] + (c2y_layers or []) + [n_tasks]
+            critic_layers = []
+
+            for i in range(1, len(critic_units)):
+                lin_layer = torch.nn.Linear(critic_units[i - 1], critic_units[i])
+
+                # Apply Spectral Normalization
+                # This constrains the Lipschitz constant of the critic, preventing
+                # exploding gradients and stabilizing the min-max game.
+                critic_layers.append(spectral_norm(lin_layer))
+                if i != len(critic_units) - 1:
+                    critic_layers.append(torch.nn.LeakyReLU())
+
+            self.critic = torch.nn.Sequential(*critic_layers)
 
         # Intervention-specific fields/handlers:
         if active_intervention_values is not None:
