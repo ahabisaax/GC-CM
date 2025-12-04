@@ -51,8 +51,8 @@ shared_params:
   weight_decay: 0
   c_extractor_arch: tabulartoy_extractor
   cbm_optimizer: adam
-  cbm_learning_rate: 0.05
-  adv_learning_rate: 0.05
+  cbm_learning_rate: 0.0001
+  adv_learning_rate: 0.0001
   adv_optimizer: adam
   early_stopping_monitor: val_loss
   early_stopping_mode: min
@@ -107,7 +107,7 @@ runs:
 
  # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "tabulartoy_critic_0delay_lambdac0.1_lambda_adv1"
+      run_name: "critic_0delay_lambdac0.1_lambda_adv1_lr0.0001"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
@@ -116,7 +116,7 @@ runs:
       max_adversarial_lambda: 1
       adversarial_delay: 0
       adversarial_lambda_scheduler_warmup: None
-      adversarial_scheduler: "lagrange"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
+      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
       adaptive_lambda_beta: 0.99
       adaptive_lambda_scale: 0.5
 
