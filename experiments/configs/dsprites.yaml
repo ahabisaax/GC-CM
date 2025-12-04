@@ -57,7 +57,7 @@ shared_params:
   early_stopping_monitor: val_loss
   early_stopping_mode: min
   early_stopping_delta: 0.0
-  check_val_every_n_epoch: 5
+  check_val_every_n_epoch: 1
   momentum: 0.9
   project_name: "dspirites"
 
