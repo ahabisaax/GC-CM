@@ -5,7 +5,7 @@ shared_params:
   # Dataset Configuration
   dataset_config:
     dataset: dsprites
-    batch_size: 2048
+    batch_size: 4096
     num_workers: 4
     root_dir: data/dsprites/dsprites_dep_0.npz # this is where you find the pre-sampled dataset
     sampling_percent: 1
@@ -26,7 +26,7 @@ shared_params:
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
   max_epochs: 500
   #concept_loss_weight: 1
-  learning_rate: 0.001
+  learning_rate: 0.05
   bool: False
   sigmoidal_prob: False
   dropout_prob: 0.2
@@ -51,8 +51,8 @@ shared_params:
   weight_decay: 0
   c_extractor_arch: dsprites_extractor
   cbm_optimizer: adam
-  cbm_learning_rate: 0.001
-  adv_learning_rate: 0.01
+  cbm_learning_rate: 0.05
+  adv_learning_rate: 0.05
   adv_optimizer: adam
   early_stopping_monitor: val_loss
   early_stopping_mode: min
@@ -73,12 +73,12 @@ runs:
     #   sigmoidal_prob: True
 
  # SOFT:
-    - architecture: 'ConceptBottleneckModel'
-      run_name: "CBM_Sigmoid_1"
-      bool: False
-      extra_dims: 0
-      sigmoidal_prob: True
-      concept_loss_weight: 0.1
+#    - architecture: 'ConceptBottleneckModel'
+#      run_name: "CBM_Sigmoid_1"
+#      bool: False
+#      extra_dims: 0
+#      sigmoidal_prob: True
+#      concept_loss_weight: 0.1
 
 # LOGITS:
     # - architecture: 'ConceptBottleneckModel'
@@ -99,16 +99,16 @@ runs:
 
 
  # CR-CBM:
-#    - architecture: 'CriticRegularisedConceptBottleneckModel'
-#      run_name: "critic_0delay_lambdac0.1_lambda_adv_1_lr0.01"
-#      bool: False
-#      extra_dims: 0
-#      sigmoidal_prob: True
-#      concept_loss_weight: 0.1
-#      use_adversarial: True
-#      max_adversarial_lambda: 1
-#      adversarial_delay: 0
-#      adversarial_lambda_scheduler_warmup: None
-#      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
-#      adaptive_lambda_beta: 0.99
-#      adaptive_lambda_scale: 0.5
+    - architecture: 'CriticRegularisedConceptBottleneckModel'
+      run_name: "critic_0delay_lambdac0.1_lambda_adv_1_lr0.05_bs_4096"
+      bool: False
+      extra_dims: 0
+      sigmoidal_prob: True
+      concept_loss_weight: 0.1
+      use_adversarial: True
+      max_adversarial_lambda: 1
+      adversarial_delay: 0
+      adversarial_lambda_scheduler_warmup: None
+      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
+      adaptive_lambda_beta: 0.99
+      adaptive_lambda_scale: 0.5
