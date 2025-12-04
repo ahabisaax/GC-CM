@@ -407,7 +407,8 @@ def dsprites_dataloaders(
     c = torch.FloatTensor(c_train[~val_mask])[:, considered_concepts]
     y = torch.LongTensor(y_train[~val_mask])
     train_dl = torch.utils.data.DataLoader(
-        list(zip(x, y, c)), batch_size=batch_size, num_workers=num_workers
+        list(zip(x, y, c)), batch_size=batch_size, num_workers=num_workers,
+        pin_memory=True
     )
 
     x = torch.FloatTensor(x_train[val_mask])
@@ -415,7 +416,8 @@ def dsprites_dataloaders(
     c = torch.FloatTensor(c_train[val_mask])[:, considered_concepts]
     y = torch.LongTensor(y_train[val_mask])
     val_dl = torch.utils.data.DataLoader(
-        list(zip(x, y, c)), batch_size=batch_size, num_workers=num_workers
+        list(zip(x, y, c)), batch_size=batch_size, num_workers=num_workers,
+        pin_memory=True, persistent_workers=True
     )
 
     x = torch.FloatTensor(x_test)
@@ -423,6 +425,7 @@ def dsprites_dataloaders(
     c = torch.FloatTensor(c_test)[:, considered_concepts]
     y = torch.LongTensor(y_test)
     test_dl = torch.utils.data.DataLoader(
-        list(zip(x, y, c)), batch_size=batch_size, num_workers=num_workers
+        list(zip(x, y, c)), batch_size=batch_size, num_workers=num_workers,
+        pin_memory=True
     )
     return train_dl, val_dl, test_dl
