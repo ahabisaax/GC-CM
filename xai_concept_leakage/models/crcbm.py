@@ -724,7 +724,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             # values are fully given
             concept_loss = self.loss_concept(c_sem, c)
             concept_loss_scalar = concept_loss.detach().item()
-            if self.current_epoch< 2:
+            if self.current_epoch< 10:
                 loss = concept_loss
             else:
             #raw_gap = task_loss - adversarial_loss
