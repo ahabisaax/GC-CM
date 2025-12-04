@@ -1086,13 +1086,13 @@ if __name__ == "__main__":
 
     run_specific_dir = os.path.join(results_dir, run_name)
     if not args.force_cpu:
-        if not torch.cuda.is_available():
-            # THROW FATAL ERROR instead of switching to CPU
-            raise RuntimeError(
-                "⛔ FATAL ERROR: GPU requested but torch.cuda.is_available() is False! "
-                "Stopping job to prevent slow CPU training."
-            )
-        accelerator = "gpu"
+        # if not torch.cuda.is_available():
+        #     # THROW FATAL ERROR instead of switching to CPU
+        #     raise RuntimeError(
+        #         "⛔ FATAL ERROR: GPU requested but torch.cuda.is_available() is False! "
+        #         "Stopping job to prevent slow CPU training."
+        #     )
+        accelerator = "mps"
         devices = 1
         print
     else:
