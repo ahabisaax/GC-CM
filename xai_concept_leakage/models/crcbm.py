@@ -722,17 +722,19 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             # whenever no concept supervision is provided
             # Will only compute the concept loss for concepts whose certainty
             # values are fully given
-
             concept_loss = self.loss_concept(c_sem, c)
             concept_loss_scalar = concept_loss.detach().item()
+            if self.current_epoch< 2:
+                loss = concept_loss
+            else:
             #raw_gap = task_loss - adversarial_loss
             #hinge_penalty = torch.clamp(raw_gap, min=0)
             #adversarial_term = adversarial_loss_weight * hinge_penalty
-            adversarial_term = - (adversarial_loss_weight * adversarial_loss)
+                adversarial_term = - (adversarial_loss_weight * adversarial_loss)
 
-            loss = (
-                self.concept_loss_weight * concept_loss
-                + task_loss + adversarial_term)
+                loss = (
+                    self.concept_loss_weight * concept_loss
+                    + task_loss + adversarial_term)
         else:
             loss = task_loss + adversarial_loss
             concept_loss_scalar = 0.0
