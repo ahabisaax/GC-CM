@@ -45,7 +45,7 @@ def _evaluate_cbm(
         model.freeze()
 
         def _inner_call():
-            [eval_results] = trainer.test(model, current_dl)
+            [eval_results] = trainer.test(model, current_dl, ckpt_path="best")
             output = [
                 eval_results[f"test_c_accuracy"],
                 eval_results[f"test_y_accuracy"],
