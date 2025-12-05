@@ -1036,6 +1036,15 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                     lr=self.cbm_learning_rate,
                     weight_decay=self.weight_decay,
                 )
+            elif self.cbm_optimizer_name.lower() == "adamw":
+                cbm_optimizer = torch.optim.AdamW(
+                    self.cbm_params,
+                    lr=self.cbm_learning_rate,
+                    weight_decay=self.weight_decay,
+                    amsgrad=True,
+                    eps=1e-7
+                )
+
             else:
                 cbm_optimizer = torch.optim.SGD(
                     filter(lambda p: p.requires_grad, self.cbm_params),
@@ -1050,6 +1059,14 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                     lr=self.adv_learning_rate,
                     weight_decay=self.weight_decay,
                 )
+            elif self.adversarial_optimizer_name.lower() == "adamw":
+                adv_optimizer = torch.optim.AdamW(
+                    self.cbm_params,
+                    lr=self.cbm_learning_rate,
+                    weight_decay=self.weight_decay,
+                    amsgrad=True,
+                    eps=1e-7
+                )
             else:
                 adv_optimizer = torch.optim.SGD(
                     filter(lambda p: p.requires_grad, self.critic.parameters()),
@@ -1057,7 +1074,39 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                     momentum=self.momentum,
                     weight_decay=self.weight_decay,
                 )
-            return [adv_optimizer,cbm_optimizer]
+
+
+            cbm_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                cbm_optimizer,
+                verbose=True,
+            )
+
+            adv_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                adv_optimizer,
+                verbose=True,
+            )
+            return [
+                # Config for Optimizer 0 (Adversary)
+                {
+                    "optimizer": adv_optimizer,
+                    "lr_scheduler": {
+                        "scheduler": adv_scheduler,
+                        "monitor": "loss",  # Required for ReduceLROnPlateau
+                        "interval": "epoch",
+                        "frequency": 1,
+                    },
+                },
+                # Config for Optimizer 1 (CBM)
+                {
+                    "optimizer": cbm_optimizer,
+                    "lr_scheduler": {
+                        "scheduler": cbm_scheduler,
+                        "monitor": "loss",  # Required for ReduceLROnPlateau
+                        "interval": "epoch",
+                        "frequency": 1,
+                    },
+                },
+            ]
 
         else:
             if self.cbm_optimizer_name.lower() == "adam":
@@ -1065,6 +1114,14 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                     self.parameters(),
                     lr=self.cbm_learning_rate,
                     weight_decay=self.weight_decay,
+                )
+            elif self.cbm_optimizer_name.lower() == "adamw":
+                cbm_optimizer = torch.optim.AdamW(
+                    self.cbm_params,
+                    lr=self.cbm_learning_rate,
+                    weight_decay=self.weight_decay,
+                    amsgrad=True,
+                    eps=1e-7
                 )
             else:
                 cbm_optimizer = torch.optim.SGD(
