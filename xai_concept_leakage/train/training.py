@@ -8,6 +8,7 @@ import time
 import torch
 import inspect
 
+from pytorch_lightning.tuner.tuning import Tuner
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
@@ -227,6 +228,27 @@ def train_end_to_end_model(
                     )
                 ),
             )
+            tuner = Tuner(trainer)
+            lr_finder = tuner.lr_find(model, train_dl, val_dl, min_lr=1e-6, max_lr=1.0)
+            new_lr = lr_finder.suggestion()
+            print(f"Optimal CBM LR found: {new_lr}")
+
+            if trainer.logger:
+                # 1. Generate the plot using Lightning's built-in method
+                fig = lr_finder.plot(suggest=True)
+
+                # 2. Log the figure to W&B
+                # We access the underlying W&B run object via .experiment
+                trainer.logger.experiment.log({
+                    "lr_finder/plot": wandb.Image(fig),
+                    "lr_finder/suggestion": new_lr
+                })
+
+            # 4. Apply and Scale
+            model.adv_learning_rate = model.cbm_learning_rate = new_lr
+
+            # 5. Disable LR Find Mode for Real Training
+            model.lr_find_mode = False
             if activation_freq:
                 fit_trainer = utils.ActivationMonitorWrapper(
                     model=model,
@@ -307,7 +329,7 @@ def train_end_to_end_model(
                 model.freeze()
 
                 def _inner_call():
-                    [test_results] = trainer.test(model, test_dl)
+                    [test_results] = trainer.test(model, test_dl, ckpt_path="best")
                     output = [
                         test_results["test_c_accuracy"],
                         test_results["test_y_accuracy"],
