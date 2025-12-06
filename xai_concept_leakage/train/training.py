@@ -137,7 +137,7 @@ def train_end_to_end_model(
     single_frequency_epochs=0,
     gradient_clip_val=0,
     old_results=None,
-    enable_checkpointing=False,
+    enable_checkpointing=True,
     accelerator="auto",
     devices="auto",
     use_adversarial=True,
