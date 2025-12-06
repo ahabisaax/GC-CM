@@ -1093,7 +1093,7 @@ if __name__ == "__main__":
         #         "⛔ FATAL ERROR: GPU requested but torch.cuda.is_available() is False! "
         #         "Stopping job to prevent slow CPU training."
         #     )
-        accelerator = "mps"
+        accelerator = "gpu"
         devices = 1
         print
     else:
