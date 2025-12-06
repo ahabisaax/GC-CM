@@ -108,7 +108,7 @@ runs:
 
  # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "critic_0delay_lambdac0.1_lambda_adv1_lagrange_adamw_lr0.0001"
+      run_name: "critic_0delay_lambdac0.1_lambda_adv1_adamw_lr0.0001"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
@@ -117,7 +117,7 @@ runs:
       max_adversarial_lambda: 1.8
       adversarial_delay: 0
       adversarial_lambda_scheduler_warmup: None
-      adversarial_scheduler: "lagrange"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
+      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
       adaptive_lambda_beta: 0.99
       adaptive_lambda_scale: 0.5
       auto_lr: False
