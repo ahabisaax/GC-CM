@@ -217,6 +217,7 @@ def train_end_to_end_model(
                 ],
                 enable_checkpointing=enable_checkpointing,
                 gradient_clip_val=gradient_clip_val,
+                #accumulate_grad_batches=32,
                 # Only use the wandb logger when it is a fresh run
                 logger=(
                     logger

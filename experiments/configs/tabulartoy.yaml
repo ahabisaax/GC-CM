@@ -5,7 +5,7 @@ shared_params:
   # Dataset Configuration
   dataset_config:
     dataset: tabulartoy
-    batch_size: 128
+    batch_size: 4096
     num_workers: 4
     root_dir: data/TabularToy/tabulartoy_25_10k/ #for tabulartoy, this is where you find the pre-sampled dataset
     considered_concepts: ['0', '1', '2']
@@ -27,7 +27,7 @@ shared_params:
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
   max_epochs: 500
   #concept_loss_weight: 1
-  learning_rate: 0.05
+  learning_rate: 0.035
   bool: False
   sigmoidal_prob: False
   hidden_size: 64
@@ -50,10 +50,10 @@ shared_params:
   scheduler_step: 20
   weight_decay: 0
   c_extractor_arch: tabulartoy_extractor
-  cbm_optimizer: adamw
-  cbm_learning_rate: 0.01
-  adv_learning_rate: 0.01
-  adv_optimizer: adamw
+  cbm_optimizer: adam
+  cbm_learning_rate: 0.035
+  adv_learning_rate: 0.035
+  adv_optimizer: adam
   early_stopping_monitor: val_constrained_score
   early_stopping_mode: max
   early_stopping_delta: 0.0
@@ -108,7 +108,7 @@ runs:
 
  # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "critic_0delay_lambdac0.1_lambda_adv1_adamw_lr0.01"
+      run_name: "critic_0delay_lambdac0.1_lambda_adv1_adamw_lr0.035"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
