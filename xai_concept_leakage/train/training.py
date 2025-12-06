@@ -232,10 +232,33 @@ def train_end_to_end_model(
                     )
                 ),
             )
-            tuner = Tuner(trainer)
-            lr_finder = tuner.lr_find(model, train_dl, val_dl, min_lr=1e-6, max_lr=1.0)
-            new_lr = lr_finder.suggestion()
-            print(f"Optimal CBM LR found: {new_lr}")
+            if auto_lr_find:
+                print("Running Learning Rate Finder (on Concepts ONLY)...")
+
+                # 1. Backup original weights
+                original_task_weight = model.hparams.task_loss_weight
+                original_adv_weight = model.hparams.max_adversarial_loss_weight  # or however it's stored
+
+                # 2. Disable Task and Adversary for Tuning
+                # We want to find the max speed for learning CONCEPTS.
+                model.hparams.task_loss_weight = 0.0
+                model.hparams.max_adversarial_loss_weight = 0.0
+
+                # 3. Run the finder
+                tuner = Tuner(trainer)
+                lr_finder = tuner.lr_find(model, train_dl, val_dl, min_lr=1e-6, max_lr=1.0, num_training=100)
+
+                # 4. Restore original weights
+                model.hparams.task_loss_weight = original_task_weight
+                model.hparams.max_adversarial_loss_weight = original_adv_weight
+
+                # 5. Get the suggestion
+                new_lr = lr_finder.suggestion()
+                model.lr_find_mode = False
+                print(f"LR Finder found optimal CONCEPT LR: {new_lr}")
+
+                model.cbm_learning_rate = new_lr
+                model.adv_learning_rate = new_lr
 
             if trainer.logger:
                 # 1. Generate the plot using Lightning's built-in method
