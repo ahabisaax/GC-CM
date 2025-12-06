@@ -5,7 +5,7 @@ shared_params:
   # Dataset Configuration
   dataset_config:
     dataset: tabulartoy
-    batch_size: 4096
+    batch_size: 128
     num_workers: 4
     root_dir: data/TabularToy/tabulartoy_25_10k/ #for tabulartoy, this is where you find the pre-sampled dataset
     considered_concepts: ['0', '1', '2']
@@ -45,21 +45,22 @@ shared_params:
   weight_loss: True
   top_k_accuracy: null
   save_model: True
-  patience: 3000
+  patience: 100
   extra_dims: 0
   scheduler_step: 20
   weight_decay: 0
   c_extractor_arch: tabulartoy_extractor
-  cbm_optimizer: adam
+  cbm_optimizer: adamw
   cbm_learning_rate: 0.035
   adv_learning_rate: 0.035
-  adv_optimizer: adam
-  early_stopping_monitor: val_loss
-  early_stopping_mode: min
+  adv_optimizer: adamw
+  early_stopping_monitor: val_constrained_score
+  early_stopping_mode: max
   early_stopping_delta: 0.0
   check_val_every_n_epoch: 1
   momentum: 0.9
-  project_name: "learning_rate_batchsize_4096"
+  project_name: "new tabulartoy"
+
 
 
 
@@ -107,7 +108,7 @@ runs:
 
  # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "critic_0delay_lambdac0.1_lambda_adv1_lr0.035_reattempt4"
+      run_name: "critic_0delay_lambdac0.1_lambda_adv1_lrfinder"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
@@ -119,4 +120,5 @@ runs:
       adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
       adaptive_lambda_beta: 0.99
       adaptive_lambda_scale: 0.5
+      auto_lr: True
 
