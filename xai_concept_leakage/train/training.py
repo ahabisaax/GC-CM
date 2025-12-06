@@ -140,7 +140,8 @@ def train_end_to_end_model(
     accelerator="auto",
     devices="auto",
     use_adversarial=True,
-    adversarial_delay=0
+    adversarial_delay=0,
+    auto_lr_find=True,
 ):
     print(f"--- DEBUG: Executing train_end_to_end_model from file: {inspect.getfile(train_end_to_end_model)} ---")
     if seed is not None:
@@ -196,6 +197,9 @@ def train_end_to_end_model(
             model_saved_path = os.path.join(result_dir, f"{full_run_name}.pt")
             cb_loss = utils.LossTracker(use_adversarial=use_adversarial,
                                         adversarial_delay=adversarial_delay)
+
+            if auto_lr_find:
+                model.lr_find_mode = True
             trainer = pl.Trainer(
                 accelerator=accelerator,
                 devices=devices,
