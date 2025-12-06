@@ -51,8 +51,8 @@ shared_params:
   weight_decay: 0
   c_extractor_arch: tabulartoy_extractor
   cbm_optimizer: adamw
-  cbm_learning_rate: 0.0001
-  adv_learning_rate: 0.0001
+  cbm_learning_rate: 0.005
+  adv_learning_rate: 0.005
   adv_optimizer: adamw
   early_stopping_monitor: val_constrained_score
   early_stopping_mode: max
@@ -108,7 +108,7 @@ runs:
 
  # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "critic_0delay_lambdac0.1_lambda_adv1_adamw_lr0.0001"
+      run_name: "critic_0delay_lambdac0.1_lambda_adv1_adamw_lr0.005"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
