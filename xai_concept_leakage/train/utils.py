@@ -310,6 +310,12 @@ class LossTracker(Callback):
                 pl_module.log('val_ctl_unnormalised', mean_unnorm_ctl)
                 pl_module.log('val_ctl_normalised', mean_norm_ctl)
 
+                if mean_norm_ctl > 0.04:
+                    constrained_score = 0
+                else:
+                    constrained_score = mean_y_accuracy
+                pl_module.log("val_constrained_score", constrained_score)
+
                 # we don't apply the maximum here with zero but it should be applied technically for leakage
             if self.track_leakage:
                 self.val_c_learnt_temp.clear()
