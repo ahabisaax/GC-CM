@@ -11,6 +11,7 @@ import inspect
 from pytorch_lightning.tuner.tuning import Tuner
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+firom pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 from scipy.special import expit
 from sklearn.metrics import accuracy_score
@@ -200,6 +201,15 @@ def train_end_to_end_model(
 
             if auto_lr_find:
                 model.lr_find_mode = True
+
+            checkpoint_callback = ModelCheckpoint(
+                dirpath=os.path.join(result_dir, "checkpoints"),  # Save dir
+                filename="{epoch}-{val_loss:.2f}",
+                monitor=config["early_stopping_monitor"],  # Use same metric as EarlyStopping
+                mode=config["early_stopping_mode"],  # "min" or "max"
+                save_top_k=1,  # Save only the single best model
+                save_last=True,  # Also save the very last epoch
+            )
             trainer = pl.Trainer(
                 accelerator=accelerator,
                 devices=devices,
@@ -214,6 +224,7 @@ def train_end_to_end_model(
                         mode=config["early_stopping_mode"],
                     ),
                     cb_loss,
+                    checkpoint_callback
                 ],
                 enable_checkpointing=enable_checkpointing,
                 gradient_clip_val=gradient_clip_val,
