@@ -574,7 +574,8 @@ def main(
                             0,
                         ),
                         single_frequency_epochs=single_frequency_epochs,
-                        activation_freq=activation_freq
+                        activation_freq=activation_freq,
+                        auto_lr_find=run_config['auto_lr']
                     )
                 else:
                     model, model_results = train_fn(
