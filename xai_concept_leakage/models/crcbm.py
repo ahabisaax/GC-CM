@@ -255,6 +255,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         if self.use_adversarial:
             self.adversarial_delay = adversarial_delay
             self.max_adversarial_loss_weight = max_adversarial_lambda
+            self.lr_find_mode = False
 
             if self.adversarial_scheduler == 'proportional':
                 self.lambda_scheduler = ProportionalLambdaScheduler(
@@ -824,9 +825,9 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         }
         return critic_loss, result
 
-    def training_step(self, batch, batch_no, optimizer_idx):
+    def training_step(self, batch, batch_no, optimizer_idx=0):
         if self.use_adversarial:        # do critic optimisation step
-            if optimizer_idx == 0:
+            if optimizer_idx == 1:
                 if self.current_epoch < self.adversarial_delay:
                     return None  # Tell PyTorch Lightning to skip this optimizer step
                 print("Critic Optimisation Step ...")
@@ -835,7 +836,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                     self.log(name, val, prog_bar=True)
                 return {"loss": critic_loss}
             #do cbm optimisation step
-            if optimizer_idx == 1:
+            if optimizer_idx == 0:
                 print('CBM Optimisation Step ...')
                 loss, result = self._run_cbm_step(batch, batch_no, train=True)
                 for name, val in result.items():
@@ -1053,6 +1054,9 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                     weight_decay=self.weight_decay,
                 )
 
+            if self.lr_find_mode:
+                return cbm_optimizer
+
             if self.adversarial_optimizer_name.lower() == "adam":
                 adv_optimizer = torch.optim.Adam(
                     self.critic.parameters(),
@@ -1075,7 +1079,6 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                     weight_decay=self.weight_decay,
                 )
 
-
             cbm_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 cbm_optimizer,
                 verbose=True,
@@ -1086,21 +1089,21 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                 verbose=True,
             )
             return [
-                # Config for Optimizer 0 (Adversary)
+                # Config for Optimizer 0 (cbm)
                 {
-                    "optimizer": adv_optimizer,
+                    "optimizer": cbm_optimizer,
                     "lr_scheduler": {
-                        "scheduler": adv_scheduler,
+                        "scheduler": cbm_scheduler,
                         "monitor": "loss",  # Required for ReduceLROnPlateau
                         "interval": "epoch",
                         "frequency": 1,
                     },
                 },
-                # Config for Optimizer 1 (CBM)
+                # Config for Optimizer 1 (adv)
                 {
-                    "optimizer": cbm_optimizer,
+                    "optimizer": adv_optimizer,
                     "lr_scheduler": {
-                        "scheduler": cbm_scheduler,
+                        "scheduler": adv_scheduler,
                         "monitor": "loss",  # Required for ReduceLROnPlateau
                         "interval": "epoch",
                         "frequency": 1,
