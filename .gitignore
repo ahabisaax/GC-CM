@@ -79,3 +79,15 @@ htmlcov/
 # Miscellaneous
 *.log
 *.tmp
+results/
+logs/
+data/
+*.pt
+*.pth
+*.npy
+results/
+logs/
+data/
+*.pt
+*.pth
+*.npy
