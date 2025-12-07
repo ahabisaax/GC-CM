@@ -1,4 +1,4 @@
-trials: 3
+trials: 1
 results_dir: results/tabulartoy_25_10k_models/
 
 shared_params:
@@ -27,7 +27,7 @@ shared_params:
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
   max_epochs: 500
   #concept_loss_weight: 1
-  learning_rate: 0.035
+  learning_rate: 0.05
   bool: False
   sigmoidal_prob: False
   hidden_size: 64
@@ -45,21 +45,21 @@ shared_params:
   weight_loss: True
   top_k_accuracy: null
   save_model: True
-  patience: 100
+  patience: 200
   extra_dims: 0
   scheduler_step: 20
   weight_decay: 0
   c_extractor_arch: tabulartoy_extractor
-  cbm_optimizer: adam
-  cbm_learning_rate: 0.035
-  adv_learning_rate: 0.035
+  cbm_optimizer: adamw
+  cbm_learning_rate: 0.05
+  adv_learning_rate: 0.05
   adv_optimizer: adam
   early_stopping_monitor: val_constrained_score
   early_stopping_mode: max
   early_stopping_delta: 0.0
   check_val_every_n_epoch: 1
   momentum: 0.9
-  project_name: "new tabulartoy"
+  project_name: "tabulartoy"
 
 
 
@@ -108,13 +108,13 @@ runs:
 
  # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "critic_0delay_lambdac0.1_lambda_adv1_adamw_lr0.035_attempt2"
+      run_name: "critic_0delay_lambdac0.1_lambda_adv1_adamw_new_lr0.05"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
       concept_loss_weight: 0.1
       use_adversarial: True
-      max_adversarial_lambda: 1.8
+      max_adversarial_lambda: 1
       adversarial_delay: 0
       adversarial_lambda_scheduler_warmup: None
       adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
