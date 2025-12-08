@@ -104,13 +104,31 @@ CONCEPT_SEMANTICS = [
 ##########################################################
 ## SIMPLIFIED LOADER FUNCTION FOR STANDARDIZATION
 ##########################################################
+class CelebATargetTransform:
+    """
+    A picklable transform for CelebA targets.
+    """
 
+    def __init__(self, label_remap, concept_selection, num_classes):
+        self.label_remap = label_remap
+        self.concept_selection = concept_selection
+        self.num_classes = num_classes
+
+    def __call__(self, x):
+        identity = x[0]
+        attributes = x[1]
+        raw_id = identity.item() - 1
+        new_label = self.label_remap.get(raw_id, self.num_classes)
+        selected_attrs = attributes[self.concept_selection].float()
+
+        return [torch.tensor(new_label, dtype=torch.long), selected_attrs]
 
 def generate_data(
     config,
     root_dir=DATASET_DIR,
     seed=42,
     output_dataset_vars=False,
+    download=False
 ):
     if root_dir is None:
         root_dir = DATASET_DIR
@@ -132,7 +150,7 @@ def generate_data(
         celeba_train_data = torchvision.datasets.CelebA(
             root=root_dir,
             split="all",
-            download=True,
+            download=download,
             target_transform=lambda x: x[0].long() - 1,
             target_type=["attr"],
         )
@@ -170,7 +188,7 @@ def generate_data(
         celeba_train_data = torchvision.datasets.CelebA(
             root=root_dir,
             split="all",
-            download=True,
+            download=download,
             transform=transforms.Compose(
                 [
                     transforms.Resize(config["image_size"]),
@@ -213,7 +231,7 @@ def generate_data(
         celeba_train_data = torchvision.datasets.CelebA(
             root=root_dir,
             split="all",
-            download=True,
+            download=download,
             transform=transforms.Compose(
                 [
                     transforms.Resize(config["image_size"]),
@@ -260,7 +278,7 @@ def generate_data(
         celeba_train_data = torchvision.datasets.CelebA(
             root=root_dir,
             split="all",
-            download=True,
+            download=download,
             target_transform=lambda x: x[0].long() - 1,
             target_type=["identity"],
         )
@@ -289,12 +307,16 @@ def generate_data(
         label_remap = {}
         for i, label in enumerate(sorted_labels[: config["num_classes"]]):
             label_remap[label] = i
-
+        transform_instance = CelebATargetTransform(
+            label_remap=label_remap,
+            concept_selection=concept_selection,
+            num_classes=config["num_classes"]
+        )
         # Now reload by transform the labels accordingly
         celeba_train_data = torchvision.datasets.CelebA(
             root=root_dir,
             split="all",
-            download=True,
+            download=download,
             transform=transforms.Compose(
                 [
                     transforms.Resize(config["image_size"]),
@@ -304,18 +326,19 @@ def generate_data(
                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
                 ]
             ),
-            target_transform=lambda x: [
-                torch.tensor(
-                    # If it is not in our map, then we make it be the token
-                    # label config['num_classes'] which will be removed
-                    # afterwards
-                    label_remap.get(
-                        x[0].cpu().detach().item() - 1, config["num_classes"]
-                    ),
-                    dtype=torch.long,
-                ),
-                x[1][concept_selection].float(),
-            ],
+            # target_transform=lambda x: [
+            #     torch.tensor(
+            #         # If it is not in our map, then we make it be the token
+            #         # label config['num_classes'] which will be removed
+            #         # afterwards
+            #         label_remap.get(
+            #             x[0].cpu().detach().item() - 1, config["num_classes"]
+            #         ),
+            #         dtype=torch.long,
+            #     ),
+            #     x[1][concept_selection].float(),
+            # ],
+            target_transform=transform_instance,
             target_type=["identity", "attr"],
         )
         num_classes = config["num_classes"]
@@ -386,3 +409,4 @@ def generate_data(
         imbalance,
         (num_concepts, len(label_remap), concept_group_map),
     )
+
