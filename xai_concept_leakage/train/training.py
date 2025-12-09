@@ -142,7 +142,7 @@ def train_end_to_end_model(
     devices="auto",
     use_adversarial=True,
     adversarial_delay=0,
-    auto_lr_find=True,
+    auto_lr_find=False,
 ):
     print(f"--- DEBUG: Executing train_end_to_end_model from file: {inspect.getfile(train_end_to_end_model)} ---")
     if seed is not None:
@@ -228,7 +228,7 @@ def train_end_to_end_model(
                 ],
                 enable_checkpointing=enable_checkpointing,
                 gradient_clip_val=gradient_clip_val,
-                accumulate_grad_batches=32,
+                accumulate_grad_batches=config.get('accumulate_grad_batches',1),
                 # Only use the wandb logger when it is a fresh run
                 logger=(
                     logger
