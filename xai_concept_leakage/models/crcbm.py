@@ -682,6 +682,20 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                 y_adv_pred = self.critic((c_logits > 0.5).float())
             else:
                 y_adv_pred = self.critic(c_logits)
+
+        # with torch.no_grad():
+        #     if self.bool:
+        #         y_honest_logits = self.c2y_model((c > 0.5).float())
+        #     else:
+        #         y_honest_logits = self.c2y_model(c)
+        #
+        #     honest_loss = self.loss_task(
+        #         y_honest_logits if y_honest_logits.shape[-1] > 1 else y_honest_logits.reshape(-1),
+        #         y
+        #     )
+        #     # Detach to ensure it's a constant target
+        #     honest_loss_scalar = honest_loss.detach()
+
         if self.task_loss_weight != 0:
             task_loss = self.loss_task(
                 y_logits if y_logits.shape[-1] > 1 else y_logits.reshape(-1),
@@ -725,9 +739,9 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             # values are fully given
             concept_loss = self.loss_concept(c_sem, c)
             concept_loss_scalar = concept_loss.detach().item()
-            #raw_gap = task_loss - adversarial_loss
-            #hinge_penalty = torch.clamp(raw_gap, min=0)
-            #adversarial_term = adversarial_loss_weight * hinge_penalty
+            # raw_gap = honest_loss - adversarial_loss
+            # hinge_penalty = torch.clamp(raw_gap, min=0)
+            # adversarial_term = adversarial_loss_weight * hinge_penalty
             adversarial_term = - (adversarial_loss_weight * adversarial_loss)
 
             loss = (
@@ -804,7 +818,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         else:
             y_adv_logits = self.critic(c_pred)
 
-        # Calculate the critic's loss (it wants to be accurate)
+        # Calculate the critic's loss
         critic_loss = self.loss_adversarial(
             y_adv_logits if y_adv_logits.shape[-1] > 1 else y_adv_logits.reshape(-1),
             y,
