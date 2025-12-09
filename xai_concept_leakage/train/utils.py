@@ -132,16 +132,10 @@ class LossTracker(Callback):
 
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
         if isinstance(outputs, list):
-            critic_output = outputs[0]
-            if "loss" in critic_output:
-                self.train_critic_loss_temp.append(critic_output["loss"].item())
             for output in outputs:
                 if output is None:
                     continue
 
-            # To get critic_acc, you must return it from the training_step
-            if "critic_acc" in critic_output:
-                self.train_critic_acc_temp.append(critic_output["critic_acc"])
                 # 2. Skip if it's not a dictionary
                 if not isinstance(output, dict):
                     continue
@@ -335,7 +329,7 @@ class LossTracker(Callback):
                 pl_module.log('val_ctl_unnormalised', mean_unnorm_ctl)
                 pl_module.log('val_ctl_normalised', mean_norm_ctl)
 
-                if mean_norm_ctl > 0.04:
+                if mean_norm_ctl > 0.035:
                     constrained_score = 0
                 else:
                     constrained_score = mean_y_accuracy
