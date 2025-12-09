@@ -321,6 +321,58 @@ def _generate_dataset_and_update_config(experiment_config):
     )
 
 
+def generate_auto_run_name(config):
+    """
+    Automatically generates a descriptive run name based on hyperparameters.
+    Format: {Type}_{Optim}_{LR}_{Batch}_{Lambda}_{Scheduler}_{Delay}
+    """
+    components = []
+
+    # 1. Model Type & Architecture
+    if config.get("architecture") == "IndependentConceptBottleneckModel":
+        components.append("Hard")
+    elif not config.get("use_adversarial", False):
+        components.append("SoftCBM")
+    else:
+        components.append("CRCBM")
+
+    opt = config.get("cbm_optimizer", "adam").lower()
+    components.append(opt)
+
+    cbm_lr = config.get("cbm_learning_rate", 0.0)
+
+    def fmt_lr(lr):
+        return f"{lr:.0e}".replace("0e", "e") if lr < 0.01 else f"{lr}"
+
+    if config.get("use_adversarial", False) and config.get("n_critic_steps", 1) != 1:
+        components.append(f"TTUR_{config['n_critic_steps']}")
+
+    components.append(f"lr{fmt_lr(cbm_lr)}")
+
+    ds_config = config.get("dataset_config", {})
+    bs = ds_config.get("batch_size", "NA")
+    components.append(f"bs{bs}")
+
+    # 5. Adversarial Specifics (Only if adversarial)
+    if config.get("use_adversarial", False):
+        # Lambda
+        lam = config.get("max_adversarial_lambda", 1.0)
+        components.append(f"lam{lam}")
+
+        # Scheduler
+        sched = config.get("adversarial_scheduler", "const")
+        if sched is None: sched = "const"
+        components.append(f"{sched}")
+
+        #delay = config.get("adversarial_delay", 0)
+        #components.append(f"del{delay}")
+
+
+    c_weight = config.get("concept_loss_weight", 1.0)
+    components.append(f"lam_c{c_weight}")
+
+    return "_".join(components)
+
 def _perform_model_selection(
     model_selection_groups,
     model_selection_metrics,
@@ -451,16 +503,15 @@ def main(
                 run_config["split"] = split
 
                 old_results = None
-                if "run_name" not in run_config:
-                    run_name = (
-                        f"{run_config['architecture']}"
-                        f"{run_config.get('extra_name', '')}"
-                    )
-                    logging.warning(
-                        f"Did not find a run name so using the "
-                        f'name "{run_name}" by default'
-                    )
-                    run_config["run_name"] = run_name
+                if "run_name" not in run_config or run_config.get("run_name") == "auto":
+                    # Generate  name
+                    auto_name = generate_auto_run_name(run_config)
+                    extra = run_config.get('extra_name', '')
+                    if extra:
+                        auto_name += f"_{extra}"
+
+                    logging.info(f"Auto-generated run name: {auto_name}")
+                    run_config["run_name"] = auto_name
                 run_name = run_config["run_name"]
 
                 # Determine filtering in and filtering out of run
