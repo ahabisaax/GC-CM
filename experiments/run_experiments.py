@@ -330,7 +330,7 @@ def generate_auto_run_name(config):
 
     # 1. Model Type & Architecture
     if config.get("architecture") == "IndependentConceptBottleneckModel":
-        components.append("Hard")
+        components.append("HardCBM")
     elif not config.get("use_adversarial", False):
         components.append("SoftCBM")
     else:
@@ -603,6 +603,8 @@ def main(
                 # Train the model and get testing and validation results
 
                 if run_config.get("use_adversarial", False):
+                    if 'adv_learning_rate' not in run_config:
+                        run_config['adv_learning_rate'] = run_config['cbm_learning_rate']
                     model, model_results = train_fn(
                         run_name=run_name,
                         task_class_weights=task_class_weights,
@@ -628,8 +630,7 @@ def main(
                             0,
                         ),
                         single_frequency_epochs=single_frequency_epochs,
-                        activation_freq=activation_freq,
-                        auto_lr_find=run_config['auto_lr']
+                        activation_freq=activation_freq
                     )
                 else:
                     model, model_results = train_fn(
