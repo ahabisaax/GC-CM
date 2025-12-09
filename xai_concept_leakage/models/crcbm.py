@@ -49,6 +49,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         adversarial_optimizer="adam",
         momentum=0.9,
         cbm_learning_rate=0.01,
+        n_critic_steps=1,
         weight_decay=4e-05,
         weight_loss=None,
         task_class_weights=None,
@@ -256,6 +257,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             self.adversarial_delay = adversarial_delay
             self.max_adversarial_loss_weight = max_adversarial_lambda
             self.lr_find_mode = False
+            self.n_critic_steps = n_critic_steps
 
             if self.adversarial_scheduler == 'proportional':
                 self.lambda_scheduler = ProportionalLambdaScheduler(
@@ -840,7 +842,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         return critic_loss, result
 
     def training_step(self, batch, batch_no, optimizer_idx=0):
-        if self.use_adversarial:        # do critic optimisation step
+        if self.use_adversarial:
             if optimizer_idx == 1:
                 if self.current_epoch < self.adversarial_delay:
                     return None  # Tell PyTorch Lightning to skip this optimizer step
@@ -851,6 +853,9 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                 return {"loss": critic_loss}
             #do cbm optimisation step
             if optimizer_idx == 0:
+                if (batch_no + 1) % self.n_critic_steps != 0:
+                    return None
+
                 print('CBM Optimisation Step ...')
                 loss, result = self._run_cbm_step(batch, batch_no, train=True)
                 for name, val in result.items():
