@@ -131,26 +131,51 @@ class LossTracker(Callback):
             return np.mean(vec)
 
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
-
         if isinstance(outputs, list):
             critic_output = outputs[0]
             if "loss" in critic_output:
                 self.train_critic_loss_temp.append(critic_output["loss"].item())
+            for output in outputs:
+                if output is None:
+                    continue
 
             # To get critic_acc, you must return it from the training_step
             if "critic_acc" in critic_output:
                 self.train_critic_acc_temp.append(critic_output["critic_acc"])
+                # 2. Skip if it's not a dictionary
+                if not isinstance(output, dict):
+                    continue
+                is_cbm = "log" in output
+                if is_cbm:
+                    if "loss" in output:
+                        self.train_loss_temp.append(output["loss"].item())
 
-            if self.use_adversarial and trainer.current_epoch > self.adversarial_delay:
-                cbm_output = outputs[1]
-            else:
-                # no adversary so only one item in list which is cbms
-                cbm_output = outputs[0]
-            if "loss" in cbm_output:
-                self.train_loss_temp.append(cbm_output["loss"].item())
+                    # Extract logs
+                    logs = output["log"]
+                    if "y_accuracy" in logs:
+                        self.train_y_accuracy_temp.append(logs["y_accuracy"])
+                    if "c_accuracy" in logs:
+                        self.train_c_accuracy_temp.append(logs["c_accuracy"])
 
-        elif outputs and ("loss" in outputs):
-            self.train_loss_temp.append(outputs["loss"].item())
+                else:
+                    if "critic_loss" in output:
+                        self.train_critic_loss_temp.append(output["critic_loss"].item())
+                    elif "loss" in output:
+                        self.train_critic_loss_temp.append(output["loss"].item())
+
+                    if "critic_acc" in output:
+                        self.train_critic_acc_temp.append(output["critic_acc"])
+
+        elif isinstance(outputs, dict):
+            if "loss" in outputs:
+                self.train_loss_temp.append(outputs["loss"].item())
+
+            if "log" in outputs:
+                logs = outputs["log"]
+                if "y_accuracy" in logs:
+                    self.train_y_accuracy_temp.append(logs["y_accuracy"])
+                if "c_accuracy" in logs:
+                    self.train_c_accuracy_temp.append(logs["c_accuracy"])
 
 
     def on_validation_batch_end(
@@ -205,7 +230,7 @@ class LossTracker(Callback):
 
             # compute CTL
             if self.track_leakage and (
-                (trainer.current_epoch % 20 == 0) or
+                (trainer.current_epoch % 5 == 0) or
                 (trainer.current_epoch == trainer.max_epochs - 1)
             ):
                 all_c_learnt = torch.cat(self.val_c_learnt_temp).numpy()
