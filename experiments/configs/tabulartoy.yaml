@@ -1,11 +1,11 @@
-trials: 1
+trials: 2
 results_dir: results/tabulartoy_25_10k_models/
 
 shared_params:
   # Dataset Configuration
   dataset_config:
     dataset: tabulartoy
-    batch_size: 4096
+    batch_size: 64
     num_workers: 4
     root_dir: data/TabularToy/tabulartoy_25_10k/ #for tabulartoy, this is where you find the pre-sampled dataset
     considered_concepts: ['0', '1', '2']
@@ -25,7 +25,7 @@ shared_params:
 
 
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
-  max_epochs: 500
+  max_epochs: 200
   #concept_loss_weight: 1
   learning_rate: 0.05
   bool: False
@@ -53,13 +53,14 @@ shared_params:
   cbm_optimizer: adamw
   cbm_learning_rate: 0.035
   adv_learning_rate: 0.035
-  adv_optimizer: adam
+  adv_optimizer: adamw
   early_stopping_monitor: val_constrained_score
   early_stopping_mode: max
   early_stopping_delta: 0.0
   check_val_every_n_epoch: 1
   momentum: 0.9
-  project_name: "tabulartoy"
+  project_name: "new tabulartoy"
+  accumulate_grad_batches: 1
 
 
 
@@ -108,17 +109,19 @@ runs:
 
  # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "critic_0delay_lambdac0.1_lambda_adv1_adamw_new_lr0.035"
+      run_name: "auto"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
       concept_loss_weight: 0.1
       use_adversarial: True
-      max_adversarial_lambda: 1
+      max_adversarial_lambda: 1.1
       adversarial_delay: 0
       adversarial_lambda_scheduler_warmup: None
-      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
+      adversarial_scheduler: "lagrange"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
       adaptive_lambda_beta: 0.99
       adaptive_lambda_scale: 0.5
       auto_lr: False
+      n_critic_steps: 2
+      accumulate_grad_batches: 1
 
