@@ -1,4 +1,4 @@
-trials: 2
+trials: 5
 results_dir: results/tabulartoy_25_10k_models/
 
 shared_params:
@@ -52,7 +52,7 @@ shared_params:
   c_extractor_arch: tabulartoy_extractor
   cbm_optimizer: adam
   cbm_learning_rate: 0.05
-  adv_learning_rate: 0.05
+#  adv_learning_rate: 0.05
   adv_optimizer: adam
   early_stopping_monitor: val_constrained_score
   early_stopping_mode: max
@@ -109,19 +109,121 @@ runs:
 
  # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "auto"
+      run_name: "lr_0.05"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
       concept_loss_weight: 0.1
       use_adversarial: True
-      max_adversarial_lambda: 1.1
+      max_adversarial_lambda: 1
       adversarial_delay: 0
       adversarial_lambda_scheduler_warmup: None
-      adversarial_scheduler: "lagrange"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
+      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
       adaptive_lambda_beta: 0.99
       adaptive_lambda_scale: 0.5
       auto_lr: False
-      n_critic_steps: 2
-      accumulate_grad_batches:
+      n_critic_steps: 1
+      accumulate_grad_batches: 1
+      cbm_learning_rate: 0.05
+      #  adv_learning_rate: 0.05
+
+    - architecture: 'CriticRegularisedConceptBottleneckModel'
+      run_name: "lr_0.05"
+      bool: False
+      extra_dims: 0
+      sigmoidal_prob: True
+      concept_loss_weight: 0.1
+      use_adversarial: True
+      max_adversarial_lambda: 1
+      adversarial_delay: 0
+      adversarial_lambda_scheduler_warmup: None
+      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
+      adaptive_lambda_beta: 0.99
+      adaptive_lambda_scale: 0.5
+      auto_lr: False
+      n_critic_steps: 1
+      accumulate_grad_batches: 1
+      cbm_learning_rate: 0.05
+      #  adv_learning_rate: 0.05
+
+
+    - architecture: 'CriticRegularisedConceptBottleneckModel'
+      run_name: "lr_0.01"
+      bool: False
+      extra_dims: 0
+      sigmoidal_prob: True
+      concept_loss_weight: 0.1
+      use_adversarial: True
+      max_adversarial_lambda: 1
+      adversarial_delay: 0
+      adversarial_lambda_scheduler_warmup: None
+      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
+      adaptive_lambda_beta: 0.99
+      adaptive_lambda_scale: 0.5
+      auto_lr: False
+      n_critic_steps: 1
+      accumulate_grad_batches: 1
+      cbm_learning_rate: 0.01
+      #  adv_learning_rate: 0.05
+
+
+
+    - architecture: 'CriticRegularisedConceptBottleneckModel'
+      run_name: "lr_0.005"
+      bool: False
+      extra_dims: 0
+      sigmoidal_prob: True
+      concept_loss_weight: 0.1
+      use_adversarial: True
+      max_adversarial_lambda: 1
+      adversarial_delay: 0
+      adversarial_lambda_scheduler_warmup: None
+      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
+      adaptive_lambda_beta: 0.99
+      adaptive_lambda_scale: 0.5
+      auto_lr: False
+      n_critic_steps: 1
+      accumulate_grad_batches: 1
+      cbm_learning_rate: 0.005
+      #  adv_learning_rate: 0.05
+
+
+    - architecture: 'CriticRegularisedConceptBottleneckModel'
+      run_name: "lr_0.03"
+      bool: False
+      extra_dims: 0
+      sigmoidal_prob: True
+      concept_loss_weight: 0.1
+      use_adversarial: True
+      max_adversarial_lambda: 1
+      adversarial_delay: 0
+      adversarial_lambda_scheduler_warmup: None
+      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
+      adaptive_lambda_beta: 0.99
+      adaptive_lambda_scale: 0.5
+      auto_lr: False
+      n_critic_steps: 1
+      accumulate_grad_batches: 1
+      cbm_learning_rate: 0.03
+      #  adv_learning_rate: 0.05
+
+
+    - architecture: 'CriticRegularisedConceptBottleneckModel'
+      run_name: "lr_0.001"
+      bool: False
+      extra_dims: 0
+      sigmoidal_prob: True
+      concept_loss_weight: 0.1
+      use_adversarial: True
+      max_adversarial_lambda: 1
+      adversarial_delay: 0
+      adversarial_lambda_scheduler_warmup: None
+      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
+      adaptive_lambda_beta: 0.99
+      adaptive_lambda_scale: 0.5
+      auto_lr: False
+      n_critic_steps: 1
+      accumulate_grad_batches: 1
+      cbm_learning_rate: 0.001
+      #  adv_learning_rate: 0.05
 
