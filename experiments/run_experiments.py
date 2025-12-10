@@ -90,7 +90,7 @@ import xai_concept_leakage.data.mnist_add as mnist_data_module
 import xai_concept_leakage.data.tabulartoy_loader as tabulartoy_data_module
 import xai_concept_leakage.data.dsprites_loader as dsprites_data_module
 import xai_concept_leakage.data.shapes3d_loader as shapes3d_data_module
-import xai_concept_leakage.data.cub_loader as cub_data_module
+#import xai_concept_leakage.data.cub_loader as cub_data_module
 import xai_concept_leakage.interventions.utils as intervention_utils
 import xai_concept_leakage.train.evaluate as evaluation
 import xai_concept_leakage.train.training as training
@@ -216,8 +216,8 @@ def _generate_dataset_and_update_config(experiment_config):
         data_module = dsprites_data_module
     elif dataset_config["dataset"] == "shapes3d":
         data_module = shapes3d_data_module
-    elif dataset_config['dataset'] == 'cub':
-        data_module  = cub_data_module
+#    elif dataset_config['dataset'] == 'cub':
+#       data_module  = cub_data_module
 
     else:
         raise ValueError(f"Unsupported dataset {dataset_config['dataset']}!")
