@@ -58,7 +58,7 @@ shared_params:
   early_stopping_mode: max
   early_stopping_delta: 0.0
   momentum: 0.9
-  project_name: "new tabulartoy"
+  project_name: "tabulartoy batchsize experiment"
 
 
 
