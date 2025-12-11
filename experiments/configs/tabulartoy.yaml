@@ -26,7 +26,7 @@ shared_params:
 
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
   max_epochs: 200
-  patience: 50
+  patience: 200
   check_val_every_n_epoch: 1
   #concept_loss_weight: 1
   learning_rate: 0.01
