@@ -1,4 +1,4 @@
-trials: 5
+trials: 3
 results_dir: results/tabulartoy_25_10k_models/
 
 shared_params:
@@ -25,9 +25,11 @@ shared_params:
 
 
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
-  max_epochs: 200
+  max_epochs: 5000
+  patience: 200
+  check_val_every_n_epoch: 5
   #concept_loss_weight: 1
-  learning_rate: 0.05
+  learning_rate: 0.01
   bool: False
   sigmoidal_prob: False
   hidden_size: 64
@@ -45,22 +47,18 @@ shared_params:
   weight_loss: True
   top_k_accuracy: null
   save_model: True
-  patience: 200
   extra_dims: 0
   scheduler_step: 20
   weight_decay: 0
   c_extractor_arch: tabulartoy_extractor
-  cbm_optimizer: adam
-  cbm_learning_rate: 0.05
+  cbm_learning_rate: 0.01
 #  adv_learning_rate: 0.05
-  adv_optimizer: adam
+
   early_stopping_monitor: val_constrained_score
   early_stopping_mode: max
   early_stopping_delta: 0.0
-  check_val_every_n_epoch: 1
   momentum: 0.9
   project_name: "new tabulartoy"
-  accumulate_grad_batches: 32
 
 
 
@@ -106,10 +104,10 @@ runs:
     #   embedding_activation: "leakyrelu"
     #   concept_loss_weight: 10
 
-
- # CR-CBM:
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "lr_0.05"
+      dataset_config:
+        batch_size: 128
+      run_name: "auto"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
@@ -124,11 +122,17 @@ runs:
       auto_lr: False
       n_critic_steps: 1
       accumulate_grad_batches: 1
-      cbm_learning_rate: 0.05
       #  adv_learning_rate: 0.05
+      cbm_optimizer: adam
+      adv_optimizer: adam
+      grid_variables: [ 'cbm_learning_rate' ]
+      cbm_learning_rate: [ 0.001, 0.005, 0.01 , 0.05]
+
 
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "lr_0.05"
+      dataset_config:
+        batch_size: 512
+      run_name: "auto"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
@@ -143,12 +147,17 @@ runs:
       auto_lr: False
       n_critic_steps: 1
       accumulate_grad_batches: 1
-      cbm_learning_rate: 0.05
       #  adv_learning_rate: 0.05
+      cbm_optimizer: adam
+      adv_optimizer: adam
+      grid_variables: [ 'cbm_learning_rate' ]
+      cbm_learning_rate: [ 0.001, 0.005, 0.01 , 0.05]
 
 
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "lr_0.01"
+      dataset_config:
+        batch_size: 1024
+      run_name: "auto"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
@@ -163,13 +172,17 @@ runs:
       auto_lr: False
       n_critic_steps: 1
       accumulate_grad_batches: 1
-      cbm_learning_rate: 0.01
       #  adv_learning_rate: 0.05
-
+      cbm_optimizer: adam
+      adv_optimizer: adam
+      grid_variables: [ 'cbm_learning_rate' ]
+      cbm_learning_rate: [ 0.001, 0.005, 0.01 , 0.05 ]
 
 
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "lr_0.005"
+      dataset_config:
+        batch_size: 4096
+      run_name: "auto"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
@@ -184,46 +197,10 @@ runs:
       auto_lr: False
       n_critic_steps: 1
       accumulate_grad_batches: 1
-      cbm_learning_rate: 0.005
       #  adv_learning_rate: 0.05
+      cbm_optimizer: adam
+      adv_optimizer: adam
+      grid_variables: [ 'cbm_learning_rate' ]
+      cbm_learning_rate: [ 0.001, 0.005, 0.01 , 0.05 ]
 
-
-    - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "lr_0.03"
-      bool: False
-      extra_dims: 0
-      sigmoidal_prob: True
-      concept_loss_weight: 0.1
-      use_adversarial: True
-      max_adversarial_lambda: 1
-      adversarial_delay: 0
-      adversarial_lambda_scheduler_warmup: None
-      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
-      adaptive_lambda_beta: 0.99
-      adaptive_lambda_scale: 0.5
-      auto_lr: False
-      n_critic_steps: 1
-      accumulate_grad_batches: 1
-      cbm_learning_rate: 0.03
-      #  adv_learning_rate: 0.05
-
-
-    - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "lr_0.001"
-      bool: False
-      extra_dims: 0
-      sigmoidal_prob: True
-      concept_loss_weight: 0.1
-      use_adversarial: True
-      max_adversarial_lambda: 1
-      adversarial_delay: 0
-      adversarial_lambda_scheduler_warmup: None
-      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
-      adaptive_lambda_beta: 0.99
-      adaptive_lambda_scale: 0.5
-      auto_lr: False
-      n_critic_steps: 1
-      accumulate_grad_batches: 1
-      cbm_learning_rate: 0.001
-      #  adv_learning_rate: 0.05
 
