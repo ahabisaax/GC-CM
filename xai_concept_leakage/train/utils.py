@@ -329,7 +329,7 @@ class LossTracker(Callback):
                 pl_module.log('val_ctl_unnormalised', mean_unnorm_ctl)
                 pl_module.log('val_ctl_normalised', mean_norm_ctl)
 
-                if mean_norm_ctl > 0.035:
+                if mean_norm_ctl > 0.04 or mean_y_accuracy < 0.6:
                     constrained_score = 0
                 else:
                     constrained_score = mean_y_accuracy

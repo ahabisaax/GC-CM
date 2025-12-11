@@ -119,6 +119,7 @@ shared_params:
   adv_learning_rate: 0.05
   adv_optimizer: adam
   project_name: "cub"
+  accumulate_grad_batches: 1
 runs:
 
   - architecture: "ConceptBottleneckModel"
