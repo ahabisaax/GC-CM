@@ -687,19 +687,6 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             else:
                 y_adv_pred = self.critic(c_logits)
 
-        # with torch.no_grad():
-        #     if self.bool:
-        #         y_honest_logits = self.c2y_model((c > 0.5).float())
-        #     else:
-        #         y_honest_logits = self.c2y_model(c)
-        #
-        #     honest_loss = self.loss_task(
-        #         y_honest_logits if y_honest_logits.shape[-1] > 1 else y_honest_logits.reshape(-1),
-        #         y
-        #     )
-        #     # Detach to ensure it's a constant target
-        #     honest_loss_scalar = honest_loss.detach()
-
         if self.task_loss_weight != 0:
             task_loss = self.loss_task(
                 y_logits if y_logits.shape[-1] > 1 else y_logits.reshape(-1),
@@ -721,6 +708,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                     competencies=competencies,
                     prev_interventions=prev_interventions,
                 )
+
         if self.use_adversarial:
             if self.adversarial_scheduler == 'linear':
                 adversarial_loss_weight = self.get_adversarial_lambda_linear()
@@ -736,11 +724,6 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         self.log('current_adv_lambda', adversarial_loss_weight, on_step=False, on_epoch=True)
 
         if self.concept_loss_weight != 0:
-            # We separate this so that we are allowed to
-            # use arbitrary activations (i.e., not necessarily in [0, 1])
-            # whenever no concept supervision is provided
-            # Will only compute the concept loss for concepts whose certainty
-            # values are fully given
             concept_loss = self.loss_concept(c_sem, c)
             concept_loss_scalar = concept_loss.detach().item()
             # raw_gap = honest_loss - adversarial_loss
@@ -761,6 +744,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             c,
             y,
         )
+remove
         # our adversarial loss here is scaled by the weighting already
         result = {
             "c_accuracy": c_accuracy,
