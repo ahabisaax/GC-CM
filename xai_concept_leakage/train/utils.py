@@ -223,7 +223,7 @@ class LossTracker(Callback):
             self.val_c_accuracy_temp = []
 
             # compute CTL
-
+            constrained_score = 0
             if self.track_leakage and (
                 (trainer.current_epoch % 10 == 0) or
                 (trainer.current_epoch == trainer.max_epochs - 1)
@@ -334,7 +334,7 @@ class LossTracker(Callback):
                     constrained_score = 0
                 else:
                     constrained_score = mean_y_accuracy
-                pl_module.log("val_constrained_score", constrained_score)
+            pl_module.log("val_constrained_score", constrained_score)
 
                 # we don't apply the maximum here with zero but it should be applied technically for leakage
             if self.track_leakage:
