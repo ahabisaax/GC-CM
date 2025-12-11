@@ -662,6 +662,66 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             prev_interventions=prev_interventions,
         )
 
+    def _monitor_grad(self,
+                     batch_idx,
+                     task_loss,
+                     c_logits,
+                     adversarial_term,
+                     concept_loss,
+                      train):
+        if train and self.use_adversarial:
+            accumulate_grad = getattr(self.trainer, "accumulate_grad_batches", 1)
+            if isinstance(accumulate_grad, int):
+                if accumulate_grad ==1:
+                    log_frequency = 10 * accumulate_grad
+                else:
+                    log_frequency = 2 * accumulate_grad
+            else:
+                log_frequency = 50
+            should_log = (batch_idx % log_frequency == 0)
+
+            if should_log:
+
+                grads_task=None
+                if isinstance(task_loss, torch.Tensor) and task_loss.requires_grad:
+                    grads_task = torch.autograd.grad(
+                        task_loss, c_logits, retain_graph=True, allow_unused=True
+                    )[0]
+
+                # 2. Adversarial Gradient
+                grads_adv = None
+                if isinstance(adversarial_term, torch.Tensor) and adversarial_term.requires_grad:
+                    grads_adv = torch.autograd.grad(
+                        adversarial_term, c_logits, retain_graph=True, allow_unused=True
+                    )[0]
+
+                # 3. Concept Gradient
+                grads_conc = None
+                weighted_concept_loss = self.concept_loss_weight * concept_loss
+                if isinstance(weighted_concept_loss, torch.Tensor) and weighted_concept_loss.requires_grad:
+                    grads_conc = torch.autograd.grad(
+                        weighted_concept_loss, c_logits, retain_graph=True, allow_unused=True
+                    )[0]
+
+                # --- Log Norms (How strong is the push?) ---
+                if grads_task is not None:
+                    self.log("grads/norm_task", grads_task.norm())
+                if grads_adv is not None:
+                    self.log("grads/norm_adv", grads_adv.norm())
+                if grads_conc is not None:
+                    self.log("grads/norm_conc", grads_conc.norm())
+
+
+
+                # --- Log Alignment (Are they cancelling?) ---
+                if grads_task is not None and grads_adv is not None:
+                    g_task_flat = grads_task.view(-1)
+                    g_adv_flat = grads_adv.view(-1)
+                    cosine = torch.nn.functional.cosine_similarity(g_task_flat, g_adv_flat, dim=0)
+                    self.log("grads/cosine_task_vs_adv", cosine)
+                    residual = (g_task_flat + g_adv_flat).norm()
+                    self.log("grads/norm_residual_task_adv", residual)
+
     def _run_cbm_step(
         self,
         batch,
@@ -726,10 +786,13 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         if self.concept_loss_weight != 0:
             concept_loss = self.loss_concept(c_sem, c)
             concept_loss_scalar = concept_loss.detach().item()
-            # raw_gap = honest_loss - adversarial_loss
-            # hinge_penalty = torch.clamp(raw_gap, min=0)
-            # adversarial_term = adversarial_loss_weight * hinge_penalty
             adversarial_term = - (adversarial_loss_weight * adversarial_loss)
+            self._monitor_grad(batch_idx,
+                     task_loss,
+                     c_logits,
+                     adversarial_term,
+                     concept_loss,
+                   train=train)
 
             loss = (
                 self.concept_loss_weight * concept_loss
@@ -744,7 +807,6 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             c,
             y,
         )
-remove
         # our adversarial loss here is scaled by the weighting already
         result = {
             "c_accuracy": c_accuracy,
