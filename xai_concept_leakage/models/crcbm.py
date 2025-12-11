@@ -673,7 +673,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             accumulate_grad = getattr(self.trainer, "accumulate_grad_batches", 1)
             if isinstance(accumulate_grad, int):
                 if accumulate_grad ==1:
-                    log_frequency = 10 * accumulate_grad
+                    log_frequency = 50 * accumulate_grad
                 else:
                     log_frequency = 2 * accumulate_grad
             else:
