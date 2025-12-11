@@ -5,7 +5,7 @@ shared_params:
   # Dataset Configuration
   dataset_config:
     dataset: tabulartoy
-    batch_size: 64
+    batch_size: 4096
     num_workers: 4
     root_dir: data/TabularToy/tabulartoy_25_10k/ #for tabulartoy, this is where you find the pre-sampled dataset
     considered_concepts: ['0', '1', '2']
