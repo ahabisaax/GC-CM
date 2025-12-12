@@ -5,7 +5,7 @@ shared_params:
   # Dataset Configuration
   dataset_config:
     dataset: tabulartoy
-    batch_size: 128
+    batch_size: 64
     num_workers: 4
     root_dir: data/TabularToy/tabulartoy_25_10k/ #for tabulartoy, this is where you find the pre-sampled dataset
     considered_concepts: ['0', '1', '2']
@@ -25,9 +25,7 @@ shared_params:
 
 
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
-  max_epochs: 700
-  patience: 700
-  check_val_every_n_epoch: 1
+
   #concept_loss_weight: 1
   learning_rate: 0.01
   bool: False
@@ -54,12 +52,15 @@ shared_params:
   cbm_learning_rate: 0.035
 #  adv_learning_rate: 0.05
 
-  early_stopping_monitor: val_constrained_score
+  early_stopping_monitor: pareto_score
   early_stopping_mode: max
   early_stopping_delta: 0.0
   momentum: 0.9
   project_name: "tabulartoy batchsize experiment"
-  #~check_val_every_n_epoch: 1
+  max_epochs: 200
+  patience: 100
+  check_val_every_n_epoch: 5
+
 
 
 
@@ -106,7 +107,7 @@ runs:
     #   concept_loss_weight: 10
 
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "gradclip2_bs64"
+      run_name: "gradclip2_bs64_not 128"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
@@ -120,7 +121,7 @@ runs:
       adaptive_lambda_scale: 0.5
       auto_lr: False
       n_critic_steps: 1
-      accumulate_grad_batches: 32
+      accumulate_grad_batches: 64
       #  adv_learning_rate: 0.05
       cbm_optimizer: adam
       adv_optimizer: adam
