@@ -107,7 +107,7 @@ runs:
     #   concept_loss_weight: 10
 
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "gradclip2_bs64_adamw"
+      run_name: "gradclip2_bs64_adam_0.01"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
@@ -123,10 +123,10 @@ runs:
       n_critic_steps: 1
       accumulate_grad_batches: 64
       #  adv_learning_rate: 0.05
-      cbm_optimizer: adamw
-      adv_optimizer: adamw
+      cbm_optimizer: adam
+      adv_optimizer: adam
       #grid_variables: [ 'cbm_learning_rate' ]
-      cbm_learning_rate: 0.05
+      cbm_learning_rate: 0.01
 
 #    - architecture: 'CriticRegularisedConceptBottleneckModel'
 #      run_name: "auto"
