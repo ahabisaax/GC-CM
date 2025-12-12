@@ -112,18 +112,18 @@ runs:
       sigmoidal_prob: True
       concept_loss_weight: 0.1
       use_adversarial: True
-      max_adversarial_lambda: 1
+      max_adversarial_lambda: 1.1
       adversarial_delay: 0
       adversarial_lambda_scheduler_warmup: None
-      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
+      adversarial_scheduler: "lagrange"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
       adaptive_lambda_beta: 0.99
       adaptive_lambda_scale: 0.5
       auto_lr: False
       n_critic_steps: 1
       accumulate_grad_batches: 1
       #  adv_learning_rate: 0.05
-      cbm_optimizer: adamw
-      adv_optimizer: adamw
+      cbm_optimizer: adam
+      adv_optimizer: adam
       #grid_variables: [ 'cbm_learning_rate' ]
       cbm_learning_rate: 0.05
 
