@@ -216,6 +216,7 @@ class LossTracker(Callback):
         self.val_y_accuracies.append(mean_y_accuracy)
         self.val_loss_temp = []
         self.val_y_accuracy_temp = []
+        pareto_score = 0
         if not self.black_box:
             #             print("self.val_c_accuracy_temp:")
             #             print(self.val_c_accuracy_temp)
@@ -224,7 +225,6 @@ class LossTracker(Callback):
             self.val_c_accuracy_temp = []
 
             # compute CTL
-            pareto_score = 0
             if self.track_leakage and (
                 (trainer.current_epoch % self.check == 0) or
                 (trainer.current_epoch == trainer.max_epochs - 1)
@@ -332,15 +332,17 @@ class LossTracker(Callback):
                 pl_module.log('val_ctl_normalised', mean_norm_ctl)
                 pareto_score = mean_y_accuracy - mean_norm_ctl
 
-
-
-            pl_module.log("val_constrained_score", pareto_score)
-
-                # we don't apply the maximum here with zero but it should be applied technically for leakage
             if self.track_leakage:
                 self.val_c_learnt_temp.clear()
                 self.val_c_true_temp.clear()
                 self.val_y_true_temp.clear()
+
+
+
+        pl_module.log("val_constrained_score", pareto_score)
+
+                # we don't apply the maximum here with zero but it should be applied technically for leakage
+
 ################################################################################
 ## HELPER FUNCTIONS
 ################################################################################
