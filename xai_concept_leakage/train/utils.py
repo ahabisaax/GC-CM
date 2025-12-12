@@ -217,6 +217,7 @@ class LossTracker(Callback):
         self.val_loss_temp = []
         self.val_y_accuracy_temp = []
         pareto_score = 0
+
         if not self.black_box:
             #             print("self.val_c_accuracy_temp:")
             #             print(self.val_c_accuracy_temp)
@@ -339,7 +340,7 @@ class LossTracker(Callback):
 
 
 
-        pl_module.log("val_pareto_score", pareto_score)
+            pl_module.log("val_pareto_score", pareto_score)
 
                 # we don't apply the maximum here with zero but it should be applied technically for leakage
 
