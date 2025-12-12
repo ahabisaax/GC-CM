@@ -475,7 +475,7 @@ def main(
     loglevel = os.environ["LOGLEVEL"]
     logging.info(f'Setting log level to: "{loglevel}"')
 
-    os.makedirs(result_dir, exist_ok=True)
+
     results = {}
     for split in range(
         shared_params.get("start_split", 0),
@@ -498,7 +498,7 @@ def main(
                 trial_config
             ):
                 run_config = copy.deepcopy(run_config)
-                run_config["result_dir"] = result_dir
+
                 experiment_utils.evaluate_expressions(run_config, soft=True)
                 run_config["split"] = split
 
@@ -513,6 +513,8 @@ def main(
                     logging.info(f"Auto-generated run name: {auto_name}")
                     run_config["run_name"] = auto_name
                 run_name = run_config["run_name"]
+                os.makedirs(run_name, exist_ok=True)
+                run_config["result_dir"] = run_name
 
                 # Determine filtering in and filtering out of run
                 if filter_out_regex is not None:
