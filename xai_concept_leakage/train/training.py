@@ -453,7 +453,8 @@ def train_end_to_end_model(
                 )
     else:
         cb_loss = utils.LossTracker(use_adversarial=use_adversarial,
-                                    adversarial_delay=adversarial_delay)
+                                    adversarial_delay=adversarial_delay,
+                                    check_leakage=5)
         callbacks = [
             EarlyStopping(
                 monitor=config["early_stopping_monitor"],

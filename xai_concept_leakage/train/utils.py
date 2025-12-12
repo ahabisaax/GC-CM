@@ -84,12 +84,13 @@ class LossTracker(Callback):
     def __init__(self, use_adversarial,
                  adversarial_delay,
                  black_box=False,
-                 track_leakage=True):
+                 track_leakage=True, check_leakage=5):
         super().__init__()
         self.black_box = black_box
         self.use_adversarial = use_adversarial
         self.adversarial_delay = adversarial_delay
         self.track_leakage = track_leakage
+        self.check = check_leakage
 
         self.train_loss_temp = []
         self.train_y_accuracy_temp = []
@@ -223,9 +224,9 @@ class LossTracker(Callback):
             self.val_c_accuracy_temp = []
 
             # compute CTL
-            constrained_score = 0
+            pareto_score = 0
             if self.track_leakage and (
-                (trainer.current_epoch % 10 == 0) or
+                (trainer.current_epoch % self.check == 0) or
                 (trainer.current_epoch == trainer.max_epochs - 1)
             ):
                 all_c_learnt = torch.cat(self.val_c_learnt_temp).numpy()
@@ -329,12 +330,11 @@ class LossTracker(Callback):
                 pl_module.log('val_icl_task_ratio', task_icl_ratio)
                 pl_module.log('val_ctl_unnormalised', mean_unnorm_ctl)
                 pl_module.log('val_ctl_normalised', mean_norm_ctl)
+                pareto_score = mean_y_accuracy - mean_norm_ctl
 
-                if mean_norm_ctl > 0.04 or mean_y_accuracy < 0.6:
-                    constrained_score = 0
-                else:
-                    constrained_score = mean_y_accuracy
-            pl_module.log("val_constrained_score", constrained_score)
+
+
+            pl_module.log("val_constrained_score", pareto_score)
 
                 # we don't apply the maximum here with zero but it should be applied technically for leakage
             if self.track_leakage:
