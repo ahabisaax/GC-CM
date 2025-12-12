@@ -106,7 +106,7 @@ runs:
     #   concept_loss_weight: 10
 
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "local"
+      run_name: "auto"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
@@ -122,8 +122,8 @@ runs:
       n_critic_steps: 1
       accumulate_grad_batches: 1
       #  adv_learning_rate: 0.05
-      cbm_optimizer: adam
-      adv_optimizer: adam
+      cbm_optimizer: adamw
+      adv_optimizer: adamw
       #grid_variables: [ 'cbm_learning_rate' ]
       cbm_learning_rate: 0.05
 
