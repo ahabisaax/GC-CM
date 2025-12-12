@@ -5,7 +5,7 @@ shared_params:
   # Dataset Configuration
   dataset_config:
     dataset: tabulartoy
-    batch_size: 4096
+    batch_size: 128
     num_workers: 4
     root_dir: data/TabularToy/tabulartoy_25_10k/ #for tabulartoy, this is where you find the pre-sampled dataset
     considered_concepts: ['0', '1', '2']
@@ -106,7 +106,7 @@ runs:
     #   concept_loss_weight: 10
 
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "gradclip2"
+      run_name: "gradclip2_bs64"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
@@ -120,7 +120,7 @@ runs:
       adaptive_lambda_scale: 0.5
       auto_lr: False
       n_critic_steps: 1
-      accumulate_grad_batches: 1
+      accumulate_grad_batches: 32
       #  adv_learning_rate: 0.05
       cbm_optimizer: adam
       adv_optimizer: adam
