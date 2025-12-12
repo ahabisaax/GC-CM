@@ -5,7 +5,7 @@ shared_params:
   # Dataset Configuration
   dataset_config:
     dataset: tabulartoy
-    batch_size: 32
+    batch_size: 4096
     num_workers: 4
     root_dir: data/TabularToy/tabulartoy_25_10k/ #for tabulartoy, this is where you find the pre-sampled dataset
     considered_concepts: ['0', '1', '2']
@@ -25,8 +25,8 @@ shared_params:
 
 
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
-  max_epochs: 200
-  patience: 200
+  max_epochs: 700
+  patience: 700
   check_val_every_n_epoch: 1
   #concept_loss_weight: 1
   learning_rate: 0.01
@@ -51,12 +51,12 @@ shared_params:
   scheduler_step: 20
   weight_decay: 0
   c_extractor_arch: tabulartoy_extractor
-  cbm_learning_rate: 0.01
+  cbm_learning_rate: 0.035
 #  adv_learning_rate: 0.05
 
-  early_stopping_monitor: val_constrained_score
-  early_stopping_mode: max
-  early_stopping_delta: 0.0
+  #early_stopping_monitor: val_constrained_score
+  #early_stopping_mode: max
+  #early_stopping_delta: 0.0
   momentum: 0.9
   project_name: "tabulartoy batchsize experiment"
   #~check_val_every_n_epoch: 1
@@ -106,7 +106,7 @@ runs:
     #   concept_loss_weight: 10
 
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "auto"
+      run_name: ""
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
@@ -124,10 +124,31 @@ runs:
       #  adv_learning_rate: 0.05
       cbm_optimizer: adam
       adv_optimizer: adam
-      grid_variables: [ 'cbm_learning_rate' ]
-      cbm_learning_rate: [ 0.001, 0.005, 0.01 , 0.05]
+      #grid_variables: [ 'cbm_learning_rate' ]
+      cbm_learning_rate: 0.05
 
-
+#    - architecture: 'CriticRegularisedConceptBottleneckModel'
+#      run_name: "auto"
+#      bool: False
+#      extra_dims: 0
+#      sigmoidal_prob: True
+#      concept_loss_weight: 0.1
+#      use_adversarial: True
+#      max_adversarial_lambda: 1
+#      adversarial_delay: 0
+#      adversarial_lambda_scheduler_warmup: None
+#      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
+#      adaptive_lambda_beta: 0.99
+#      adaptive_lambda_scale: 0.5
+#      auto_lr: False
+#      n_critic_steps: 1
+#      accumulate_grad_batches: 1
+#      #  adv_learning_rate: 0.05
+#      cbm_optimizer: adam
+#      adv_optimizer: adam
+#      #grid_variables: [ 'cbm_learning_rate' ]
+#      #cbm_learning_rate: [ 0.001, 0.005, 0.01 , 0.05]
+#      cbm_learning_rate: 0.01
 
 
 
