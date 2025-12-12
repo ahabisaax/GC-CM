@@ -1160,7 +1160,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                 {
                     "optimizer": cbm_optimizer,
                     "lr_scheduler": {
-                        "scheduler": cbm_scheduler,
+                        #"scheduler": cbm_scheduler,
                         "monitor": "loss",  # Required for ReduceLROnPlateau
                         "interval": "epoch",
                         "frequency": 1,
@@ -1170,7 +1170,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                 {
                     "optimizer": adv_optimizer,
                     "lr_scheduler": {
-                        "scheduler": adv_scheduler,
+                        #"scheduler": adv_scheduler,
                         "monitor": "loss",  # Required for ReduceLROnPlateau
                         "interval": "epoch",
                         "frequency": 1,
