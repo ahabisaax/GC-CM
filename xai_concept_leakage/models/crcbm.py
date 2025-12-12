@@ -1155,28 +1155,29 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                 adv_optimizer,
                 verbose=True,
             )
-            return [
-                # Config for Optimizer 0 (cbm)
-                {
-                    "optimizer": cbm_optimizer,
-                    "lr_scheduler": {
-                        #"scheduler": cbm_scheduler,
-                        "monitor": "loss",  # Required for ReduceLROnPlateau
-                        "interval": "epoch",
-                        "frequency": 1,
-                    },
-                },
-                # Config for Optimizer 1 (adv)
-                {
-                    "optimizer": adv_optimizer,
-                    "lr_scheduler": {
-                        #"scheduler": adv_scheduler,
-                        "monitor": "loss",  # Required for ReduceLROnPlateau
-                        "interval": "epoch",
-                        "frequency": 1,
-                    },
-                },
-            ]
+            return [cbm_optimizer, adv_optimizer]
+            # [
+            #     # Config for Optimizer 0 (cbm)
+            #     {
+            #         "optimizer": cbm_optimizer,
+            #         "lr_scheduler": {
+            #             #"scheduler": cbm_scheduler,
+            #             "monitor": "loss",  # Required for ReduceLROnPlateau
+            #             "interval": "epoch",
+            #             "frequency": 1,
+            #         },
+            #     },
+            #     # Config for Optimizer 1 (adv)
+            #     {
+            #         "optimizer": adv_optimizer,
+            #         "lr_scheduler": {
+            #             #"scheduler": adv_scheduler,
+            #             "monitor": "loss",  # Required for ReduceLROnPlateau
+            #             "interval": "epoch",
+            #             "frequency": 1,
+            #         },
+            #     },
+            # ]
 
         else:
             if self.cbm_optimizer_name.lower() == "adam":
