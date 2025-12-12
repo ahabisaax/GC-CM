@@ -722,6 +722,21 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                     residual = (g_task_flat + g_adv_flat).norm()
                     self.log("grads/norm_residual_task_adv", residual)
 
+    def get_lambda_scheduler(self,
+                         task_loss_scalar,
+                        adversarial_loss_scalar):
+        if self.adversarial_scheduler == 'linear':
+            adversarial_loss_weight = self.get_adversarial_lambda_linear()
+        elif self.adversarial_scheduler in ['lagrange', 'proportional']:
+            adversarial_loss_weight = self.lambda_scheduler.update(task_loss_scalar, adversarial_loss_scalar)
+        elif self.adversarial_scheduler == 'sigmoid':
+            adversarial_loss_weight = self.get_adversarial_lambda_sigmoid()
+        else:
+            adversarial_loss_weight = self.max_adversarial_loss_weight
+        self.log('current_adv_lambda', adversarial_loss_weight, on_step=False, on_epoch=True)
+        return adversarial_loss_weight
+
+
     def _run_cbm_step(
         self,
         batch,
@@ -747,16 +762,6 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             else:
                 y_adv_pred = self.critic(c_logits)
 
-        if self.task_loss_weight != 0:
-            task_loss = self.loss_task(
-                y_logits if y_logits.shape[-1] > 1 else y_logits.reshape(-1),
-                y,
-            )
-            task_loss_scalar = task_loss.detach()
-        else:
-            task_loss = 0
-            task_loss_scalar = 0
-
         adversarial_loss, adversarial_loss_scalar = self._extra_losses(
                     x=x,
                     y=y,
@@ -769,19 +774,22 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                     prev_interventions=prev_interventions,
                 )
 
+        if self.task_loss_weight != 0:
+            task_loss = self.loss_task(
+                y_logits if y_logits.shape[-1] > 1 else y_logits.reshape(-1),
+                y,
+            )
+            task_loss_scalar = task_loss.detach()
+        else:
+            task_loss = 0
+            task_loss_scalar = 0
+
+
         if self.use_adversarial:
-            if self.adversarial_scheduler == 'linear':
-                adversarial_loss_weight = self.get_adversarial_lambda_linear()
-            elif self.adversarial_scheduler in ['lagrange', 'proportional']:
-                adversarial_loss_weight = self.lambda_scheduler.update(task_loss_scalar, adversarial_loss_scalar)
-            elif self.adversarial_scheduler == 'sigmoid':
-                adversarial_loss_weight = self.get_adversarial_lambda_sigmoid()
-            else:
-                adversarial_loss_weight = self.max_adversarial_loss_weight
+            adversarial_loss_weight = self.get_lambda_scheduler(task_loss_scalar, adversarial_loss_scalar)
         else:
             adversarial_loss = 0
             adversarial_loss_weight = 0
-        self.log('current_adv_lambda', adversarial_loss_weight, on_step=False, on_epoch=True)
 
         if self.concept_loss_weight != 0:
             concept_loss = self.loss_concept(c_sem, c)
