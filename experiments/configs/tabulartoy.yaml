@@ -54,9 +54,9 @@ shared_params:
   cbm_learning_rate: 0.035
 #  adv_learning_rate: 0.05
 
-  #early_stopping_monitor: val_constrained_score
-  #early_stopping_mode: max
-  #early_stopping_delta: 0.0
+  early_stopping_monitor: val_constrained_score
+  early_stopping_mode: max
+  early_stopping_delta: 0.0
   momentum: 0.9
   project_name: "tabulartoy batchsize experiment"
   #~check_val_every_n_epoch: 1
@@ -106,7 +106,7 @@ runs:
     #   concept_loss_weight: 10
 
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: ""
+      run_name: "local"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
