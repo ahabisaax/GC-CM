@@ -106,7 +106,7 @@ runs:
     #   concept_loss_weight: 10
 
     - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "gradclip"
+      run_name: "gradclip2"
       bool: False
       extra_dims: 0
       sigmoidal_prob: True
