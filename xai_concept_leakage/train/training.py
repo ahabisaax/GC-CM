@@ -48,7 +48,7 @@ def _evaluate_cbm(
 
         def _inner_call():
             [eval_results] = trainer.test(model, current_dl
-                                          #, ckpt_path="best"
+                                          , ckpt_path="best"
                                           )
             output = [
                 eval_results[f"test_c_accuracy"],
@@ -328,7 +328,7 @@ def train_end_to_end_model(
 
                 def _inner_call():
                     [test_results] = trainer.test(model, test_dl,
-                                                  #ckpt_path="best"
+                                                  ckpt_path="best"
                                                   )
                     output = [
                         test_results["test_c_accuracy"],
