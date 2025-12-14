@@ -1,4 +1,4 @@
-trials: 3
+trials: 5
 results_dir: results/tabulartoy_25_10k_models/
 
 shared_params:
@@ -25,18 +25,16 @@ shared_params:
 
 
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
-
-  #concept_loss_weight: 1
-  learning_rate: 0.01
+  learning_rate: 0.05
   bool: False
   sigmoidal_prob: False
   hidden_size: 64
   dropout_prob: 0.2
   all_dropout: False
 
-  learning_rate_c2y: 0.1
-  optimizer_c2y: sgd
-  c2y_max_epochs: 1
+  learning_rate_c2y: 0.05
+  optimizer_c2y: adam
+  c2y_max_epochs: 300
   linear_c2y: True
 
   n_hidden: 64
@@ -49,38 +47,39 @@ shared_params:
   scheduler_step: 20
   weight_decay: 0
   c_extractor_arch: tabulartoy_extractor
-  cbm_learning_rate: 0.035
+  cbm_learning_rate: 0.05
 #  adv_learning_rate: 0.05
 
   early_stopping_monitor: 'val_pareto_score'
   early_stopping_mode: max
   early_stopping_delta: 0.0
   momentum: 0.9
-  project_name: "tabulartoy batchsize experiment"
-  max_epochs: 200
+  project_name: "Tabulartoy final"
+  max_epochs: 300
   patience: 100
   check_val_every_n_epoch: 1
-
-
-
-
+  #TODO check how early stopping interacts with soft and independent training of cbm
 
 runs:
 # HARD:
-#     - architecture: 'IndependentConceptBottleneckModel'
-#       run_name: "independent2"
-#       bool: True
-#       extra_dims: 0
-#       sigmoidal_extra_capacity: False
-#       sigmoidal_prob: True
+     - architecture: 'IndependentConceptBottleneckModel'
+       run_name: "auto"
+       bool: True
+       extra_dims: 0
+       sigmoidal_extra_capacity: False
+       sigmoidal_prob: True
+       accumulate_grad_batches: 1
+       grid_variables: [ 'concept_loss_weight' ]
+       concept_loss_weight: [0.1, 0.5, 1]
 
-# # SOFT:
-#    - architecture: 'ConceptBottleneckModel'
-#      run_name: "softcbm_lambda_c0.1_lr0.05"
-#      bool: False
-#      extra_dims: 0
-#      sigmoidal_prob: True
-#      concept_loss_weight: 0.1
+# SOFT:
+     - architecture: 'ConceptBottleneckModel'
+       run_name: "auto"
+       bool: False
+       extra_dims: 0
+       sigmoidal_prob: True
+       grid_variables: ['concept_loss_weight']
+       concept_loss_weight: [0.1, 0.5, 1]
 
 #    - architecture: 'ConceptBottleneckModel'
 #      run_name: "CBM_Sigmoid_5"
@@ -106,50 +105,29 @@ runs:
     #   embedding_activation: "leakyrelu"
     #   concept_loss_weight: 10
 
-    - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "gradclip2_bs64_adam_0.01"
-      bool: False
-      extra_dims: 0
-      sigmoidal_prob: True
-      concept_loss_weight: 0.1
-      use_adversarial: True
-      max_adversarial_lambda: 1
-      adversarial_delay: 0
-      adversarial_lambda_scheduler_warmup: None
-      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
-      adaptive_lambda_beta: 0.99
-      adaptive_lambda_scale: 0.5
-      auto_lr: False
-      n_critic_steps: 1
-      accumulate_grad_batches: 64
-      #  adv_learning_rate: 0.05
-      cbm_optimizer: adam
-      adv_optimizer: adam
-      #grid_variables: [ 'cbm_learning_rate' ]
-      cbm_learning_rate: 0.01
 
-#    - architecture: 'CriticRegularisedConceptBottleneckModel'
-#      run_name: "auto"
-#      bool: False
-#      extra_dims: 0
-#      sigmoidal_prob: True
-#      concept_loss_weight: 0.1
-#      use_adversarial: True
-#      max_adversarial_lambda: 1
-#      adversarial_delay: 0
-#      adversarial_lambda_scheduler_warmup: None
-#      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
-#      adaptive_lambda_beta: 0.99
-#      adaptive_lambda_scale: 0.5
-#      auto_lr: False
-#      n_critic_steps: 1
-#      accumulate_grad_batches: 1
-#      #  adv_learning_rate: 0.05
-#      cbm_optimizer: adam
-#      adv_optimizer: adam
-#      #grid_variables: [ 'cbm_learning_rate' ]
-#      #cbm_learning_rate: [ 0.001, 0.005, 0.01 , 0.05]
-#      cbm_learning_rate: 0.01
+  # CR-CBM:
+     - architecture: 'CriticRegularisedConceptBottleneckModel'
+       run_name: "critic"
+       bool: False
+       extra_dims: 0
+       sigmoidal_prob: True
+       use_adversarial: True
+       max_adversarial_lambda: 1.0
+       adversarial_delay: 0
+       adversarial_lambda_scheduler_warmup: null  # Changed 'None' to 'null'
+       adversarial_scheduler: "none"
+       adaptive_lambda_beta: 0.99
+       adaptive_lambda_scale: 0.5
+       auto_lr: False
+       n_critic_steps: 1
+       accumulate_grad_batches: 64
+       cbm_optimizer: adam
+       adv_optimizer: adam
+       cbm_learning_rate: 0.05
+       grid_variables: ['concept_loss_weight']
+       concept_loss_weight: [0.1, 0.5, 1.0]
+
 
 
 
