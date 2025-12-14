@@ -50,9 +50,7 @@ shared_params:
   cbm_learning_rate: 0.05
 #  adv_learning_rate: 0.05
 
-  early_stopping_monitor: 'val_pareto_score'
-  early_stopping_mode: max
-  early_stopping_delta: 0.0
+
   momentum: 0.9
   project_name: "Tabulartoy final"
   max_epochs: 200
@@ -72,6 +70,8 @@ runs:
        cbm_optimizer: adam
        grid_variables: [ 'concept_loss_weight' ]
        concept_loss_weight: [0.1, 0.5, 1]
+       early_stopping_monitor: None
+       early_stopping_delta: 0.0
 
 # SOFT:
      - architecture: 'ConceptBottleneckModel'
@@ -82,6 +82,8 @@ runs:
        grid_variables: ['concept_loss_weight']
        concept_loss_weight: [0.1, 0.5, 1]
        cbm_optimizer: adam
+       early_stopping_monitor: 'val_y_accuracy'
+       early_stopping_delta: 0.0
 
 
 #    - architecture: 'ConceptBottleneckModel'
@@ -130,6 +132,9 @@ runs:
        cbm_learning_rate: 0.05
        grid_variables: ['concept_loss_weight']
        concept_loss_weight: [0.1, 0.5, 1.0]
+       early_stopping_monitor: 'val_pareto_score'
+       early_stopping_mode: max
+       early_stopping_delta: 0.0
 
 
 
