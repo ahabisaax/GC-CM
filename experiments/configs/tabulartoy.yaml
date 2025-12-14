@@ -70,7 +70,8 @@ runs:
        cbm_optimizer: adam
        grid_variables: [ 'concept_loss_weight' ]
        concept_loss_weight: [0.1, 0.5, 1]
-       early_stopping_monitor: None
+       early_stopping_monitor: 'val_loss'
+       early_stopping_mode: max
        early_stopping_delta: 0.0
 
 # SOFT:
