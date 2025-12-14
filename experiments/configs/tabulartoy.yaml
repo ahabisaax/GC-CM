@@ -34,7 +34,7 @@ shared_params:
 
   learning_rate_c2y: 0.05
   optimizer_c2y: adam
-  c2y_max_epochs: 300
+  c2y_max_epochs: 100
   linear_c2y: True
 
   n_hidden: 64
@@ -55,7 +55,7 @@ shared_params:
   early_stopping_delta: 0.0
   momentum: 0.9
   project_name: "Tabulartoy final"
-  max_epochs: 300
+  max_epochs: 200
   patience: 100
   check_val_every_n_epoch: 1
   #TODO check how early stopping interacts with soft and independent training of cbm
@@ -71,8 +71,6 @@ runs:
        accumulate_grad_batches: 1
        grid_variables: [ 'concept_loss_weight' ]
        concept_loss_weight: [0.1, 0.5, 1]
-       early_stopping_monitor: 'val_y_accuracy'
-       patience: 200
 
 # SOFT:
      - architecture: 'ConceptBottleneckModel'
@@ -82,6 +80,7 @@ runs:
        sigmoidal_prob: True
        grid_variables: ['concept_loss_weight']
        concept_loss_weight: [0.1, 0.5, 1]
+
 
 #    - architecture: 'ConceptBottleneckModel'
 #      run_name: "CBM_Sigmoid_5"
