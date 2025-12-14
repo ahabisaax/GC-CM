@@ -69,6 +69,7 @@ runs:
        sigmoidal_extra_capacity: False
        sigmoidal_prob: True
        accumulate_grad_batches: 1
+       cbm_optimizer: adam
        grid_variables: [ 'concept_loss_weight' ]
        concept_loss_weight: [0.1, 0.5, 1]
 
@@ -80,6 +81,7 @@ runs:
        sigmoidal_prob: True
        grid_variables: ['concept_loss_weight']
        concept_loss_weight: [0.1, 0.5, 1]
+       cbm_optimizer: adam
 
 
 #    - architecture: 'ConceptBottleneckModel'
