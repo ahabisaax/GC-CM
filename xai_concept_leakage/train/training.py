@@ -137,7 +137,7 @@ def train_end_to_end_model(
     save_model=True,
     activation_freq=0,
     single_frequency_epochs=0,
-    gradient_clip_val=1,
+    gradient_clip_val=0,
     old_results=None,
     enable_checkpointing=True,
     accelerator="auto",
@@ -1096,7 +1096,7 @@ def train_independent_model(
         #also use adversarial and delay are only to check if critic is involved for output type not leakage tracking
         cb_loss = utils.LossTracker(use_adversarial=False,
                                     adversarial_delay=-1,
-                                    track_leakage=True)
+                                    track_leakage=False)
 
         if project_name and (rerun or (not chpt_exists)):
             # Create ONE logger.
