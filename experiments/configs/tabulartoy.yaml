@@ -53,26 +53,25 @@ shared_params:
 
   momentum: 0.9
   project_name: "Tabulartoy final"
-  max_epochs: 200
-  patience: 100
-  check_val_every_n_epoch: 1
-  #TODO check how early stopping interacts with soft and independent training of cbm
+  max_epochs: 250
+  patience: 150
+  check_val_every_n_epoch: 5
 
 runs:
 # HARD:
-#     - architecture: 'IndependentConceptBottleneckModel'
-#       run_name: "auto"
-#       bool: True
-#       extra_dims: 0
-#       sigmoidal_extra_capacity: False
-#       sigmoidal_prob: True
-#       accumulate_grad_batches: 1
-#       cbm_optimizer: adam
-#       grid_variables: [ 'concept_loss_weight' ]
-#       concept_loss_weight: [0.1, 0.5, 1]
-#       early_stopping_monitor: 'val_loss'
-#       early_stopping_mode: max
-#       early_stopping_delta: 0.0
+     - architecture: 'IndependentConceptBottleneckModel'
+       run_name: "auto"
+       bool: True
+       extra_dims: 0
+       sigmoidal_extra_capacity: False
+       sigmoidal_prob: True
+       accumulate_grad_batches: 1
+       cbm_optimizer: adam
+       grid_variables: [ 'concept_loss_weight' ]
+       concept_loss_weight: [0.1, 0.5, 1]
+       early_stopping_monitor: 'val_loss'
+       early_stopping_mode: max
+       early_stopping_delta: 0.0
 
 # SOFT:
      - architecture: 'ConceptBottleneckModel'
@@ -86,6 +85,7 @@ runs:
        early_stopping_monitor: 'val_y_accuracy'
        early_stopping_delta: 0.0
        early_stopping_mode: max
+       gradient_clip_val: 1.0
 
 
 #    - architecture: 'ConceptBottleneckModel'
@@ -115,7 +115,7 @@ runs:
 
   # CR-CBM:
      - architecture: 'CriticRegularisedConceptBottleneckModel'
-       run_name: "critic"
+       run_name: "auto"
        bool: False
        extra_dims: 0
        sigmoidal_prob: True
@@ -137,6 +137,7 @@ runs:
        early_stopping_monitor: 'val_pareto_score'
        early_stopping_mode: max
        early_stopping_delta: 0.0
+       gradient_clip_val: 1.0
 
 
 
