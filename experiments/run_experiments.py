@@ -512,9 +512,13 @@ def main(
 
                     logging.info(f"Auto-generated run name: {auto_name}")
                     run_config["run_name"] = auto_name
-                run_name = run_config["run_name"]
-                os.makedirs(run_name, exist_ok=True)
-                run_config["result_dir"] = run_name
+                    run_name = run_config["run_name"]
+                else:
+                    run_name = run_config["run_name"]
+
+                result_dir = os.path.join(result_dir, run_name)
+                run_config["result_dir"] = result_dir
+                os.makedirs(result_dir, exist_ok=True)
 
                 # Determine filtering in and filtering out of run
                 if filter_out_regex is not None:
@@ -1144,12 +1148,6 @@ if __name__ == "__main__":
 
     run_specific_dir = os.path.join(results_dir, run_name)
     if not args.force_cpu:
-        # if not torch.cuda.is_available():
-        #     # THROW FATAL ERROR instead of switching to CPU
-        #     raise RuntimeError(
-        #         "⛔ FATAL ERROR: GPU requested but torch.cuda.is_available() is False! "
-        #         "Stopping job to prevent slow CPU training."
-        #     )
         accelerator = "gpu"
         devices = 1
     else:
