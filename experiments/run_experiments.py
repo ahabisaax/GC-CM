@@ -1152,7 +1152,6 @@ if __name__ == "__main__":
         #     )
         accelerator = "gpu"
         devices = 1
-        print
     else:
         accelerator = "cpu"
         devices = "auto"
