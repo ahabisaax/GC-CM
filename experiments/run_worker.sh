@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #$ -N CBM_Leakage_Run
-#$ -o ~/Scratch/xai-crcbm/logs/test_run.out
-#$ -e ~/Scratch/xai-crcbm/logs/test_run.err
+#$ -o ~/Scratch/xai-crcbm/logs/test_run_dsrpites.out
+#$ -e ~/Scratch/xai-crcbm/logs/test_run_dsprites.err
 #$ -pe smp 4
 #$ -l h_rt=16:00:00
 #$ -l mem=8G
@@ -30,12 +30,12 @@ export MKL_NUM_THREADS=$NSLOTS
 # --- 3. PATHS ---
 PROJECT_ROOT=~/Scratch/xai-crcbm
 #CHANGE FOR EACH DATASET
-RESULTS_DIR=$PROJECT_ROOT/results/tabulartoy_25_10k_models
-CONFIG_PATH=$PROJECT_ROOT/experiments/configs/tabulartoy.yaml
+RESULTS_DIR=$PROJECT_ROOT/results/dsprites_models
+CONFIG_PATH=$PROJECT_ROOT/experiments/configs/dsprites.yaml
 
 export PYTHONPATH=$PROJECT_ROOT:$PYTHONPATH
 # --- 5. RUN PYTHON WORKER ---
 $CONDA_PREFIX/bin/python -u $PROJECT_ROOT/experiments/run_experiments.py \
     --config $CONFIG_PATH \
-    --project_name "TabularToy Final" \
+    --project_name "Dsprites" \
     --output_dir $RESULTS_DIR
