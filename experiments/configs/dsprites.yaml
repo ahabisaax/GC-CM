@@ -74,8 +74,9 @@ runs:
        grid_variables: [ 'concept_loss_weight' ]
        concept_loss_weight: [0.1, 0.5, 1]
        early_stopping_monitor: 'val_loss'
-       early_stopping_mode: max
+       early_stopping_mode: min
        early_stopping_delta: 0.0
+       patience: 500
 
 # SOFT:
      - architecture: 'ConceptBottleneckModel'
@@ -89,7 +90,8 @@ runs:
        early_stopping_monitor: 'val_y_accuracy'
        early_stopping_delta: 0.0
        early_stopping_mode: max
-       gradient_clip_val: 1.0
+       gradient_clip_val: 0.0
+       patience: 500
 
 # LOGITS:
     # - architecture: 'ConceptBottleneckModel'
@@ -131,3 +133,4 @@ runs:
        early_stopping_mode: max
        early_stopping_delta: 0.0
        gradient_clip_val: 1.0
+       patience: 200
