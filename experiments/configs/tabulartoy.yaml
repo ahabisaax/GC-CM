@@ -54,7 +54,7 @@ shared_params:
   momentum: 0.9
   project_name: "Tabulartoy final"
   max_epochs: 250
-  check_val_every_n_epoch: 5
+  check_val_every_n_epoch: 1
 
 runs:
 # HARD:
@@ -137,7 +137,7 @@ runs:
        early_stopping_monitor: 'val_pareto_score'
        early_stopping_mode: max
        early_stopping_delta: 0.0
-       patience: 150
+       patience: 200
        gradient_clip_val: 1.0
 
 
