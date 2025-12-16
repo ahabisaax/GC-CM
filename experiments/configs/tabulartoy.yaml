@@ -54,7 +54,6 @@ shared_params:
   momentum: 0.9
   project_name: "Tabulartoy final"
   max_epochs: 250
-  patience: 150
   check_val_every_n_epoch: 5
 
 runs:
@@ -67,11 +66,11 @@ runs:
        sigmoidal_prob: True
        accumulate_grad_batches: 1
        cbm_optimizer: adam
-       grid_variables: [ 'concept_loss_weight' ]
-       concept_loss_weight: [0.1, 0.5, 1]
        early_stopping_monitor: 'val_loss'
-       early_stopping_mode: max
+       early_stopping_mode: min
+       patience: 350
        early_stopping_delta: 0.0
+       concept_loss_weight: 1
 
 # SOFT:
      - architecture: 'ConceptBottleneckModel'
@@ -85,7 +84,8 @@ runs:
        early_stopping_monitor: 'val_y_accuracy'
        early_stopping_delta: 0.0
        early_stopping_mode: max
-       gradient_clip_val: 1.0
+       gradient_clip_val: 0
+       patience: 250
 
 
 #    - architecture: 'ConceptBottleneckModel'
@@ -122,7 +122,7 @@ runs:
        use_adversarial: True
        max_adversarial_lambda: 1.0
        adversarial_delay: 0
-       adversarial_lambda_scheduler_warmup: null  # Changed 'None' to 'null'
+       adversarial_lambda_scheduler_warmup: None
        adversarial_scheduler: "none"
        adaptive_lambda_beta: 0.99
        adaptive_lambda_scale: 0.5
@@ -137,6 +137,7 @@ runs:
        early_stopping_monitor: 'val_pareto_score'
        early_stopping_mode: max
        early_stopping_delta: 0.0
+       patience: 150
        gradient_clip_val: 1.0
 
 
