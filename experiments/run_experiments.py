@@ -498,6 +498,7 @@ def main(
                 trial_config
             ):
                 run_config = copy.deepcopy(run_config)
+                result_dir = run_config["results_dir"]
 
                 experiment_utils.evaluate_expressions(run_config, soft=True)
                 run_config["split"] = split
@@ -517,7 +518,6 @@ def main(
                     run_name = run_config["run_name"]
 
                 result_dir = os.path.join(result_dir, run_name)
-                run_config["result_dir"] = result_dir
                 os.makedirs(result_dir, exist_ok=True)
 
                 # Determine filtering in and filtering out of run
