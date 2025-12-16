@@ -3,7 +3,7 @@
 #$ -o ~/Scratch/xai-crcbm/logs/test_run.out
 #$ -e ~/Scratch/xai-crcbm/logs/test_run.err
 #$ -pe smp 4
-#$ -l h_rt=03:00:00
+#$ -l h_rt=16:00:00
 #$ -l mem=8G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
@@ -30,20 +30,12 @@ export MKL_NUM_THREADS=$NSLOTS
 # --- 3. PATHS ---
 PROJECT_ROOT=~/Scratch/xai-crcbm
 #CHANGE FOR EACH DATASET
-RESULTS_DIR=$PROJECT_ROOT/results/Tabulartoy
+RESULTS_DIR=$PROJECT_ROOT/results/tabulartoy_25_10k_models
 CONFIG_PATH=$PROJECT_ROOT/experiments/configs/tabulartoy.yaml
-
-TEMP_RESULTS_DIR=$TMPDIR/results
-mkdir -p $TEMP_RESULTS_DIR
-
-cd $TMPDIR
-echo "Changed working directory to $TMPDIR"
 
 export PYTHONPATH=$PROJECT_ROOT:$PYTHONPATH
 # --- 5. RUN PYTHON WORKER ---
 $CONDA_PREFIX/bin/python -u $PROJECT_ROOT/experiments/run_experiments.py \
     --config $CONFIG_PATH \
-    --project_name "Myriad Test Run" \
-    --output_dir $TEMP_RESULTS_DIR
-
-rsync -a --recursive $TEMP_RESULTS_DIR/ $FINAL_RESULTS_DIR/
+    --project_name "TabularToy Final" \
+    --output_dir $RESULTS_DIR
