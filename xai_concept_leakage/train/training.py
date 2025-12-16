@@ -205,14 +205,16 @@ def train_end_to_end_model(
         ) as run:
             model_saved_path = os.path.join(result_dir, f"{full_run_name}.pt")
             cb_loss = utils.LossTracker(use_adversarial=use_adversarial,
-                                        adversarial_delay=adversarial_delay)
+                                        adversarial_delay=adversarial_delay,
+                                        check_leakage=5,
+                                        every_n_check_val=config.get("check_val_every_n_epoch", 5))
 
             if auto_lr_find:
                 model.lr_find_mode = True
 
             checkpoint_callback = ModelCheckpoint(
                 dirpath=os.path.join(result_dir, "checkpoints"),
-                filename="best-checkpoint",
+                filename="{epoch}-val_constrained_score={val_pareto_score:.4f}",
                 monitor=config["early_stopping_monitor"],
                 mode=config["early_stopping_mode"],
                 save_top_k=1,
@@ -420,7 +422,8 @@ def train_end_to_end_model(
     else:
         cb_loss = utils.LossTracker(use_adversarial=use_adversarial,
                                     adversarial_delay=adversarial_delay,
-                                    check_leakage=5)
+                                    check_leakage=5,
+                                    every_n_check_val=config.get("check_val_every_n_epoch", 5))
         callbacks = [
             EarlyStopping(
                 monitor=config["early_stopping_monitor"],

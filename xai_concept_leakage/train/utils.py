@@ -84,13 +84,15 @@ class LossTracker(Callback):
     def __init__(self, use_adversarial,
                  adversarial_delay,
                  black_box=False,
-                 track_leakage=True, check_leakage=5):
+                 track_leakage=True, check_leakage=5,
+                 every_n_check_val=1):
         super().__init__()
         self.black_box = black_box
         self.use_adversarial = use_adversarial
         self.adversarial_delay = adversarial_delay
         self.track_leakage = track_leakage
         self.check = check_leakage
+        self.val_every_n = every_n_check_val
 
         self.train_loss_temp = []
         self.train_y_accuracy_temp = []
@@ -225,9 +227,12 @@ class LossTracker(Callback):
             self.val_c_accuracies.append(mean_c_accuracy)
             self.val_c_accuracy_temp = []
 
-            # compute CTL
+            if self.val_every_n ==1:
+                add_1 = 0
+            else:
+                add_1 = 1
             if self.track_leakage and (
-                (trainer.current_epoch % self.check == 0) or
+                ((trainer.current_epoch + add_1) % self.check == 0) or
                 (trainer.current_epoch == trainer.max_epochs - 1)
             ):
                 all_c_learnt = torch.cat(self.val_c_learnt_temp).numpy()
