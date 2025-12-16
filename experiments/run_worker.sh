@@ -29,7 +29,8 @@ export MKL_NUM_THREADS=$NSLOTS
 
 # --- 3. PATHS ---
 PROJECT_ROOT=~/Scratch/xai-crcbm
-RESULTS_DIR=$PROJECT_ROOT/results
+#CHANGE FOR EACH DATASET
+RESULTS_DIR=$PROJECT_ROOT/results/Tabulartoy
 CONFIG_PATH=$PROJECT_ROOT/experiments/configs/tabulartoy.yaml
 
 TEMP_RESULTS_DIR=$TMPDIR/results
