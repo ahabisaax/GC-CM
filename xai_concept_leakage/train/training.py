@@ -39,6 +39,7 @@ def _evaluate_cbm(
     rerun=False,
     test_dl=None,
     val_dl=None,
+    best_model=True
 ):
     eval_results = {}
     for current_dl, dl_name in [(val_dl, "val"), (test_dl, "test")]:
@@ -47,9 +48,14 @@ def _evaluate_cbm(
         model.freeze()
 
         def _inner_call():
-            [eval_results] = trainer.test(model, current_dl
+            if best_model:
+                [eval_results] = trainer.test(model, current_dl
                                           , ckpt_path="best"
-                                          )
+                                            )
+            else:
+                [eval_results] = trainer.test(model, current_dl
+                                            )
+
             output = [
                 eval_results[f"test_c_accuracy"],
                 eval_results[f"test_y_accuracy"],
@@ -205,12 +211,12 @@ def train_end_to_end_model(
                 model.lr_find_mode = True
 
             checkpoint_callback = ModelCheckpoint(
-                dirpath=os.path.join(result_dir, "checkpoints"),  # Save dir
-                filename="{epoch}-{val_loss:.2f}",
-                monitor=config["early_stopping_monitor"],  # Use same metric as EarlyStopping
-                mode=config["early_stopping_mode"],  # "min" or "max"
-                save_top_k=1,  # Save only the single best model
-                save_last=True,  # Also save the very last epoch
+                dirpath=os.path.join(result_dir, "checkpoints"),
+                filename="best-checkpoint",
+                monitor=config["early_stopping_monitor"],
+                mode=config["early_stopping_mode"],
+                save_top_k=1,
+                save_last=True,
             )
             trainer = pl.Trainer(
                 accelerator=accelerator,
@@ -228,7 +234,7 @@ def train_end_to_end_model(
                     cb_loss,
                     checkpoint_callback
                 ],
-                enable_checkpointing=enable_checkpointing,
+                enable_checkpointing=True,
                 gradient_clip_val=gradient_clip_val,
                 accumulate_grad_batches=config.get('accumulate_grad_batches',1),
                 # Only use the wandb logger when it is a fresh run
@@ -960,7 +966,7 @@ def train_independent_model(
     accelerator="auto",
     devices="auto",
     old_results=None,
-    enable_checkpointing=False,
+    enable_checkpointing=True,
     gradient_clip_val=0,
 ):
     if seed is not None:
@@ -1099,14 +1105,11 @@ def train_independent_model(
                                     track_leakage=False)
 
         if project_name and (rerun or (not chpt_exists)):
-            # Create ONE logger.
-            # CRITICAL: Pass 'experiment=run' to tell the logger
-            # "Log to this run, but DO NOT finish it."
             my_logger = WandbLogger(
                 name=full_run_name,
                 project=project_name,
                 save_dir=os.path.join(result_dir, "logs"),
-                experiment=run  # <--- This is the key fix
+                experiment=run
             )
         else:
             # If we are not logging, set the logger to False.
@@ -1114,7 +1117,6 @@ def train_independent_model(
         trainer = pl.Trainer(
             accelerator=accelerator,
             devices=devices,
-            # We will distribute half epochs in one model and half on the other
             max_epochs=config["max_epochs"],
             check_val_every_n_epoch=config.get("check_val_every_n_epoch", 5),
             callbacks=[
@@ -1218,11 +1220,10 @@ def train_independent_model(
             cb_loss = utils.LossTracker(use_adversarial=False,
                                         adversarial_delay=-1,
                                         black_box=True)
+
             ind_c2y_trainer = pl.Trainer(
                 accelerator=accelerator,
                 devices=devices,
-                # We will distribute half epochs in one model and half on the
-                # other
                 max_epochs=config.get("c2y_max_epochs", 20),
                 enable_checkpointing=enable_checkpointing,
                 gradient_clip_val=gradient_clip_val,
@@ -1309,7 +1310,7 @@ def train_independent_model(
                     np.array([ind_training_time, ind_num_epochs]),
                 )
         eval_results = _evaluate_cbm(
-            model=model,
+            model=ind_model,
             trainer=trainer,
             config=config,
             run_name=run_name,
@@ -1317,6 +1318,7 @@ def train_independent_model(
             rerun=rerun,
             test_dl=test_dl,
             val_dl=val_dl,
+            best_model=False
         )
     eval_results["training_time"] = training_time
     eval_results["num_epochs"] = num_epochs
