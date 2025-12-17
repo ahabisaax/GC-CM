@@ -3,7 +3,7 @@
 #$ -o ~/Scratch/xai-crcbm/logs/test_run_dsprites.out
 #$ -e ~/Scratch/xai-crcbm/logs/test_run_dsprites.err
 #$ -pe smp 4
-#$ -l h_rt=16:00:00
+#$ -l h_rt=18:00:00
 #$ -l mem=8G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
