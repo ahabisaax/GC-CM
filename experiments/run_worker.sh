@@ -2,7 +2,7 @@
 #$ -N CBM_Leakage_Run
 #$ -o ~/Scratch/xai-crcbm/logs/test_run_dsprites2.out
 #$ -e ~/Scratch/xai-crcbm/logs/test_run_dsprites2.err
-#$ -pe smp 4
+#$ -pe smp 8
 #$ -l h_rt=18:00:00
 #$ -l mem=8G
 #$ -l tmpfs=20G

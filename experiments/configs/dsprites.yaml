@@ -6,7 +6,7 @@ shared_params:
   dataset_config:
     dataset: dsprites
     batch_size: 64
-    num_workers: 4
+    num_workers: 8
     root_dir: data/dsprites/dsprites_dep_0.npz # this is where you find the pre-sampled dataset
     sampling_percent: 1
     test_subsampling: 1
