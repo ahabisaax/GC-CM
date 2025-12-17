@@ -25,7 +25,7 @@ shared_params:
 
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
   #concept_loss_weight: 1
-  learning_rate: 0.0001
+  learning_rate: 0.01
   bool: False
   sigmoidal_prob: False
   dropout_prob: 0.2
@@ -50,13 +50,13 @@ shared_params:
   weight_decay: 0
   c_extractor_arch: dsprites_extractor
   cbm_optimizer: adam
-  cbm_learning_rate: 0.0001
-  adv_learning_rate: 0.0001
+  cbm_learning_rate: 0.01
+  #adv_learning_rate: 0.0001
   adv_optimizer: adam
   early_stopping_delta: 0.0
   check_val_every_n_epoch: 5
   momentum: 0.9
-  project_name: "Dsprites final"
+  project_name: "Dsprites 0.01lr"
 
 
 
@@ -76,6 +76,7 @@ runs:
        early_stopping_delta: 0.0
        patience: 500
        max_epochs: 150
+       c2y_max_epochs: 100
 
 # SOFT:
      - architecture: 'ConceptBottleneckModel'
@@ -92,6 +93,7 @@ runs:
        gradient_clip_val: 0.0
        patience: 500
        max_epochs: 300
+       accumulate_grad_batches: 1
 
 # LOGITS:
     # - architecture: 'ConceptBottleneckModel'
