@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #$ -N CBM_Leakage_Run
-#$ -o ~/Scratch/xai-crcbm/logs/test_run_dsprites.out
-#$ -e ~/Scratch/xai-crcbm/logs/test_run_dsprites.err
+#$ -o ~/Scratch/xai-crcbm/logs/test_run_dsprites2.out
+#$ -e ~/Scratch/xai-crcbm/logs/test_run_dsprites2.err
 #$ -pe smp 4
 #$ -l h_rt=18:00:00
 #$ -l mem=8G
