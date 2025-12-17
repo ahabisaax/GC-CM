@@ -90,7 +90,8 @@ import xai_concept_leakage.data.mnist_add as mnist_data_module
 import xai_concept_leakage.data.tabulartoy_loader as tabulartoy_data_module
 import xai_concept_leakage.data.dsprites_loader as dsprites_data_module
 import xai_concept_leakage.data.shapes3d_loader as shapes3d_data_module
-import xai_concept_leakage.data.cub_loader as cub_data_module
+#import data.CUB200.cub_loader as cub_data_module
+import data.CUB200.cub_loader as cub_data_module
 import xai_concept_leakage.interventions.utils as intervention_utils
 import xai_concept_leakage.train.evaluate as evaluation
 import xai_concept_leakage.train.training as training
