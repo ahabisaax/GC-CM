@@ -24,7 +24,6 @@ shared_params:
 
 
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
-  max_epochs: 300
   #concept_loss_weight: 1
   learning_rate: 0.0001
   bool: False
@@ -45,7 +44,7 @@ shared_params:
   use_task_class_weights: False #False weighting of the task in loss
   top_k_accuracy: null
   save_model: True
-  patience: 200
+  #patience: 200
   extra_dims: 0
   scheduler_step: 20
   weight_decay: 0
@@ -71,12 +70,12 @@ runs:
        sigmoidal_prob: True
        accumulate_grad_batches: 1
        cbm_optimizer: adam
-       grid_variables: [ 'concept_loss_weight' ]
-       concept_loss_weight: [0.1, 0.5, 1]
+       concept_loss_weight:  1
        early_stopping_monitor: 'val_loss'
        early_stopping_mode: min
        early_stopping_delta: 0.0
        patience: 500
+       max_epochs: 150
 
 # SOFT:
      - architecture: 'ConceptBottleneckModel'
@@ -92,6 +91,7 @@ runs:
        early_stopping_mode: max
        gradient_clip_val: 0.0
        patience: 500
+       max_epochs: 300
 
 # LOGITS:
     # - architecture: 'ConceptBottleneckModel'
@@ -134,3 +134,4 @@ runs:
        early_stopping_delta: 0.0
        gradient_clip_val: 1.0
        patience: 200
+       max_epochs: 300
