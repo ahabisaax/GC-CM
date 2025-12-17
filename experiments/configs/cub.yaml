@@ -1,5 +1,5 @@
 results_dir: "results/cub_complete/"
-trials: 5
+trials: 1
 
 shared_params:
   model_selection_trials: 3
@@ -94,40 +94,40 @@ shared_params:
 #            s_vs_p: 0.5
 
   skip_repr_evaluation: true
-  max_epochs: 150
+  max_epochs: 300
   top_k_accuracy: null
   save_model: true
-  patience: 15
+  patience: 100
   emb_size: 16
   extra_dims: 0
-  concept_loss_weight: [1, 5, 10]
+  #concept_loss_weight: [1, 5, 10]
   learning_rate: 0.01
   weight_decay: 4.0e-06
   weight_loss: true
   c_extractor_arch: "resnet18"
   optimizer: adam
   bool: false
-  early_stopping_monitor: "val_loss"
-  early_stopping_mode: "min"
-  early_stopping_delta: 0.0
+  #early_stopping_monitor: "val_loss"
+  #early_stopping_mode: "min"
+  #early_stopping_delta: 0.0
   momentum: 0.9
   sigmoidal_prob: false
   training_intervention_prob: 0
   num_load_workers: 0
   cbm_optimizer: adam
-  cbm_learning_rate: 0.05
-  adv_learning_rate: 0.05
+
+  #adv_learning_rate: 0.05
   adv_optimizer: adam
   project_name: "cub"
-  accumulate_grad_batches: 1
+  #accumulate_grad_batches: 1
 runs:
 
-  - architecture: "ConceptBottleneckModel"
-    run_name: "DNN"
-    extra_dims: 200
-    concept_loss_weight: 0
-    sigmoidal_prob: true
-    embedding_activation: "leakyrelu"
+#  - architecture: "ConceptBottleneckModel"
+#    run_name: "DNN"
+#    extra_dims: 200
+#    concept_loss_weight: 0
+#    sigmoidal_prob: true
+#    embedding_activation: "leakyrelu"
 #
 #  - architecture: "ConceptBottleneckModel"
 #    run_name: "Joint CBM"
@@ -257,3 +257,28 @@ runs:
 #    all_intervened_loss_weight: 1
 #    ood_dropout_prob: 0.9
 #    calibration_epochs: 30
+
+ # CR-CBM:
+     - architecture: 'CriticRegularisedConceptBottleneckModel'
+       run_name: "auto"
+       bool: False
+       extra_dims: 0
+       sigmoidal_prob: True
+       use_adversarial: True
+       max_adversarial_lambda: 1.0
+       adversarial_delay: 0
+       adversarial_lambda_scheduler_warmup: null  # Changed 'None' to 'null'
+       adversarial_scheduler: "none"
+       adaptive_lambda_beta: 0.99
+       adaptive_lambda_scale: 0.5
+       auto_lr: False
+       n_critic_steps: 1
+       accumulate_grad_batches: 64
+       grid_variables: ['cbm_learning_rate']
+       cbm_learning_rate: [0.001, 0.01, 0.05]
+       concept_loss_weight: 0.1
+       early_stopping_monitor: 'val_pareto_score'
+       early_stopping_mode: max
+       early_stopping_delta: 0.0
+       gradient_clip_val: 1.0
+       patience: 200
