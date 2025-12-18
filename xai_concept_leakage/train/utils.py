@@ -220,6 +220,8 @@ class LossTracker(Callback):
         self.val_y_accuracy_temp = []
         pareto_score = 0
 
+        print("computed means of accuracies")
+
         if not self.black_box:
             #             print("self.val_c_accuracy_temp:")
             #             print(self.val_c_accuracy_temp)
@@ -235,10 +237,13 @@ class LossTracker(Callback):
                 ((trainer.current_epoch + add_1) % self.check == 0) or
                 (trainer.current_epoch == trainer.max_epochs - 1)
             ):
+                print("ABOUT TO START LEAKAGE COMPUTATION")
                 all_c_learnt = torch.cat(self.val_c_learnt_temp).numpy()
                 all_c_truth = torch.cat(self.val_c_true_temp).numpy()
                 all_y_true = torch.cat(self.val_y_true_temp).numpy()
                 n_concepts = all_c_truth.shape[1]
+
+                print(f'SHAPE OF CONCEPT VECTOR {all_c_learnt.shape}')
 
                 norm_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
                                                            c_true=all_c_truth,
@@ -249,10 +254,10 @@ class LossTracker(Callback):
                                                            normalise=True,
                                                            n_concepts=n_concepts
                                                            )
-
+                print(f'COMPUTED ICL')
                 mean_norm_icl_i = matrix_from_tril(norm_icl).sum(axis=1) / (n_concepts - 1)
                 mean_norm_icl = mean_norm_icl_i.sum() / len(mean_norm_icl_i)
-
+                print(f'ABOUT TO COMPUTE CTL')
                 norm_ctl_vec = compute_MI_score_model_training(c_pred=all_c_learnt,
                                                                c_true=all_c_truth,
                                                                y_true=all_y_true,

@@ -312,6 +312,7 @@ def estimate_MI_interconcept(
         for jj in range(ii + 1, n_concepts):
             I[ii, jj] = compute_mi(c[:, ii], c[:, jj])
     if normalise:
+        print('ABOUT TO COMPUTE VIA NUMPY FUNCTION')
         diag_sqrt_MI = np.sqrt(
             [compute_mi(c[:, ii], c[:, ii]) for ii in range(n_concepts)]
         )
@@ -528,6 +529,7 @@ def compute_MI_score_model_training(
         normalise=True,
         n_concepts=None):
     if score_type == "interconcept":
+        print(f'ABOUT TO COMPUTE MI INTERCONCEPT')
         pred_mi = estimate_MI_interconcept(
             c_pred,
             n_concepts=n_concepts,
@@ -536,6 +538,7 @@ def compute_MI_score_model_training(
             normalise=normalise,
         )
         if wrt_true:
+            print(f'ABOUT TO COMPUTE MI INTERCONCEPT')
             true_mi = estimate_MI_interconcept(
                 c_true,
                 n_concepts=n_concepts,
