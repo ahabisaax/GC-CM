@@ -6,7 +6,7 @@ shared_params:
   dataset_config:
     dataset: "cub"
     num_workers: 8
-    batch_size: 64
+    batch_size: 128
     root_dir: data/CUB200/
     sampling_percent: 1
     sampling_groups: true
@@ -273,7 +273,7 @@ runs:
        adaptive_lambda_scale: 0.5
        auto_lr: False
        n_critic_steps: 1
-       accumulate_grad_batches: 64
+       accumulate_grad_batches: 32
        grid_variables: ['cbm_learning_rate']
        cbm_learning_rate: [0.001, 0.01, 0.05]
        concept_loss_weight: 0.1
