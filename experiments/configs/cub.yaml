@@ -101,7 +101,7 @@ shared_params:
   emb_size: 16
   extra_dims: 0
   #concept_loss_weight: [1, 5, 10]
-  learning_rate: 0.01
+  learning_rate: 0.001
   weight_decay: 4.0e-06
   weight_loss: true
   c_extractor_arch: "resnet18"
@@ -119,6 +119,7 @@ shared_params:
   #adv_learning_rate: 0.05
   adv_optimizer: adam
   project_name: "cub"
+  check_val_every_n_epoch: 1
   #accumulate_grad_batches: 1
 runs:
 
