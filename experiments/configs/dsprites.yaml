@@ -1,4 +1,4 @@
-trials: 5
+trials: 3
 results_dir: results/dsprites_dep_0_models/
 
 shared_params:
@@ -25,13 +25,13 @@ shared_params:
 
   skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
   #concept_loss_weight: 1
-  learning_rate: 0.01
+  learning_rate: 0.0001
   bool: False
   sigmoidal_prob: False
   dropout_prob: 0.2
   all_dropout: False
 
-  learning_rate_c2y: 0.01
+  learning_rate_c2y: 0.0001
   optimizer_c2y: adam
   c2y_max_epochs: 100
   c2y_layers: [64, 64]
@@ -50,20 +50,20 @@ shared_params:
   weight_decay: 0
   c_extractor_arch: dsprites_extractor
   cbm_optimizer: adam
-  cbm_learning_rate: 0.01
-  #adv_learning_rate: 0.0001
+  cbm_learning_rate: 0.0001
+  adv_learning_rate: 0.0001
   adv_optimizer: adam
   early_stopping_delta: 0.0
   check_val_every_n_epoch: 5
   momentum: 0.9
-  project_name: "Dsprites 0.01lr"
+  project_name: "Dsprites final"
 
 
 
 runs:
 # HARD:
      - architecture: 'IndependentConceptBottleneckModel'
-       run_name: "auto"
+       run_name: "HardCBM_fold3"
        bool: True
        extra_dims: 0
        sigmoidal_extra_capacity: False
@@ -75,7 +75,7 @@ runs:
        early_stopping_mode: min
        early_stopping_delta: 0.0
        patience: 500
-       max_epochs: 100
+       max_epochs: 150
        c2y_max_epochs: 100
 
 # SOFT:
@@ -91,7 +91,7 @@ runs:
        early_stopping_delta: 0.0
        early_stopping_mode: min
        gradient_clip_val: 0.0
-       patience: 50
+       patience: 10
        max_epochs: 200
        accumulate_grad_batches: 1
 
@@ -115,7 +115,7 @@ runs:
 
  # CR-CBM:
      - architecture: 'CriticRegularisedConceptBottleneckModel'
-       run_name: "auto"
+       run_name: "CRCBM_fold3"
        bool: False
        extra_dims: 0
        sigmoidal_prob: True
@@ -135,5 +135,5 @@ runs:
        early_stopping_mode: max
        early_stopping_delta: 0.0
        gradient_clip_val: 1.0
-       patience: 50
-       max_epochs: 200
+       patience: 40
+       max_epochs: 250
