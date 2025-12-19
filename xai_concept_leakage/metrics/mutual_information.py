@@ -409,6 +409,10 @@ def estimate_MI_interconcept(
                 ).item()
         else:
             def compute_mi(x, y):
+                print(x.shape)
+                print(y.shape)
+                print(torch.randn(*x.shape, device=x.device).shape)
+                print(torch.randn(*y.shape, device=y.device).shape)
                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
                 noise_x = 1e-10 * torch.mean(x) * torch.randn(*x.shape, device=x.device)
                 noise_y = 1e-10 * torch.mean(y) * torch.randn(*y.shape, device=y.device)
