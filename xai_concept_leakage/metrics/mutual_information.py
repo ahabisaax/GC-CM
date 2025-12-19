@@ -151,8 +151,9 @@ def compute_mi_cc_torch(x, y, k=3):
     if x.ndim == 1:
         print(f' x dim is 1 so we need to unsqueeze')
         x = x.unsqueeze(1)
+    print(y.ndim)
     if y.dim == 1:
-        print(f' x dim is 1 so we need to unsqueeze')
+        print(f' y dim is 1 so we need to unsqueeze')
         y = y.unsqueeze(1)
     print(x.shape)
     print(y.shape)
@@ -420,12 +421,6 @@ def estimate_MI_interconcept(
                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
                 noise_x = 1e-10 * torch.mean(x) * torch.randn(*x.shape, device=x.device)
                 noise_y = 1e-10 * torch.mean(y) * torch.randn(*y.shape, device=y.device)
-
-
-                a = x + noise_x
-                b = y + noise_y
-                print(a.shape)
-                print(b.shape)
                 return np.float64(
                     compute_mi_cc_torch(x + noise_x, y + noise_y, k=n_neighbors)
                 ).item()
