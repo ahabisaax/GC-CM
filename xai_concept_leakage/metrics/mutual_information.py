@@ -155,10 +155,8 @@ def compute_mi_cc_torch(x, y, k=3):
     if y.ndim == 1:
         print(f' y dim is 1 so we need to unsqueeze')
         y = y.unsqueeze(1)
-    print(x.shape)
-    print(y.shape)
 
-    print([x,y])
+
     z = torch.cat([x, y], dim=1)
     dist_z = torch.cdist(z,z, p=float('inf'))
     values, _ = torch.topk(dist_z, k + 1, largest=False)
@@ -404,7 +402,17 @@ def estimate_MI_interconcept(
         is_integer = isinteger(c)
 
     if is_integer:
+
         def compute_mi(x, y):
+            if isinstance(c, torch.Tensor):
+                x.detach().numpy().cpu()
+                y.detach().numpy().cpu()
+
+            # Also sklearn expects 1D arrays for labels, ensure shape is correct
+                if x.ndim > 1: x = x.reshape(-1)
+                if y.ndim > 1: y = y.reshape(-1)
+                return mutual_info_score(x,y)
+
             return mutual_info_score(x.squeeze(-1), y.squeeze(-1))
 
     else:
