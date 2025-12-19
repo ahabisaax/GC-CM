@@ -402,8 +402,8 @@ def estimate_MI_interconcept(
 
         def compute_mi(x, y):
             if isinstance(c, torch.Tensor):
-                x.cpu().detach().numpy()
-                y.cpu().detach().numpy()
+                x = x.cpu().detach().numpy()
+                x = y.cpu().detach().numpy()
 
             # Also sklearn expects 1D arrays for labels, ensure shape is correct
                 if x.ndim > 1: x = x.reshape(-1)
