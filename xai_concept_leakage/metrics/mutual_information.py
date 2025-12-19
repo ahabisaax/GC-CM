@@ -152,7 +152,7 @@ def compute_mi_cc_torch(x, y, k=3):
         print(f' x dim is 1 so we need to unsqueeze')
         x = x.unsqueeze(1)
     print(y.ndim)
-    if y.dim == 1:
+    if y.ndim == 1:
         print(f' y dim is 1 so we need to unsqueeze')
         y = y.unsqueeze(1)
     print(x.shape)
