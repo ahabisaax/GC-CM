@@ -383,13 +383,10 @@ def estimate_MI_interconcept(
     n_samples = c.shape[0]
     if n_concepts is None:
         n_concepts = c.shape[1]
-        print('ABOUT TO CHECK IF IS CUDA')
     if not c.is_cuda:
-        print("NO CUDA!!!!! BAD")
         c = to_numpy(c)
         c = c.reshape(n_samples, n_concepts, -1)
     else:
-        print(f'GOOD CUDA IS THERE')
         torch.reshape(c, (n_samples, n_concepts))
 
     if isinstance(c, torch.Tensor):
@@ -405,8 +402,8 @@ def estimate_MI_interconcept(
 
         def compute_mi(x, y):
             if isinstance(c, torch.Tensor):
-                x.detach().numpy().cpu()
-                y.detach().numpy().cpu()
+                x.cpu().detach().numpy()
+                y.cpu().detach().numpy()
 
             # Also sklearn expects 1D arrays for labels, ensure shape is correct
                 if x.ndim > 1: x = x.reshape(-1)
