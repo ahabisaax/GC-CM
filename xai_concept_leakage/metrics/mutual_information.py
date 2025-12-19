@@ -410,8 +410,8 @@ def estimate_MI_interconcept(
         else:
             def compute_mi(x, y):
                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
-                noise_x = 1e-10 * torch.mean(x) * torch.randn(*x.shape)
-                noise_y = 1e-10 * torch.mean(y) * torch.randn(*y.shape)
+                noise_x = 1e-10 * torch.mean(x) * torch.randn(*x.shape, device=x.device)
+                noise_y = 1e-10 * torch.mean(y) * torch.randn(*y.shape, device=y.device)
                 return np.float64(
                     compute_mi_cc_torch(x + noise_x, y + noise_y, k=n_neighbors)
                 ).item()
@@ -467,8 +467,8 @@ def normalised_interconcept_leakage(I, c, n_neighbors=3, n_concepts=None, flatte
         else:
             def compute_mi(x, y):
                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
-                noise_x = 1e-10 * torch.mean(x) * torch.randn(*x.shape)
-                noise_y = 1e-10 * torch.mean(y) * torch.randn(*y.shape)
+                noise_x = 1e-10 * torch.mean(x) * torch.randn(*x.shape, device=x.device)
+                noise_y = 1e-10 * torch.mean(y) * torch.randn(*y.shape, device=y.device)
                 return np.float64(
                     compute_mi_cc_torch(x + noise_x, y + noise_y, k=n_neighbors)
                 ).item()
@@ -541,8 +541,8 @@ def estimate_cmi_interconcept(c, d, n_concepts=None, flatten=True, n_neighbors=3
         else:
             def compute_mi(x, y):
                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
-                noise_x = 1e-10 * torch.mean(x) * torch.randn(*x.shape)
-                noise_y = 1e-10 * torch.mean(y) * torch.randn(*y.shape)
+                noise_x = 1e-10 * torch.mean(x) * torch.randn(*x.shape, device=x.device)
+                noise_y = 1e-10 * torch.mean(y) * torch.randn(*y.shape, device=y.device)
                 return np.float64(
                     compute_mi_cc_torch(x + noise_x, y + noise_y, k=n_neighbors)
                 ).item()
@@ -670,7 +670,7 @@ def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=Tr
         else:
             def compute_mi(c, y):
                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
-                noise = 1e-10 * torch.mean(c) * torch.randn(*c.shape)
+                noise = 1e-10 * torch.mean(c) * torch.randn(*c.shape, device=c.device)
                 return np.float64(
                     compute_mi_cd_torch(c + noise, y, k=n_neighbors)
                 ).item()
