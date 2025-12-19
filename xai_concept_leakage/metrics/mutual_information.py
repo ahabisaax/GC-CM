@@ -385,8 +385,16 @@ def estimate_MI_interconcept(
         print(f'GOOD CUDA IS THERE')
         torch.reshape(c, (n_samples, n_concepts))
 
-    if isinteger(c):
+    if isinstance(c, torch.Tensor):
+        if torch.is_floating_point(c):
+            # Check if all values are equal to their floor (i.e., no decimal part)
+            is_integer =  torch.allclose(c, c.floor())
+        else:
+            is_integer = True
+    else:
+        is_integer = isinteger(c)
 
+    if is_integer:
         def compute_mi(x, y):
             return mutual_info_score(x.squeeze(-1), y.squeeze(-1))
 
@@ -434,7 +442,16 @@ def normalised_interconcept_leakage(I, c, n_neighbors=3, n_concepts=None, flatte
     else:
         torch.reshape(c, (n_samples, n_concepts))
 
-    if isinteger(c):
+    if isinstance(c, torch.Tensor):
+        if torch.is_floating_point(c):
+            # Check if all values are equal to their floor (i.e., no decimal part)
+            is_integer =  torch.allclose(c, c.floor())
+        else:
+            is_integer = True
+    else:
+        is_integer = isinteger(c)
+
+    if is_integer:
         def compute_mi(x, y):
             return mutual_info_score(x.squeeze(-1), y.squeeze(-1))
 
@@ -499,8 +516,16 @@ def estimate_cmi_interconcept(c, d, n_concepts=None, flatten=True, n_neighbors=3
     else:
         torch.reshape(c, (n_samples, n_concepts))
 
-    if isinteger(c):
+    if isinstance(c, torch.Tensor):
+        if torch.is_floating_point(c):
+            # Check if all values are equal to their floor (i.e., no decimal part)
+            is_integer =  torch.allclose(c, c.floor())
+        else:
+            is_integer = True
+    else:
+        is_integer = isinteger(c)
 
+    if is_integer:
         def compute_mi(x, y):
             return mutual_info_score(x.squeeze(-1), y.squeeze(-1))
 
@@ -621,8 +646,16 @@ def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=Tr
     def norm_mi(y):
         return mutual_info_score(y, y)
 
-    if isinteger(c):
+    if isinstance(c, torch.Tensor):
+        if torch.is_floating_point(c):
+            # Check if all values are equal to their floor (i.e., no decimal part)
+            is_integer =  torch.allclose(c, c.floor())
+        else:
+            is_integer = True
+    else:
+        is_integer = isinteger(c)
 
+    if is_integer:
         def compute_mi(c, y):
             return mutual_info_score(c.squeeze(-1), y)
 
