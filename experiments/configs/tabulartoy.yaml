@@ -58,34 +58,34 @@ shared_params:
 
 runs:
 # HARD:
-     - architecture: 'IndependentConceptBottleneckModel'
-       run_name: "auto"
-       bool: True
-       extra_dims: 0
-       sigmoidal_extra_capacity: False
-       sigmoidal_prob: True
-       accumulate_grad_batches: 1
-       cbm_optimizer: adam
-       early_stopping_monitor: 'val_loss'
-       early_stopping_mode: min
-       patience: 350
-       early_stopping_delta: 0.0
-       concept_loss_weight: 1
+#     - architecture: 'IndependentConceptBottleneckModel'
+#       run_name: "auto"
+#       bool: True
+#       extra_dims: 0
+#       sigmoidal_extra_capacity: False
+#       sigmoidal_prob: True
+#       accumulate_grad_batches: 1
+#       cbm_optimizer: adam
+#       early_stopping_monitor: 'val_loss'
+#       early_stopping_mode: min
+#       patience: 350
+#       early_stopping_delta: 0.0
+#       concept_loss_weight: 1
 
 # SOFT:
-     - architecture: 'ConceptBottleneckModel'
-       run_name: "auto"
-       bool: False
-       extra_dims: 0
-       sigmoidal_prob: True
-       grid_variables: ['concept_loss_weight']
-       concept_loss_weight: [0.1, 0.5, 1]
-       cbm_optimizer: adam
-       early_stopping_monitor: 'val_y_accuracy'
-       early_stopping_delta: 0.0
-       early_stopping_mode: max
-       gradient_clip_val: 0
-       patience: 250
+#     - architecture: 'ConceptBottleneckModel'
+#       run_name: "auto"
+#       bool: False
+#       extra_dims: 0
+#       sigmoidal_prob: True
+#       grid_variables: ['concept_loss_weight']
+#       concept_loss_weight: [0.1, 0.5, 1]
+#       cbm_optimizer: adam
+#       early_stopping_monitor: 'val_y_accuracy'
+#       early_stopping_delta: 0.0
+#       early_stopping_mode: max
+#       gradient_clip_val: 0
+#       patience: 250
 
 
 #    - architecture: 'ConceptBottleneckModel'
@@ -115,7 +115,7 @@ runs:
 
   # CR-CBM:
      - architecture: 'CriticRegularisedConceptBottleneckModel'
-       run_name: "auto"
+       run_name: "gpu test"
        bool: False
        extra_dims: 0
        sigmoidal_prob: True
