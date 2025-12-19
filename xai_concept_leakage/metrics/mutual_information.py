@@ -391,7 +391,6 @@ def estimate_MI_interconcept(
 
     if isinstance(c, torch.Tensor):
         if torch.is_floating_point(c):
-            # Check if all values are equal to their floor (i.e., no decimal part)
             is_integer =  torch.allclose(c, c.floor())
         else:
             is_integer = True
@@ -399,7 +398,7 @@ def estimate_MI_interconcept(
         is_integer = isinteger(c)
 
     if is_integer:
-
+        #TODO go from here this function isnt working
         def compute_mi(x, y):
             if isinstance(c, torch.Tensor):
                 x = x.cpu().detach().numpy()
