@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 ##################################################################################################
 ### Helper functions:
@@ -133,6 +134,45 @@ def compute_mi_cc(x, y, n_neighbors):
     return max(0, mi)
 
 
+def compute_mi_cc_torch(x, y, k=3):
+    """
+    Estimates Mutual Information I(X;Y) using KSG estimator on the GPU.
+    x, y: PyTorch tensors of shape [N, dim_x] and [N, dim_y].
+    Must be on the same device (CUDA).
+
+    This implementation replaces sklearn.neighbors with torch.cdist and torch.topk.
+    """
+
+    N = x.shape[0]
+    device = x.device
+    print(f'WE MADE IT TO COMPUTE CC TORCH VERSION')
+
+    if x.ndim == 1: x = x.unsqueeze(1)
+    if y.dim == 1: y = y.unsqueeze(1)
+
+    z = torch.cat([x, y], dim=1)
+    dist_z = torch.cdist(z,z, p=float('inf'))
+    values, _ = torch.topk(dist_z, k + 1, largest=False)
+    radius = values[:, -1] # The distance to the k-th neighbor
+
+    radius = torch.clamp(radius, min=1e-6)
+
+    dist_x = torch.cdist(x, x, p=float('inf'))
+    dist_y = torch.cdist(y, y, p=float('inf'))
+
+    nx = (dist_x < radius.unsqueeze(1)).float().sum(dim=1) - 1
+    ny = (dist_y < radius.unsqueeze(1)).float().sum(dim=1) - 1
+
+    psi_N = torch.digamma(torch.tensor(N, dtype=torch.float, device=device))
+    psi_k = torch.digamma(torch.tensor(k, dtype=torch.float, device=device))
+    psi_nx = torch.mean(torch.digamma(nx + 1))
+    psi_ny = torch.mean(torch.digamma(ny + 1))
+    mi = psi_N + psi_k - psi_nx - psi_ny
+
+    # Clamp at 0 (MI cannot be negative)
+    return max(0.0, mi.item())
+
+
 def compute_mi_cd(c, d, n_neighbors):
     """
     This function is a modified version of the one in
@@ -214,6 +254,50 @@ def compute_mi_cd(c, d, n_neighbors):
     return max(0, mi)
 
 
+def compute_mi_cd_torch(c,d, k=3):
+    N = c.shape[0]
+
+    if c.ndim == 1: c = c.unsqueeze(1)
+    device = c.device
+    radius = torch.zeros(N, device=device)
+    k_counts = torch.zeros(N, device=device)
+    unique_labels = torch.unique(d)
+
+    for label in unique_labels:
+        mask = (d ==label)
+        count = mask.sum().item()
+
+        if count <= 1:
+            continue
+
+        k_eff = min(k, count-1)
+        c_subset  = c[mask]
+        dist_sub = torch.cdist(c_subset, c_subset, p=float('inf'))
+        values, _ = torch.topk(dist_sub, k_eff + 1, largest=False)
+        r = values[:, -1]
+
+        radius[mask] = r
+        k_counts[mask] = float(k_eff)
+
+        dist_full = torch.cdist(c, c, p=float('inf'))
+
+        # nx = count(dist < radius) - 1
+        nx = (dist_full < radius.unsqueeze(1)).float().sum(dim=1) - 1
+        psi_N = torch.digamma(torch.tensor(N, dtype=torch.float, device=device))
+        term_k = torch.mean(torch.digamma(k_counts))
+        term_nx = torch.mean(torch.digamma(nx + 1))
+
+        # Term 4: mean(digamma(count of class c_i))
+        class_counts_lookup = torch.zeros(d.max() + 1, device=device)
+        labels, counts = torch.unique(d, return_counts=True)
+        class_counts_lookup[labels] = counts.float()
+        point_class_counts = class_counts_lookup[d]
+        term_class = torch.mean(torch.digamma(point_class_counts))
+
+        mi = psi_N + term_k - term_nx - term_class
+        return max(0.0, mi.item())
+
+
 def compute_cmi_cd(c_1, c_2, d, n_neighbors):
     """
     Computes the Conditional Mutual Information I(c_1, c_2 | y_discrete)
@@ -252,8 +336,10 @@ def compute_cmi_cd(c_1, c_2, d, n_neighbors):
 
         if len(c_i_subset) <= n_neighbors:
             continue
-
-        mi_subset = compute_mi_cc(c_i_subset, c_j_subset, n_neighbors)
+        if c_1.is_cuda:
+            mi_subset = compute_mi_cc_torch(c_i_subset, c_j_subset, n_neighbors)
+        else:
+            mi_subset = compute_mi_cc(c_i_subset, c_j_subset, n_neighbors)
 
         total_cmi += p_y * mi_subset
     return total_cmi
@@ -286,11 +372,18 @@ def estimate_MI_interconcept(
     - normalise : bool.
         If True, normalises the MI matrix by dividing by the sqrt of the concept entropies.
     """
+
     n_samples = c.shape[0]
     if n_concepts is None:
         n_concepts = c.shape[1]
-    c = to_numpy(c)
-    c = c.reshape(n_samples, n_concepts, -1)
+        print('ABOUT TO CHECK IF IS CUDA')
+    if not c.is_cuda:
+        print("NO CUDA!!!!! BAD")
+        c = to_numpy(c)
+        c = c.reshape(n_samples, n_concepts, -1)
+    else:
+        print(f'GOOD CUDA IS THERE')
+        torch.reshape(c, (n_samples, n_concepts))
 
     if isinteger(c):
 
@@ -298,14 +391,22 @@ def estimate_MI_interconcept(
             return mutual_info_score(x.squeeze(-1), y.squeeze(-1))
 
     else:
-
-        def compute_mi(x, y):
-            # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
-            noise_x = 1e-10 * np.mean(x) * np.random.randn(*x.shape)
-            noise_y = 1e-10 * np.mean(y) * np.random.randn(*y.shape)
-            return np.float64(
-                compute_mi_cc(x + noise_x, y + noise_y, n_neighbors=n_neighbors)
-            ).item()
+        if not c.is_cuda:
+            def compute_mi(x, y):
+                # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+                noise_x = 1e-10 * np.mean(x) * np.random.randn(*x.shape)
+                noise_y = 1e-10 * np.mean(y) * np.random.randn(*y.shape)
+                return np.float64(
+                    compute_mi_cc(x + noise_x, y + noise_y, n_neighbors=n_neighbors)
+                ).item()
+        else:
+            def compute_mi(x, y):
+                # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+                noise_x = 1e-10 * torch.mean(x) * torch.randn(*x.shape)
+                noise_y = 1e-10 * torch.mean(y) * torch.randn(*y.shape)
+                return np.float64(
+                    compute_mi_cc_torch(x + noise_x, y + noise_y, k=n_neighbors)
+                ).item()
 
     I = np.zeros((n_concepts, n_concepts))
     for ii in range(n_concepts):
@@ -325,25 +426,35 @@ def estimate_MI_interconcept(
 
 def normalised_interconcept_leakage(I, c, n_neighbors=3, n_concepts=None, flatten=True):
     n_samples = c.shape[0]
-    c = to_numpy(c)
     if n_concepts is None:
         n_concepts = c.shape[1]
-    c = c.reshape(n_samples, n_concepts, -1)
+    if not c.is_cuda:
+        c = to_numpy(c)
+        c = c.reshape(n_samples, n_concepts, -1)
+    else:
+        torch.reshape(c, (n_samples, n_concepts))
 
     if isinteger(c):
-
         def compute_mi(x, y):
             return mutual_info_score(x.squeeze(-1), y.squeeze(-1))
 
     else:
-
-        def compute_mi(x, y):
-            # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
-            noise_x = 1e-10 * np.mean(x) * np.random.randn(*x.shape)
-            noise_y = 1e-10 * np.mean(y) * np.random.randn(*y.shape)
-            return np.float64(
-                compute_mi_cc(x + noise_x, y + noise_y, n_neighbors=n_neighbors)
-            ).item()
+        if not c.is_cuda:
+            def compute_mi(x, y):
+                # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+                noise_x = 1e-10 * np.mean(x) * np.random.randn(*x.shape)
+                noise_y = 1e-10 * np.mean(y) * np.random.randn(*y.shape)
+                return np.float64(
+                    compute_mi_cc(x + noise_x, y + noise_y, n_neighbors=n_neighbors)
+                ).item()
+        else:
+            def compute_mi(x, y):
+                # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+                noise_x = 1e-10 * torch.mean(x) * torch.randn(*x.shape)
+                noise_y = 1e-10 * torch.mean(y) * torch.randn(*y.shape)
+                return np.float64(
+                    compute_mi_cc_torch(x + noise_x, y + noise_y, k=n_neighbors)
+                ).item()
 
     diag_sqrt_MI = np.sqrt(
         [compute_mi(c[:, ii], c[:, ii]) for ii in range(n_concepts)]
@@ -351,7 +462,6 @@ def normalised_interconcept_leakage(I, c, n_neighbors=3, n_concepts=None, flatte
     norm_matrix = np.tensordot(diag_sqrt_MI, diag_sqrt_MI, axes=0) + 1e-10
     tril_indices = np.tril_indices(n_concepts, k=-1)
     norm_vector = norm_matrix[tril_indices]
-
     I_normalized = I / norm_vector
 
     if flatten:
@@ -382,8 +492,12 @@ def estimate_cmi_interconcept(c, d, n_concepts=None, flatten=True, n_neighbors=3
     n_samples = c.shape[0]
     if n_concepts is None:
         n_concepts = c.shape[1]
-    c = to_numpy(c)
-    c = c.reshape(n_samples, n_concepts, -1)
+
+    if not c.is_cuda:
+        c = to_numpy(c)
+        c = c.reshape(n_samples, n_concepts, -1)
+    else:
+        torch.reshape(c, (n_samples, n_concepts))
 
     if isinteger(c):
 
@@ -391,14 +505,22 @@ def estimate_cmi_interconcept(c, d, n_concepts=None, flatten=True, n_neighbors=3
             return mutual_info_score(x.squeeze(-1), y.squeeze(-1))
 
     else:
-
-        def compute_mi(x, y):
-            # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
-            noise_x = 1e-10 * np.mean(x) * np.random.randn(*x.shape)
-            noise_y = 1e-10 * np.mean(y) * np.random.randn(*y.shape)
-            return np.float64(
-                compute_mi_cc(x + noise_x, y + noise_y, n_neighbors=n_neighbors)
-            ).item()
+        if not c.is_cuda:
+            def compute_mi(x, y):
+                # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+                noise_x = 1e-10 * np.mean(x) * np.random.randn(*x.shape)
+                noise_y = 1e-10 * np.mean(y) * np.random.randn(*y.shape)
+                return np.float64(
+                    compute_mi_cc(x + noise_x, y + noise_y, n_neighbors=n_neighbors)
+                ).item()
+        else:
+            def compute_mi(x, y):
+                # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+                noise_x = 1e-10 * torch.mean(x) * torch.randn(*x.shape)
+                noise_y = 1e-10 * torch.mean(y) * torch.randn(*y.shape)
+                return np.float64(
+                    compute_mi_cc_torch(x + noise_x, y + noise_y, k=n_neighbors)
+                ).item()
 
     I = np.zeros((n_concepts, n_concepts))
     for ii in range(n_concepts):
@@ -487,9 +609,13 @@ def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=Tr
     n_samples = c.shape[0]
     if n_concepts is None:
         n_concepts = c.shape[1]
-    y = to_numpy(y)
-    c = to_numpy(c)
-    c = c.reshape(n_samples, n_concepts, -1)
+
+    if not c.is_cuda:
+        y = to_numpy(y)
+        c = to_numpy(c)
+        c = c.reshape(n_samples, n_concepts, -1)
+    else:
+        torch.reshape(c, (n_samples, n_concepts))
 
     # We assume y is always integer:
     def norm_mi(y):
@@ -501,13 +627,20 @@ def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=Tr
             return mutual_info_score(c.squeeze(-1), y)
 
     else:
-
-        def compute_mi(c, y):
-            # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
-            noise = 1e-10 * np.mean(c) * np.random.randn(*c.shape)
-            return np.float64(
-                compute_mi_cd(c + noise, y, n_neighbors=n_neighbors)
-            ).item()
+        if not c.is_cuda:
+            def compute_mi(c, y):
+                # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+                noise = 1e-10 * np.mean(c) * np.random.randn(*c.shape)
+                return np.float64(
+                    compute_mi_cd(c + noise, y, n_neighbors=n_neighbors)
+                ).item()
+        else:
+            def compute_mi(c, y):
+                # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+                noise = 1e-10 * torch.mean(c) * torch.randn(*c.shape)
+                return np.float64(
+                    compute_mi_cd_torch(c + noise, y, k=n_neighbors)
+                ).item()
 
     I = np.zeros((n_concepts))
     for ii in range(n_concepts):

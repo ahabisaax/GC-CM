@@ -180,15 +180,18 @@ class LossTracker(Callback):
     ):
         self.val_loss_temp.append(outputs["val_loss"].item())
         self.val_y_accuracy_temp.append(outputs["val_y_accuracy"])
+        # Force usage of CUDA if available, regardless of where the model currently sits
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f'DEVICE IS {device}')
         if not self.black_box:
             self.val_c_accuracy_temp.append(outputs["val_c_accuracy"])
         if self.track_leakage:
             if "c_learnt" in outputs:
-                self.val_c_learnt_temp.append(outputs["c_learnt"].detach().cpu())
+                self.val_c_learnt_temp.append(outputs["c_learnt"].detach().to(device))
             if "c_true" in outputs:
-                self.val_c_true_temp.append(outputs["c_true"].detach().cpu())
+                self.val_c_true_temp.append(outputs["c_true"].detach().to(device))
             if "y_true" in outputs:
-                self.val_y_true_temp.append(outputs["y_true"].detach().cpu())
+                self.val_y_true_temp.append(outputs["y_true"].detach().to(device))
 
     def on_train_epoch_end(self, trainer, pl_module):
         #         print("self.train_y_accuracy_temp:")
@@ -238,9 +241,17 @@ class LossTracker(Callback):
                 (trainer.current_epoch == trainer.max_epochs - 1)
             ):
                 print("ABOUT TO START LEAKAGE COMPUTATION")
-                all_c_learnt = torch.cat(self.val_c_learnt_temp).numpy()
-                all_c_truth = torch.cat(self.val_c_true_temp).numpy()
-                all_y_true = torch.cat(self.val_y_true_temp).numpy()
+
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                if device == 'cpu':
+                    all_c_learnt = torch.cat(self.val_c_learnt_temp).numpy()
+                    all_c_truth = torch.cat(self.val_c_true_temp).numpy()
+                    all_y_true = torch.cat(self.val_y_true_temp).numpy()
+                else:
+                    print(f'NOT NUMPY()ing the arrays')
+                    all_c_learnt = torch.cat(self.val_c_learnt_temp)
+                    all_c_truth = torch.cat(self.val_c_true_temp)
+                    all_y_true = torch.cat(self.val_y_true_temp)
                 n_concepts = all_c_truth.shape[1]
 
                 print(f'SHAPE OF CONCEPT VECTOR {all_c_learnt.shape}')
