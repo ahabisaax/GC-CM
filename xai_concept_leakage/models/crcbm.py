@@ -31,8 +31,6 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         adversarial_lambda_scheduler_warmup=None,
         use_adversarial=True,
         adv_learning_rate=0.01,
-        adaptive_lambda_beta=0.99,
-        adaptive_lambda_scale=0.5,
         concept_loss_weight=0.01,
         task_loss_weight=1,
         extra_dims=0,
@@ -70,20 +68,13 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         :param float max_adversarial_lambda: The maximum weighting we apply to the critic
             in the CBM loss function.
         :param float adversarial_scheduler: A function that takes the current epoch and returns the current adversarial
-            weight (lambda_adv). Defaults to None can be one of ['adaptive', 'linear', 'sigmoid'].
+            weight (lambda_adv). Defaults to None can be one of ['lagrange', 'linear', 'sigmoid'].
         :param int adversarial_lambda_scheduler_warmup: Number of epochs over which the penalty ramps up if we have
             a linear scheduler.
         :param bool use_adversarial: If True, enables the adversarial critic and its loss. If False,
             the model trains as a standard CBM. Defaults to True.
         :param float adv_learning_rate: The learning rate for the adversarial
             critic's optimizer. Defaults to 0.01.
-        :param float adaptive_lambda_beta: The momentum parameter (beta) for any dynamic/adaptive lambda scheduling,
-            often used to smooth the loss signal. Defaults to 0.99.
-        :param float adaptive_lambda_scale: A scaling factor to control the magnitude of the change
-            in any dynamic/adaptive lambda scheduling. Defaults to 0.5.
-        :param float concept_loss_weight: Weight to be used for the final loss'
-            component corresponding to the concept classification loss. Default
-            is 0.01.
         :param float task_loss_weight: Weight to be used for the final loss'
             component corresponding to the output task classification loss.
             Default is 1.
@@ -259,12 +250,6 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             self.lr_find_mode = False
             self.n_critic_steps = n_critic_steps
 
-            if self.adversarial_scheduler == 'proportional':
-                self.lambda_scheduler = ProportionalLambdaScheduler(
-                    beta = adaptive_lambda_beta,
-                    scale_factor=adaptive_lambda_scale,
-                    max_lambda=self.max_adversarial_loss_weight
-                )
             if self.adversarial_scheduler == "linear":
                 #Specific to linear scheduler period over which we increase the weighting
                 self.adversarial_warmup_epochs = adversarial_lambda_scheduler_warmup
