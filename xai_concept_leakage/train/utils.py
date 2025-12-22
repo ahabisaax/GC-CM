@@ -234,7 +234,6 @@ class LossTracker(Callback):
                 ((trainer.current_epoch + add_1) % self.check == 0) or
                 (trainer.current_epoch == trainer.max_epochs - 1)
             ):
-                print("ABOUT TO START LEAKAGE COMPUTATION")
 
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 if device == 'cpu':
@@ -242,7 +241,6 @@ class LossTracker(Callback):
                     all_c_truth = torch.cat(self.val_c_true_temp).numpy()
                     all_y_true = torch.cat(self.val_y_true_temp).numpy()
                 else:
-                    print(f'NOT NUMPY()ing the arrays')
                     all_c_learnt = torch.cat(self.val_c_learnt_temp)
                     all_c_truth = torch.cat(self.val_c_true_temp)
                     all_y_true = torch.cat(self.val_y_true_temp)
@@ -259,10 +257,8 @@ class LossTracker(Callback):
                                                            normalise=True,
                                                            n_concepts=n_concepts
                                                            )
-                print(f'COMPUTED ICL')
                 mean_norm_icl_i = matrix_from_tril(norm_icl).sum(axis=1) / (n_concepts - 1)
                 mean_norm_icl = mean_norm_icl_i.sum() / len(mean_norm_icl_i)
-                print(f'ABOUT TO COMPUTE CTL')
                 norm_ctl_vec = compute_MI_score_model_training(c_pred=all_c_learnt,
                                                                c_true=all_c_truth,
                                                                y_true=all_y_true,

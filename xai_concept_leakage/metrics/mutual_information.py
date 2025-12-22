@@ -710,7 +710,7 @@ def compute_MI_score_model_training(
         normalise=True,
         n_concepts=None):
     if score_type == "interconcept":
-        print(f'ABOUT TO COMPUTE MI INTERCONCEPT of c_pred which is continous')
+
         pred_mi = estimate_MI_interconcept(
             c_pred,
             n_concepts=n_concepts,
@@ -719,7 +719,6 @@ def compute_MI_score_model_training(
             normalise=normalise,
         )
         if wrt_true:
-            print(f'ABOUT TO COMPUTE MI INTERCONCEPT of c_true which is binary')
             true_mi = estimate_MI_interconcept(
                 c_true,
                 n_concepts=n_concepts,
