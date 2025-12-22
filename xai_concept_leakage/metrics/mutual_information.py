@@ -652,7 +652,7 @@ def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=Tr
     # We assume y is always integer:
     def norm_mi(y):
         if isinstance(y, torch.Tensor):
-            y.cpu().detach().numpy()
+            y = y.cpu().detach().numpy()
         return mutual_info_score(y, y)
 
     if isinstance(c, torch.Tensor):
