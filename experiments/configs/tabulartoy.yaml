@@ -127,8 +127,8 @@ runs:
        adversarial_loss_type: 'accuracy_gap'
        n_critic_steps: 1
        accumulate_grad_batches: 1
-       cbm_optimizer: adam
-       adv_optimizer: adam
+       cbm_optimizer: adamw
+       adv_optimizer: adamw
        cbm_learning_rate: 0.05
        grid_variables: ['concept_loss_weight']
        concept_loss_weight: [0.1, 0.5, 1.0]
