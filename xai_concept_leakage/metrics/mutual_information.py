@@ -652,8 +652,10 @@ def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=Tr
     # We assume y is always integer:
     def norm_mi(y):
         if isinstance(y, torch.Tensor):
-            y = y.cpu().detach().numpy()
-        return mutual_info_score(y, y)
+            y_np = y.cpu().detach().numpy()
+        else:
+            y_np = y
+        return mutual_info_score(y_np, y_np)
 
     if isinstance(c, torch.Tensor):
         if torch.is_floating_point(c):
@@ -665,9 +667,10 @@ def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=Tr
 
     if is_integer:
         def compute_mi(c, y):
-            #TODO this is going to be a bug as y is tensor and so is function won't work
-            print(f'USING SKLEARN MI function')
-            return mutual_info_score(c.squeeze(-1), y)
+            c_np = c.detach().cpu().numpy().squeeze()
+            y_np = y.detach().cpu().numpy().squeeze()
+
+            return mutual_info_score(c_np, y_np)
 
     else:
         if not c.is_cuda:
