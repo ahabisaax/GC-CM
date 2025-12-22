@@ -150,7 +150,6 @@ def train_end_to_end_model(
     devices="auto",
     use_adversarial=True,
     adversarial_delay=0,
-    auto_lr_find=False,
 ):
     print(f"--- DEBUG: Executing train_end_to_end_model from file: {inspect.getfile(train_end_to_end_model)} ---")
     if seed is not None:
@@ -209,8 +208,7 @@ def train_end_to_end_model(
                                         check_leakage=5,
                                         every_n_check_val=config.get("check_val_every_n_epoch", 5))
 
-            if auto_lr_find:
-                model.lr_find_mode = True
+
 
             checkpoint_callback = ModelCheckpoint(
                 dirpath=os.path.join(result_dir, "checkpoints"),
