@@ -173,6 +173,7 @@ def construct_model(
             "adv_learning_rate": config.get("adv_learning_rate"),
             "adversarial_lambda_scheduler_warmup": config.get("adversarial_lambda_scheduler_warmup"),
             "adversarial_scheduler": config.get("adversarial_scheduler"),
+            "adversarial_loss_type": config.get("adversarial_loss_type", 'gradient'),
             "n_critic_steps": config.get("n_critic_steps", 1)
         }
 

@@ -28,6 +28,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         adversarial_delay,
         max_adversarial_lambda=1,
         adversarial_scheduler = None,
+        adversarial_loss_type ='gradient',
         adversarial_lambda_scheduler_warmup=None,
         use_adversarial=True,
         adv_learning_rate=0.01,
@@ -247,8 +248,8 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         if self.use_adversarial:
             self.adversarial_delay = adversarial_delay
             self.max_adversarial_loss_weight = max_adversarial_lambda
-            self.lr_find_mode = False
             self.n_critic_steps = n_critic_steps
+            self.adversarial_loss_type = adversarial_loss_type
 
             if self.adversarial_scheduler == "linear":
                 #Specific to linear scheduler period over which we increase the weighting
@@ -742,10 +743,15 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         c_sem, c_logits, y_logits = outputs[0], outputs[1], outputs[2]
         y_adv_pred = None
         if self.use_adversarial and self.current_epoch >= self.adversarial_delay:
-            if self.bool:
-                y_adv_pred = self.critic((c_logits > 0.5).float())
+            if self.adversarial_loss_type == 'gradient':
+                if self.bool:
+                    y_adv_pred = self.critic((c_logits > 0.5).float())
+                else:
+                    y_adv_pred = self.critic(c_logits)
             else:
-                y_adv_pred = self.critic(c_logits)
+                #this is the accuracy gap method
+                y_adv_pred = self.critic(c)
+
 
         adversarial_loss, adversarial_loss_scalar = self._extra_losses(
                     x=x,
@@ -772,26 +778,35 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
 
         if self.use_adversarial:
             adversarial_loss_weight = self.get_lambda_scheduler(task_loss_scalar, adversarial_loss_scalar)
+            if self.adversarial_loss_type == 'gradient':
+                adversarial_term = - (adversarial_loss_weight * adversarial_loss)
+            else:
+                leakage_gap = task_loss - adversarial_loss
+                hinge_penalty = torch.clamp(leakage_gap, min=0)
+                adversarial_term = adversarial_loss_weight * hinge_penalty
+
+
         else:
             adversarial_loss = 0
+            adversarial_term = 0
             adversarial_loss_weight = 0
 
         if self.concept_loss_weight != 0:
             concept_loss = self.loss_concept(c_sem, c)
             concept_loss_scalar = concept_loss.detach().item()
-            adversarial_term = - (adversarial_loss_weight * adversarial_loss)
-            self._monitor_grad(batch_idx,
-                     task_loss,
-                     c_logits,
-                     adversarial_term,
-                     concept_loss,
-                   train=train)
 
+            # self._monitor_grad(batch_idx,
+            #          task_loss,
+            #          c_logits,
+            #          adversarial_term,
+            #          concept_loss,
+            #        train=train)
             loss = (
                 self.concept_loss_weight * concept_loss
                 + task_loss + adversarial_term)
+
         else:
-            loss = task_loss + adversarial_loss
+            loss = task_loss + adversarial_term
             concept_loss_scalar = 0.0
         # compute accuracy
         (c_accuracy, c_auc, c_f1), (y_accuracy, y_auc, y_f1) = compute_accuracy(
@@ -1114,8 +1129,6 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                     weight_decay=self.weight_decay,
                 )
 
-            if self.lr_find_mode:
-                return cbm_optimizer
 
             if self.adversarial_optimizer_name.lower() == "adam":
                 adv_optimizer = torch.optim.Adam(
@@ -1139,38 +1152,8 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                     weight_decay=self.weight_decay,
                 )
 
-            cbm_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                cbm_optimizer,
-                verbose=True,
-            )
-
-            adv_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                adv_optimizer,
-                verbose=True,
-            )
             return [cbm_optimizer, adv_optimizer]
-            # [
-            #     # Config for Optimizer 0 (cbm)
-            #     {
-            #         "optimizer": cbm_optimizer,
-            #         "lr_scheduler": {
-            #             #"scheduler": cbm_scheduler,
-            #             "monitor": "loss",  # Required for ReduceLROnPlateau
-            #             "interval": "epoch",
-            #             "frequency": 1,
-            #         },
-            #     },
-            #     # Config for Optimizer 1 (adv)
-            #     {
-            #         "optimizer": adv_optimizer,
-            #         "lr_scheduler": {
-            #             #"scheduler": adv_scheduler,
-            #             "monitor": "loss",  # Required for ReduceLROnPlateau
-            #             "interval": "epoch",
-            #             "frequency": 1,
-            #         },
-            #     },
-            # ]
+
 
         else:
             if self.cbm_optimizer_name.lower() == "adam":
