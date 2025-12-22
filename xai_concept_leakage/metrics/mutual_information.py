@@ -144,16 +144,11 @@ def compute_mi_cc_torch(x, y, k=3):
     """
 
     N = x.shape[0]
-    print(f'N {N}')
     device = x.device
-    print(f'WE MADE IT TO COMPUTE CC TORCH VERSION')
 
     if x.ndim == 1:
-        print(f' x dim is 1 so we need to unsqueeze')
         x = x.unsqueeze(1)
-    print(y.ndim)
     if y.ndim == 1:
-        print(f' y dim is 1 so we need to unsqueeze')
         y = y.unsqueeze(1)
 
 
@@ -434,7 +429,6 @@ def estimate_MI_interconcept(
         for jj in range(ii + 1, n_concepts):
             I[ii, jj] = compute_mi(c[:, ii], c[:, jj])
     if normalise:
-        print('ABOUT TO COMPUTE VIA NUMPY FUNCTION')
         diag_sqrt_MI = np.sqrt(
             [compute_mi(c[:, ii], c[:, ii]) for ii in range(n_concepts)]
         )
@@ -657,11 +651,12 @@ def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=Tr
 
     # We assume y is always integer:
     def norm_mi(y):
+        if isinstance(y, torch.Tensor):
+            y.cpu().detach().numpy()
         return mutual_info_score(y, y)
 
     if isinstance(c, torch.Tensor):
         if torch.is_floating_point(c):
-            # Check if all values are equal to their floor (i.e., no decimal part)
             is_integer =  torch.allclose(c, c.floor())
         else:
             is_integer = True
@@ -670,11 +665,14 @@ def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=Tr
 
     if is_integer:
         def compute_mi(c, y):
+            #TODO this is going to be a bug as y is tensor and so is function won't work
+            print(f'USING SKLEARN MI function')
             return mutual_info_score(c.squeeze(-1), y)
 
     else:
         if not c.is_cuda:
             def compute_mi(c, y):
+                print("NUUMPY CPU VERSION OF mutual information function")
                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
                 noise = 1e-10 * np.mean(c) * np.random.randn(*c.shape)
                 return np.float64(
@@ -682,6 +680,7 @@ def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=Tr
                 ).item()
         else:
             def compute_mi(c, y):
+                print("TORCH VERSION OF mutual information function")
                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
                 noise = 1e-10 * torch.mean(c) * torch.randn(*c.shape, device=c.device)
                 return np.float64(
@@ -708,7 +707,7 @@ def compute_MI_score_model_training(
         normalise=True,
         n_concepts=None):
     if score_type == "interconcept":
-        print(f'ABOUT TO COMPUTE MI INTERCONCEPT')
+        print(f'ABOUT TO COMPUTE MI INTERCONCEPT of c_pred which is continous')
         pred_mi = estimate_MI_interconcept(
             c_pred,
             n_concepts=n_concepts,
@@ -717,7 +716,7 @@ def compute_MI_score_model_training(
             normalise=normalise,
         )
         if wrt_true:
-            print(f'ABOUT TO COMPUTE MI INTERCONCEPT')
+            print(f'ABOUT TO COMPUTE MI INTERCONCEPT of c_true which is binary')
             true_mi = estimate_MI_interconcept(
                 c_true,
                 n_concepts=n_concepts,
