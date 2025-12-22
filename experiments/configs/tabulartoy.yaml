@@ -120,7 +120,7 @@ runs:
        extra_dims: 0
        sigmoidal_prob: True
        use_adversarial: True
-       max_adversarial_lambda: 1.0
+       max_adversarial_lambda: 0.2
        adversarial_delay: 0
        adversarial_lambda_scheduler_warmup: None
        adversarial_scheduler: "none"
