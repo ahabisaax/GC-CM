@@ -203,8 +203,6 @@ class LossTracker(Callback):
         self.train_loss_temp = []
         self.train_y_accuracy_temp = []
         if not self.black_box:
-            #             print("self.train_c_accuracy_temp:")
-            #             print(self.train_c_accuracy_temp)
             mean_c_accuracy = self._avg_of_empty(self.train_c_accuracy_temp)
             self.train_c_accuracies.append(mean_c_accuracy)
             self.train_c_accuracy_temp = []
@@ -223,16 +221,12 @@ class LossTracker(Callback):
         self.val_y_accuracy_temp = []
         pareto_score = 0
 
-        print("computed means of accuracies")
-
         if not self.black_box:
-            #             print("self.val_c_accuracy_temp:")
-            #             print(self.val_c_accuracy_temp)
             mean_c_accuracy = self._avg_of_empty(self.val_c_accuracy_temp)
             self.val_c_accuracies.append(mean_c_accuracy)
             self.val_c_accuracy_temp = []
 
-            if self.val_every_n ==1:
+            if self.val_every_n == 1:
                 add_1 = 0
             else:
                 add_1 = 1

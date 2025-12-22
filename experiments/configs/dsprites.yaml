@@ -122,11 +122,9 @@ runs:
        use_adversarial: True
        max_adversarial_lambda: 1.0
        adversarial_delay: 0
-       adversarial_lambda_scheduler_warmup: null  # Changed 'None' to 'null'
+       adversarial_lambda_scheduler_warmup: null
        adversarial_scheduler: "none"
-       adaptive_lambda_beta: 0.99
-       adaptive_lambda_scale: 0.5
-       auto_lr: False
+       adversarial_loss_type: 'gradient'
        n_critic_steps: 1
        accumulate_grad_batches: 64
        grid_variables: ['concept_loss_weight']
@@ -135,5 +133,5 @@ runs:
        early_stopping_mode: max
        early_stopping_delta: 0.0
        gradient_clip_val: 1.0
-       patience: 40
-       max_epochs: 250
+       patience: 500
+       max_epochs: 500

@@ -124,9 +124,7 @@ runs:
        adversarial_delay: 0
        adversarial_lambda_scheduler_warmup: None
        adversarial_scheduler: "none"
-       adaptive_lambda_beta: 0.99
-       adaptive_lambda_scale: 0.5
-       auto_lr: False
+       adversarial_loss_type: 'gradient'
        n_critic_steps: 1
        accumulate_grad_batches: 64
        cbm_optimizer: adam
