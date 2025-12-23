@@ -6,7 +6,7 @@ shared_params:
   dataset_config:
     dataset: tabulartoy
     batch_size: 64
-    num_workers: 4
+    num_workers: 8
     root_dir: data/TabularToy/tabulartoy_25_10k/ #for tabulartoy, this is where you find the pre-sampled dataset
     considered_concepts: ['0', '1', '2']
     sampling_percent: 1
@@ -84,7 +84,7 @@ runs:
        cbm_learning_rate: [0.0001, 0.001, 0.01, 0.05]
        early_stopping_monitor: 'val_loss'
        early_stopping_delta: 0.0
-       early_stopping_mode: max
+       early_stopping_mode: min
        gradient_clip_val: 0
        patience: 20
        max_epochs: 250
