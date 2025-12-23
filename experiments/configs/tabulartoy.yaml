@@ -52,7 +52,7 @@ shared_params:
 
 
   momentum: 0.9
-  project_name: "Tabulartoy ts"
+  project_name: "Tabulartoy lr and longer training"
   max_epochs: 250
   check_val_every_n_epoch: 5
 
