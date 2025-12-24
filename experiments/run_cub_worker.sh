@@ -39,6 +39,7 @@ LOCAL_WORKSPACE="$TMPDIR/$JOB_ID"
 mkdir -p "$LOCAL_WORKSPACE/data"
 
 echo "Copying code to local SSD..."
+cd "$LOCAL_WORKSPACE/data"
 rsync -a \
     --exclude '/results' \
     --exclude '/logs' \
@@ -59,14 +60,14 @@ export PYTHONPATH="$LOCAL_WORKSPACE:$PYTHONPATH"
 echo "Running from: $(pwd)"
 
 
-LOCAL_CONFIG="experiments/configs/cub_final.yaml"
+LOCAL_CONFIG="experiments/configs/cub.yaml"
 LOCAL_RESULTS="$TMPDIR/results_temp"
 
 echo "Starting Training..."
 $CONDA_PREFIX/bin/python -u experiments/run_experiments.py \
     --config "$LOCAL_CONFIG" \
     --project_name "CUB_Fast" \
-    --output-dir "$LOCAL_RESULTS"
+    --output_dir "$LOCAL_RESULTS"
 
 # --- 6. SAVE RESULTS ---
 echo "Syncing results back to Scratch..."

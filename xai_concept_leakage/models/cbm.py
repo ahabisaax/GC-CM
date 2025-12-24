@@ -718,17 +718,36 @@ class ConceptBottleneckModel(pl.LightningModule):
         outputs = self._forward(x)
         c_sem = outputs[0]
 
-        result["c_learnt"] = c_sem
-        result["c_true"] = c
-        result["y_true"] = y
+        if torch.cuda.is_available():
+            device = torch.device('cuda')
+        elif torch.backends.mps.is_available():
+            device = torch.device('mps')
+        else:
+            device = torch.device("cpu")
+
+        result["c_learnt"] = c_sem.detach().to(device)
+        result["c_true"] = c.detach().to(device)
+        result["y_true"] = y.detach().to(device)
 
         self._test_step_outputs.append(result)
         return result
 
     def on_test_epoch_end(self):
-        all_c_learnt = torch.cat([out['c_learnt'] for out in self._test_step_outputs]).detach().cpu().numpy()
-        all_c_truth = torch.cat([out['c_true'] for out in self._test_step_outputs]).detach().cpu().numpy()
-        all_y_true = torch.cat([out['y_true'] for out in self._test_step_outputs]).detach().cpu().numpy()
+        if torch.cuda.is_available():
+            device = torch.device('cuda')
+        elif torch.backends.mps.is_available():
+            device = torch.device('mps')
+        else:
+            device = torch.device("cpu")
+
+        if device == 'cpu':
+            all_c_learnt = torch.cat([out['c_learnt'] for out in self._test_step_outputs]).numpy()
+            all_c_truth = torch.cat([out['c_true'] for out in self._test_step_outputs]).numpy()
+            all_y_true = torch.cat([out['y_true'] for out in self._test_step_outputs]).numpy()
+        else:
+            all_c_learnt = torch.cat([out['c_learnt'] for out in self._test_step_outputs])
+            all_c_truth = torch.cat([out['c_true'] for out in self._test_step_outputs])
+            all_y_true = torch.cat([out['y_true'] for out in self._test_step_outputs])
         n_concepts = all_c_truth.shape[1]
 
         norm_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
@@ -757,33 +776,33 @@ class ConceptBottleneckModel(pl.LightningModule):
         mean_norm_ctl = norm_ctl_vec.sum() / len(norm_ctl_vec)
 
         # this is the interconcept leakage which is independent of the task
-        task_independent_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
-                                                               c_true=all_c_truth,
-                                                               y_true=all_y_true,
-                                                               score_type="interconcept_cmi",
-                                                               wrt_true=True,
-                                                               apply_max=False,
-                                                               n_neighbors=3,
-                                                               normalise=False,
-                                                               n_concepts=n_concepts
-                                                               )
-
-        task_independent_icl_i = matrix_from_tril(task_independent_icl).sum(axis=1) / (n_concepts - 1)
-        task_independent_icl = task_independent_icl_i.sum() / len(task_independent_icl_i)
-
-        unnormalised_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
-                                                           c_true=all_c_truth,
-                                                           y_true=all_y_true,
-                                                           score_type="interconcept",
-                                                           wrt_true=True,
-                                                           apply_max=False,
-                                                           n_neighbors=3,
-                                                           normalise=False,
-                                                           n_concepts=n_concepts
-                                                           )
-
-        unnormalised_icl_i = matrix_from_tril(unnormalised_icl).sum(axis=1) / (n_concepts - 1)
-        unnormalised_icl = unnormalised_icl_i.sum() / len(unnormalised_icl_i)
+        # task_independent_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
+        #                                                        c_true=all_c_truth,
+        #                                                        y_true=all_y_true,
+        #                                                        score_type="interconcept_cmi",
+        #                                                        wrt_true=True,
+        #                                                        apply_max=False,
+        #                                                        n_neighbors=3,
+        #                                                        normalise=False,
+        #                                                        n_concepts=n_concepts
+        #                                                        )
+        #
+        # task_independent_icl_i = matrix_from_tril(task_independent_icl).sum(axis=1) / (n_concepts - 1)
+        # task_independent_icl = task_independent_icl_i.sum() / len(task_independent_icl_i)
+        #
+        # unnormalised_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
+        #                                                    c_true=all_c_truth,
+        #                                                    y_true=all_y_true,
+        #                                                    score_type="interconcept",
+        #                                                    wrt_true=True,
+        #                                                    apply_max=False,
+        #                                                    n_neighbors=3,
+        #                                                    normalise=False,
+        #                                                    n_concepts=n_concepts
+        #                                                    )
+        #
+        # unnormalised_icl_i = matrix_from_tril(unnormalised_icl).sum(axis=1) / (n_concepts - 1)
+        # unnormalised_icl = unnormalised_icl_i.sum() / len(unnormalised_icl_i)
 
         unnormalised_ctl_vec = compute_MI_score_model_training(c_pred=all_c_learnt,
                                                                c_true=all_c_truth,
@@ -797,13 +816,16 @@ class ConceptBottleneckModel(pl.LightningModule):
         mean_unnorm_ctl = unnormalised_ctl_vec.sum() / len(unnormalised_ctl_vec)
 
         # note we are already applying the max operation before this subtraction
-        task_dependent_icl = unnormalised_icl - task_independent_icl
+        #task_dependent_icl = unnormalised_icl - task_independent_icl
 
-        if unnormalised_icl <= 0 or task_dependent_icl < 0:
-            task_icl_ratio = 0
-        else:
-            task_icl_ratio = task_dependent_icl / unnormalised_icl
-
+        #if unnormalised_icl <= 0 or task_dependent_icl < 0:
+        #    task_icl_ratio = 0
+        #else:
+        #    task_icl_ratio = task_dependent_icl / unnormalised_icl
+        unnormalised_icl = 0
+        task_dependent_icl = 0
+        task_independent_icl = 0
+        task_icl_ratio = 0
         self.log('test_ctl_average', mean_unnorm_ctl)
         self.log('test_normalised_ctl_average', mean_norm_ctl)
         self.log('test_normalised_icl_average', mean_norm_icl)

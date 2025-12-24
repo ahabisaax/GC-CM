@@ -378,22 +378,19 @@ def estimate_MI_interconcept(
     n_samples = c.shape[0]
     if n_concepts is None:
         n_concepts = c.shape[1]
-    if not c.is_cuda:
-        c = to_numpy(c)
-        c = c.reshape(n_samples, n_concepts, -1)
-    else:
-        torch.reshape(c, (n_samples, n_concepts))
 
     if isinstance(c, torch.Tensor):
+        torch.reshape(c, (n_samples, n_concepts))
         if torch.is_floating_point(c):
             is_integer =  torch.allclose(c, c.floor())
         else:
             is_integer = True
     else:
+        c = to_numpy(c)
+        c = c.reshape(n_samples, n_concepts, -1)
         is_integer = isinteger(c)
 
     if is_integer:
-        #TODO go from here this function isnt working
         def compute_mi(x, y):
             if isinstance(c, torch.Tensor):
                 x = x.cpu().detach().numpy()
@@ -407,7 +404,7 @@ def estimate_MI_interconcept(
             return mutual_info_score(x.squeeze(-1), y.squeeze(-1))
 
     else:
-        if not c.is_cuda:
+        if not isinstance(c, torch.Tensor):
             def compute_mi(x, y):
                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
                 noise_x = 1e-10 * np.mean(x) * np.random.randn(*x.shape)
@@ -443,19 +440,16 @@ def normalised_interconcept_leakage(I, c, n_neighbors=3, n_concepts=None, flatte
     n_samples = c.shape[0]
     if n_concepts is None:
         n_concepts = c.shape[1]
-    if not c.is_cuda:
-        c = to_numpy(c)
-        c = c.reshape(n_samples, n_concepts, -1)
-    else:
-        torch.reshape(c, (n_samples, n_concepts))
 
     if isinstance(c, torch.Tensor):
+        torch.reshape(c, (n_samples, n_concepts))
         if torch.is_floating_point(c):
-            # Check if all values are equal to their floor (i.e., no decimal part)
             is_integer =  torch.allclose(c, c.floor())
         else:
             is_integer = True
     else:
+        c = to_numpy(c)
+        c = c.reshape(n_samples, n_concepts, -1)
         is_integer = isinteger(c)
 
     if is_integer:
@@ -463,7 +457,7 @@ def normalised_interconcept_leakage(I, c, n_neighbors=3, n_concepts=None, flatte
             return mutual_info_score(x.squeeze(-1), y.squeeze(-1))
 
     else:
-        if not c.is_cuda:
+        if not isinstance(c, torch.Tensor):
             def compute_mi(x, y):
                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
                 noise_x = 1e-10 * np.mean(x) * np.random.randn(*x.shape)
@@ -517,19 +511,16 @@ def estimate_cmi_interconcept(c, d, n_concepts=None, flatten=True, n_neighbors=3
     if n_concepts is None:
         n_concepts = c.shape[1]
 
-    if not c.is_cuda:
-        c = to_numpy(c)
-        c = c.reshape(n_samples, n_concepts, -1)
-    else:
-        torch.reshape(c, (n_samples, n_concepts))
-
     if isinstance(c, torch.Tensor):
+        torch.reshape(c, (n_samples, n_concepts))
         if torch.is_floating_point(c):
             # Check if all values are equal to their floor (i.e., no decimal part)
             is_integer =  torch.allclose(c, c.floor())
         else:
             is_integer = True
     else:
+        c = to_numpy(c)
+        c = c.reshape(n_samples, n_concepts, -1)
         is_integer = isinteger(c)
 
     if is_integer:
@@ -537,7 +528,7 @@ def estimate_cmi_interconcept(c, d, n_concepts=None, flatten=True, n_neighbors=3
             return mutual_info_score(x.squeeze(-1), y.squeeze(-1))
 
     else:
-        if not c.is_cuda:
+        if not isinstance(c, torch.Tensor):
             def compute_mi(x, y):
                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
                 noise_x = 1e-10 * np.mean(x) * np.random.randn(*x.shape)
@@ -642,40 +633,37 @@ def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=Tr
     if n_concepts is None:
         n_concepts = c.shape[1]
 
-    if not c.is_cuda:
-        y = to_numpy(y)
-        c = to_numpy(c)
-        c = c.reshape(n_samples, n_concepts, -1)
-    else:
-        torch.reshape(c, (n_samples, n_concepts))
-
     # We assume y is always integer:
     def norm_mi(y):
         if isinstance(y, torch.Tensor):
+            # thought about cloning here maybe
             y_np = y.cpu().detach().numpy()
         else:
             y_np = y
         return mutual_info_score(y_np, y_np)
 
     if isinstance(c, torch.Tensor):
+        torch.reshape(c, (n_samples, n_concepts))
         if torch.is_floating_point(c):
             is_integer =  torch.allclose(c, c.floor())
         else:
             is_integer = True
     else:
+        y = to_numpy(y)
+        c = to_numpy(c)
+        c = c.reshape(n_samples, n_concepts, -1)
         is_integer = isinteger(c)
 
     if is_integer:
         def compute_mi(c, y):
             c_np = c.detach().cpu().numpy().squeeze()
             y_np = y.detach().cpu().numpy().squeeze()
-
             return mutual_info_score(c_np, y_np)
 
     else:
-        if not c.is_cuda:
+        if not isinstance(c, torch.Tensor):
             def compute_mi(c, y):
-                print("NUUMPY CPU VERSION OF mutual information function")
+                print("NUMPY CPU VERSION OF mutual information function")
                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
                 noise = 1e-10 * np.mean(c) * np.random.randn(*c.shape)
                 return np.float64(
@@ -683,7 +671,6 @@ def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=Tr
                 ).item()
         else:
             def compute_mi(c, y):
-                print("TORCH VERSION OF mutual information function")
                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
                 noise = 1e-10 * torch.mean(c) * torch.randn(*c.shape, device=c.device)
                 return np.float64(
