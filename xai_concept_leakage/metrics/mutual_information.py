@@ -123,7 +123,6 @@ def compute_mi_cc(x, y, n_neighbors):
     kd = KDTree(y, metric="chebyshev")
     ny = kd.query_radius(y, radius, count_only=True, return_distance=False)
     ny = np.array(ny) - 1.0
-
     mi = (
         digamma(n_samples)
         + digamma(n_neighbors)
@@ -136,43 +135,48 @@ def compute_mi_cc(x, y, n_neighbors):
 
 def compute_mi_cc_torch(x, y, k=3):
     """
-    Estimates Mutual Information I(X;Y) using KSG estimator on the GPU.
-    x, y: PyTorch tensors of shape [N, dim_x] and [N, dim_y].
-    Must be on the same device (CUDA).
-
-    This implementation replaces sklearn.neighbors with torch.cdist and torch.topk.
+    Continuous-Continuous MI (KSG) on GPU.
+    Uses Chebyshev (L-inf) distance to match standard KSG.
     """
 
     N = x.shape[0]
     device = x.device
 
-    if x.ndim == 1:
-        x = x.unsqueeze(1)
-    if y.ndim == 1:
-        y = y.unsqueeze(1)
+    # Validation & Reshape
+    if x.ndim == 1: x = x.view(-1, 1)
+    if y.ndim == 1: y = y.view(-1, 1)
 
 
-    z = torch.cat([x, y], dim=1)
-    dist_z = torch.cdist(z,z, p=float('inf'))
+    x_norm = x
+    y_norm = y
+
+    # Joint vector
+    z = torch.cat([x_norm, y_norm], dim=1)
+
+    # Note: 'inf' norm might be slow on some MPS versions.
+    # If using Mac M1/M2 and it crashes, switch to p=2.
+    p_norm = float('inf')
+
+    # Joint Distances
+    dist_z = torch.cdist(z, z, p=p_norm)
+
+    # Find k-th neighbor distance (k+1 because 0 is self)
     values, _ = torch.topk(dist_z, k + 1, largest=False)
-    radius = values[:, -1] # The distance to the k-th neighbor
+    radius = torch.clamp(values[:, -1], min=1e-6)
 
-    radius = torch.clamp(radius, min=1e-6)
-
-    dist_x = torch.cdist(x, x, p=float('inf'))
-    dist_y = torch.cdist(y, y, p=float('inf'))
+    # Marginal Counts
+    dist_x = torch.cdist(x_norm, x_norm, p=p_norm)
+    dist_y = torch.cdist(y_norm, y_norm, p=p_norm)
 
     nx = (dist_x < radius.unsqueeze(1)).float().sum(dim=1) - 1
     ny = (dist_y < radius.unsqueeze(1)).float().sum(dim=1) - 1
-
+    # Formula
     psi_N = torch.digamma(torch.tensor(N, dtype=torch.float, device=device))
     psi_k = torch.digamma(torch.tensor(k, dtype=torch.float, device=device))
     psi_nx = torch.mean(torch.digamma(nx + 1))
     psi_ny = torch.mean(torch.digamma(ny + 1))
-    mi = psi_N + psi_k - psi_nx - psi_ny
 
-    # Clamp at 0 (MI cannot be negative)
-    return max(0.0, mi.item())
+    return max(0.0, (psi_N + psi_k - psi_nx - psi_ny).item())
 
 
 def compute_mi_cd(c, d, n_neighbors):
@@ -256,48 +260,93 @@ def compute_mi_cd(c, d, n_neighbors):
     return max(0, mi)
 
 
-def compute_mi_cd_torch(c,d, k=3):
+def compute_mi_cd_torch(c, d, k=3):
+    """
+    Compute MI between continuous c and discrete d on GPU.
+    """
     N = c.shape[0]
-
-    if c.ndim == 1: c = c.unsqueeze(1)
     device = c.device
+
+    if c.ndim == 1: c = c.view(-1, 1)
+
+    # Ensure d is integer labels
+    d = d.long().flatten()
+    if len(d) != N: d = d[:N]
+
+    # Normalize c
+    c_std = c.std(0)
+    c_std[c_std < 1e-6] = 1.0
+    c_norm = (c - c.mean(0)) / c_std
+
     radius = torch.zeros(N, device=device)
     k_counts = torch.zeros(N, device=device)
-    unique_labels = torch.unique(d)
 
-    for label in unique_labels:
-        mask = (d ==label)
-        count = mask.sum().item()
+    # Identify valid classes (enough samples)
+    unique_labels, counts = torch.unique(d, return_counts=True)
+    valid_labels = unique_labels[counts > k + 1]
 
-        if count <= 1:
-            continue
+    if len(valid_labels) == 0:
+        return 0.0
+    if torch.backends.mps.is_available:
+        valid_mask = (d.unsqueeze(1) == valid_labels.unsqueeze(0)).any(dim=1)
+    else:
+        valid_mask = torch.isin(d, valid_labels)
 
-        k_eff = min(k, count-1)
-        c_subset  = c[mask]
+    # Iterate over classes to find conditional k-NN radii
+    # We only process valid points
+    for label in valid_labels:
+        mask = (d == label)
+        c_subset = c_norm[mask]
+
+        # Distances within this class (Chebyshev to match CPU)
         dist_sub = torch.cdist(c_subset, c_subset, p=float('inf'))
-        values, _ = torch.topk(dist_sub, k_eff + 1, largest=False)
+
+        # Get k-th neighbor (k+1 because of self)
+        # Note: largest=False gives smallest
+        values, _ = torch.topk(dist_sub, k + 1, largest=False, sorted=True)
         r = values[:, -1]
 
-        radius[mask] = r
-        k_counts[mask] = float(k_eff)
+        # CPU uses np.nextafter(r, 0) -> makes radius slightly smaller?
+        # If we use strict inequality < radius, we exclude the k-th point.
+        # So we count k-1 neighbors.
+        radius[mask] = r - 1e-7
+        k_counts[mask] = float(k)
 
-        dist_full = torch.cdist(c, c, p=float('inf'))
+    # Filter to valid points for the global count and final averaging
+    c_valid = c_norm[valid_mask]
+    r_valid = radius[valid_mask]
+    k_valid = k_counts[valid_mask]
+    d_valid = d[valid_mask]
+    N_valid = c_valid.shape[0]
 
-        # nx = count(dist < radius) - 1
-        nx = (dist_full < radius.unsqueeze(1)).float().sum(dim=1) - 1
-        psi_N = torch.digamma(torch.tensor(N, dtype=torch.float, device=device))
-        term_k = torch.mean(torch.digamma(k_counts))
-        term_nx = torch.mean(torch.digamma(nx + 1))
+    # Target points j can be anywhere in c_norm
+    # dist[i, j]
+    dist_full = torch.cdist(c_valid, c_norm, p=float('inf'))
 
-        # Term 4: mean(digamma(count of class c_i))
-        class_counts_lookup = torch.zeros(d.max() + 1, device=device)
-        labels, counts = torch.unique(d, return_counts=True)
-        class_counts_lookup[labels] = counts.float()
-        point_class_counts = class_counts_lookup[d]
-        term_class = torch.mean(torch.digamma(point_class_counts))
+    # nx = count(dist < radius) - 1 (self)
+    nx = (dist_full < r_valid.unsqueeze(1)).float().sum(dim=1) - 1
 
-        mi = psi_N + term_k - term_nx - term_class
-        return max(0.0, mi.item())
+    # Formula
+    psi_N = torch.digamma(torch.tensor(N_valid, dtype=torch.float, device=device))
+    term_k = torch.mean(torch.digamma(k_valid))
+    term_nx = torch.mean(torch.digamma(nx + 1))
+
+    # Create lookup
+    if d.max() < 10000:
+        count_lookup = torch.zeros(d.max() + 1, device=device)
+        count_lookup[unique_labels] = counts.float()
+        point_class_counts = count_lookup[d_valid]
+    else:
+        # Slow fallback for sparse labels? Unlikely needed for CBMs.
+        # For now assume dense.
+        count_lookup = torch.zeros(d.max() + 1, device=device)
+        count_lookup[unique_labels] = counts.float()
+        point_class_counts = count_lookup[d_valid]
+
+    term_class = torch.mean(torch.digamma(point_class_counts))
+
+    mi = psi_N + term_k - term_nx - term_class
+    return max(0.0, mi.item())
 
 
 def compute_cmi_cd(c_1, c_2, d, n_neighbors):
@@ -663,7 +712,6 @@ def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=Tr
     else:
         if not isinstance(c, torch.Tensor):
             def compute_mi(c, y):
-                print("NUMPY CPU VERSION OF mutual information function")
                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
                 noise = 1e-10 * np.mean(c) * np.random.randn(*c.shape)
                 return np.float64(

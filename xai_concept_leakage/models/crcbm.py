@@ -1063,53 +1063,58 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         mean_norm_ctl = norm_ctl_vec.sum()/len(norm_ctl_vec)
 
         #this is the interconcept leakage which is independent of the task
-        task_independent_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
-                                        c_true=all_c_truth,
-                                        y_true=all_y_true,
-                                        score_type="interconcept_cmi",
-                                        wrt_true=True,
-                                        apply_max=False,
-                                        n_neighbors=3,
-                                        normalise=False,
-                                        n_concepts=n_concepts
-                                        )
+        # task_independent_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
+        #                                 c_true=all_c_truth,
+        #                                 y_true=all_y_true,
+        #                                 score_type="interconcept_cmi",
+        #                                 wrt_true=True,
+        #                                 apply_max=False,
+        #                                 n_neighbors=3,
+        #                                 normalise=False,
+        #                                 n_concepts=n_concepts
+        #                                 )
+        #
+        # task_independent_icl_i = matrix_from_tril(task_independent_icl).sum(axis=1) / (n_concepts - 1)
+        # task_independent_icl = task_independent_icl_i.sum() / len(task_independent_icl_i)
 
-        task_independent_icl_i = matrix_from_tril(task_independent_icl).sum(axis=1) / (n_concepts - 1)
-        task_independent_icl = task_independent_icl_i.sum() / len(task_independent_icl_i)
+        # unnormalised_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
+        #                                 c_true=all_c_truth,
+        #                                 y_true=all_y_true,
+        #                                 score_type="interconcept",
+        #                                 wrt_true=True,
+        #                                 apply_max=False,
+        #                                 n_neighbors=3,
+        #                                 normalise=False,
+        #                                 n_concepts=n_concepts
+        #                                 )
 
-        unnormalised_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
-                                        c_true=all_c_truth,
-                                        y_true=all_y_true,
-                                        score_type="interconcept",
-                                        wrt_true=True,
-                                        apply_max=False,
-                                        n_neighbors=3,
-                                        normalise=False,
-                                        n_concepts=n_concepts
-                                        )
+        # unnormalised_icl_i = matrix_from_tril(unnormalised_icl).sum(axis=1) / (n_concepts - 1)
+        # unnormalised_icl = unnormalised_icl_i.sum() / len(unnormalised_icl_i)
 
-        unnormalised_icl_i = matrix_from_tril(unnormalised_icl).sum(axis=1) / (n_concepts - 1)
-        unnormalised_icl = unnormalised_icl_i.sum() / len(unnormalised_icl_i)
-
-        unnormalised_ctl_vec = compute_MI_score_model_training(c_pred=all_c_learnt,
-                                        c_true=all_c_truth,
-                                        y_true=all_y_true,
-                                        score_type="concepts_task",
-                                        wrt_true=True,
-                                        n_neighbors=3,
-                                        normalise=False,
-                                        n_concepts=n_concepts
-                                        )
-        mean_unnorm_ctl = unnormalised_ctl_vec.sum()/len(unnormalised_ctl_vec)
+        # unnormalised_ctl_vec = compute_MI_score_model_training(c_pred=all_c_learnt,
+        #                                 c_true=all_c_truth,
+        #                                 y_true=all_y_true,
+        #                                 score_type="concepts_task",
+        #                                 wrt_true=True,
+        #                                 n_neighbors=3,
+        #                                 normalise=False,
+        #                                 n_concepts=n_concepts
+        #                                 )
+        # mean_unnorm_ctl = unnormalised_ctl_vec.sum()/len(unnormalised_ctl_vec)
 
         # note we are already applying the max operation before this subtraction
-        task_dependent_icl = unnormalised_icl - task_independent_icl
+        # task_dependent_icl = unnormalised_icl - task_independent_icl
 
-        if unnormalised_icl <= 0 or task_dependent_icl < 0:
-            task_icl_ratio = 0
-        else:
-            task_icl_ratio = task_dependent_icl/ unnormalised_icl
+        # if unnormalised_icl <= 0 or task_dependent_icl < 0:
+        #     task_icl_ratio = 0
+        # else:
+        #     task_icl_ratio = task_dependent_icl/ unnormalised_icl
 
+        task_icl_ratio=0
+        task_independent_icl = 0
+        task_dependent_icl = 0
+        unnormalised_icl = 0
+        mean_unnorm_ctl = 0
         self.log('test_ctl_average', mean_unnorm_ctl)
         self.log('test_normalised_ctl_average', mean_norm_ctl)
         self.log('test_normalised_icl_average', mean_norm_icl)
