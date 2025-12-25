@@ -1007,12 +1007,13 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         outputs = self._forward(x)
         c_sem = outputs[0]
 
-        if torch.cuda.is_available():
-            device = torch.device('cuda')
-        elif torch.backends.mps.is_available():
-            device = torch.device('mps')
-        else:
-            device = torch.device("cpu")
+        # if torch.cuda.is_available():
+        #     device = torch.device('cuda')
+        # elif torch.backends.mps.is_available():
+        #     device = torch.device('mps')
+        # else:
+        #     device = torch.device("cpu")
+        device = torch.device('cpu')
         result["c_learnt"] = c_sem.detach().to(device)
         result["c_true"] = c.detach().to(device)
         result["y_true"] = y.detach().to(device)
@@ -1024,16 +1025,16 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         all_c_learnt = torch.cat([out['c_learnt'] for out in self._test_step_outputs])
         all_c_truth = torch.cat([out['c_true'] for out in self._test_step_outputs])
         all_y_true = torch.cat([out['y_true'] for out in self._test_step_outputs])
-        if torch.cuda.is_available():
-            device = torch.device('cuda')
-        elif torch.backends.mps.is_available():
-            device = torch.device('mps')
-        else:
-            device = torch.device("cpu")
-        if device == 'cpu':
-            all_c_learnt = all_c_learnt.numpy()
-            all_c_truth =all_c_truth.numpy()
-            all_y_true =all_y_true.numpy()
+        # if torch.cuda.is_available():
+        #     device = torch.device('cuda')
+        # elif torch.backends.mps.is_available():
+        #     device = torch.device('mps')
+        # else:
+        #     device = torch.device("cpu")
+        # if device == 'cpu':
+        all_c_learnt = all_c_learnt.numpy()
+        all_c_truth =all_c_truth.numpy()
+        all_y_true = all_y_true.numpy()
 
         n_concepts = all_c_truth.shape[1]
 

@@ -268,10 +268,7 @@ def compute_mi_cd_torch(c, d, k=3):
     device = c.device
 
     if c.ndim == 1: c = c.view(-1, 1)
-
-    # Ensure d is integer labels
-    d = d.long().flatten()
-    if len(d) != N: d = d[:N]
+    d = d.long().view(-1)
 
     # Normalize c
     c_std = c.std(0)
@@ -281,71 +278,69 @@ def compute_mi_cd_torch(c, d, k=3):
     radius = torch.zeros(N, device=device)
     k_counts = torch.zeros(N, device=device)
 
-    # Identify valid classes (enough samples)
+    # 1. Valid Classes
     unique_labels, counts = torch.unique(d, return_counts=True)
     valid_labels = unique_labels[counts > k + 1]
 
     if len(valid_labels) == 0:
         return 0.0
-    if torch.backends.mps.is_available:
-        valid_mask = (d.unsqueeze(1) == valid_labels.unsqueeze(0)).any(dim=1)
-    else:
-        valid_mask = torch.isin(d, valid_labels)
 
-    # Iterate over classes to find conditional k-NN radii
-    # We only process valid points
+    valid_mask = (d.unsqueeze(1) == valid_labels.unsqueeze(0)).any(dim=1)
+
+    # 2. Conditional Radii
+    p_norm = float('inf')
+
     for label in valid_labels:
         mask = (d == label)
+        count = mask.sum().item()
+        k_eff = min(k, count - 1)
+
         c_subset = c_norm[mask]
-
-        # Distances within this class (Chebyshev to match CPU)
-        dist_sub = torch.cdist(c_subset, c_subset, p=float('inf'))
-
-        # Get k-th neighbor (k+1 because of self)
-        # Note: largest=False gives smallest
-        values, _ = torch.topk(dist_sub, k + 1, largest=False, sorted=True)
+        dist_sub = torch.cdist(c_subset, c_subset, p=p_norm)
+        values, _ = torch.topk(dist_sub, k_eff + 1, largest=False, sorted=True)
         r = values[:, -1]
 
-        # CPU uses np.nextafter(r, 0) -> makes radius slightly smaller?
-        # If we use strict inequality < radius, we exclude the k-th point.
-        # So we count k-1 neighbors.
-        radius[mask] = r - 1e-7
-        k_counts[mask] = float(k)
+        # FIX: Robust epsilon for duplicates
+        # If r is 0 (duplicates), we set it to 1e-5.
+        # cdist noise is usually < 1e-6.
+        r = torch.clamp(r - 1e-9, min=1e-9)
 
-    # Filter to valid points for the global count and final averaging
+        radius[mask] = r
+        k_counts[mask] = float(k_eff)
+
+    # 3. Filter
     c_valid = c_norm[valid_mask]
     r_valid = radius[valid_mask]
     k_valid = k_counts[valid_mask]
     d_valid = d[valid_mask]
+
     N_valid = c_valid.shape[0]
+    if N_valid == 0: return 0.0
 
-    # Target points j can be anywhere in c_norm
-    # dist[i, j]
-    dist_full = torch.cdist(c_valid, c_norm, p=float('inf'))
-
-    # nx = count(dist < radius) - 1 (self)
+    # 4. Global Counts
+    dist_full = torch.cdist(c_valid, c_norm, p=p_norm)
     nx = (dist_full < r_valid.unsqueeze(1)).float().sum(dim=1) - 1
 
-    # Formula
+    # Safety clamp
+    nx = torch.max(nx, k_valid - 1)
+
+    # 5. Formula
     psi_N = torch.digamma(torch.tensor(N_valid, dtype=torch.float, device=device))
     term_k = torch.mean(torch.digamma(k_valid))
     term_nx = torch.mean(torch.digamma(nx + 1))
 
-    # Create lookup
-    if d.max() < 10000:
-        count_lookup = torch.zeros(d.max() + 1, device=device)
-        count_lookup[unique_labels] = counts.float()
-        point_class_counts = count_lookup[d_valid]
-    else:
-        # Slow fallback for sparse labels? Unlikely needed for CBMs.
-        # For now assume dense.
-        count_lookup = torch.zeros(d.max() + 1, device=device)
-        count_lookup[unique_labels] = counts.float()
-        point_class_counts = count_lookup[d_valid]
+    max_label = int(d.max().item())
+    count_lookup = torch.zeros(max_label + 1, device=device)
+    count_lookup[unique_labels] = counts.float()
 
+    point_class_counts = count_lookup[d_valid]
     term_class = torch.mean(torch.digamma(point_class_counts))
 
     mi = psi_N + term_k - term_nx - term_class
+
+    if torch.isnan(mi) or torch.isinf(mi):
+        return 0.0
+
     return max(0.0, mi.item())
 
 
@@ -404,6 +399,87 @@ def compute_cmi_cd(c_1, c_2, d, n_neighbors):
 from sklearn.metrics.cluster import mutual_info_score
 
 
+# def estimate_MI_interconcept(
+#     c, n_concepts=None, flatten=True, n_neighbors=3, normalise=True
+# ):
+#     """
+#     Computes the interconcept mutual information matrix for a set of concept representations.
+#     Parameters:
+#     - c :  numpy array or torch tensor of shape (n_samples, n_concepts, emb_dim)
+#         or (n_samples, n_concepts*emb_dim). In the latter case, n_concepts must be specified.
+#         emb_dim can be 1 (e.g. in CBM) or >1 (e.g. in CEMs).
+#     - n_concepts : int.
+#     - flatten : bool.
+#         If True, it flattens the lower-triangular part of the output to a 1D array of length
+#         n_concepts*(n_concepts-1)/2.
+#     - n_neighbors : int.
+#         Number of nearest neighbors to use for the MI estimation.
+#         This is only used if the input is continuous.
+#     - normalise : bool.
+#         If True, normalises the MI matrix by dividing by the sqrt of the concept entropies.
+#     """
+#
+#     n_samples = c.shape[0]
+#     if n_concepts is None:
+#         n_concepts = c.shape[1]
+#
+#     if isinstance(c, torch.Tensor):
+#         torch.reshape(c, (n_samples, n_concepts))
+#         if torch.is_floating_point(c):
+#             is_integer =  torch.allclose(c, c.floor())
+#         else:
+#             is_integer = True
+#     else:
+#         c = to_numpy(c)
+#         c = c.reshape(n_samples, n_concepts, -1)
+#         is_integer = isinteger(c)
+#
+#     if is_integer:
+#         def compute_mi(x, y):
+#             if isinstance(c, torch.Tensor):
+#                 x = x.cpu().detach().numpy()
+#                 y = y.cpu().detach().numpy()
+#
+#             # Also sklearn expects 1D arrays for labels, ensure shape is correct
+#                 if x.ndim > 1: x = x.reshape(-1)
+#                 if y.ndim > 1: y = y.reshape(-1)
+#                 return mutual_info_score(x,y)
+#
+#             return mutual_info_score(x.squeeze(-1), y.squeeze(-1))
+#
+#     else:
+#         if not isinstance(c, torch.Tensor):
+#             def compute_mi(x, y):
+#                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+#                 noise_x = 1e-10 * np.mean(x) * np.random.randn(*x.shape)
+#                 noise_y = 1e-10 * np.mean(y) * np.random.randn(*y.shape)
+#                 return np.float64(
+#                     compute_mi_cc(x + noise_x, y + noise_y, n_neighbors=n_neighbors)
+#                 ).item()
+#         else:
+#             def compute_mi(x, y):
+#                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+#                 noise_x = 1e-10 * torch.mean(x) * torch.randn(*x.shape, device=x.device)
+#                 noise_y = 1e-10 * torch.mean(y) * torch.randn(*y.shape, device=y.device)
+#                 return np.float64(
+#                     compute_mi_cc_torch(x + noise_x, y + noise_y, k=n_neighbors)
+#                 ).item()
+#
+#     I = np.zeros((n_concepts, n_concepts))
+#     for ii in range(n_concepts):
+#         for jj in range(ii + 1, n_concepts):
+#             I[ii, jj] = compute_mi(c[:, ii], c[:, jj])
+#     if normalise:
+#         diag_sqrt_MI = np.sqrt(
+#             [compute_mi(c[:, ii], c[:, ii]) for ii in range(n_concepts)]
+#         )
+#         I /= np.tensordot(diag_sqrt_MI, diag_sqrt_MI, axes=0) + 1e-10
+#     if flatten:
+#         output = extract_tril(I)
+#     else:
+#         output = I + I.T
+#     return output
+
 def estimate_MI_interconcept(
     c, n_concepts=None, flatten=True, n_neighbors=3, normalise=True
 ):
@@ -423,52 +499,26 @@ def estimate_MI_interconcept(
     - normalise : bool.
         If True, normalises the MI matrix by dividing by the sqrt of the concept entropies.
     """
-
     n_samples = c.shape[0]
     if n_concepts is None:
         n_concepts = c.shape[1]
+    c = to_numpy(c)
+    c = c.reshape(n_samples, n_concepts, -1)
 
-    if isinstance(c, torch.Tensor):
-        torch.reshape(c, (n_samples, n_concepts))
-        if torch.is_floating_point(c):
-            is_integer =  torch.allclose(c, c.floor())
-        else:
-            is_integer = True
-    else:
-        c = to_numpy(c)
-        c = c.reshape(n_samples, n_concepts, -1)
-        is_integer = isinteger(c)
+    if isinteger(c):
 
-    if is_integer:
         def compute_mi(x, y):
-            if isinstance(c, torch.Tensor):
-                x = x.cpu().detach().numpy()
-                y = y.cpu().detach().numpy()
-
-            # Also sklearn expects 1D arrays for labels, ensure shape is correct
-                if x.ndim > 1: x = x.reshape(-1)
-                if y.ndim > 1: y = y.reshape(-1)
-                return mutual_info_score(x,y)
-
             return mutual_info_score(x.squeeze(-1), y.squeeze(-1))
 
     else:
-        if not isinstance(c, torch.Tensor):
-            def compute_mi(x, y):
-                # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
-                noise_x = 1e-10 * np.mean(x) * np.random.randn(*x.shape)
-                noise_y = 1e-10 * np.mean(y) * np.random.randn(*y.shape)
-                return np.float64(
-                    compute_mi_cc(x + noise_x, y + noise_y, n_neighbors=n_neighbors)
-                ).item()
-        else:
-            def compute_mi(x, y):
-                # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
-                noise_x = 1e-10 * torch.mean(x) * torch.randn(*x.shape, device=x.device)
-                noise_y = 1e-10 * torch.mean(y) * torch.randn(*y.shape, device=y.device)
-                return np.float64(
-                    compute_mi_cc_torch(x + noise_x, y + noise_y, k=n_neighbors)
-                ).item()
+
+        def compute_mi(x, y):
+            # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+            noise_x = 1e-10 * np.mean(x) * np.random.randn(*x.shape)
+            noise_y = 1e-10 * np.mean(y) * np.random.randn(*y.shape)
+            return np.float64(
+                compute_mi_cc(x + noise_x, y + noise_y, n_neighbors=n_neighbors)
+            ).item()
 
     I = np.zeros((n_concepts, n_concepts))
     for ii in range(n_concepts):
@@ -662,6 +712,81 @@ def repeat_estimate_MI_interconcept(
             return avg, se
 
 
+# def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=True):
+#     """
+#     Computes the concepts-task mutual information matrix for a set of concept representations.
+#     Parameters:
+#     - c :  numpy array or torch tensor of shape (n_samples, n_concepts, emb_dim)
+#         or (n_samples, n_concepts*emb_dim). In the latter case, n_concepts must be specified.
+#         emb_dim can be 1 (e.g. in CBM) or >1 (e.g. in CEMs).
+#     - y :  numpy array or torch tensor of shape (n_samples, n_tasks).
+#         Task labels. Assuming they are categorical.
+#     - n_concepts : int.
+#     - n_neighbors : int.
+#         Number of nearest neighbors to use for the MI estimation.
+#         This is only used if the input is continuous.
+#     - normalise : bool.
+#         If True, normalises the MI matrix by dividing by the task entropies.
+#     """
+#     n_samples = c.shape[0]
+#     if n_concepts is None:
+#         n_concepts = c.shape[1]
+#
+#     # We assume y is always integer:
+#     def norm_mi(y):
+#         if isinstance(y, torch.Tensor):
+#             # thought about cloning here maybe
+#             y_np = y.cpu().detach().numpy()
+#         else:
+#             y_np = y
+#         return mutual_info_score(y_np, y_np)
+#
+#     if isinstance(c, torch.Tensor):
+#         torch.reshape(c, (n_samples, n_concepts))
+#         if torch.is_floating_point(c):
+#             is_integer =  torch.allclose(c, c.floor())
+#         else:
+#             is_integer = True
+#     else:
+#         y = to_numpy(y)
+#         c = to_numpy(c)
+#         c = c.reshape(n_samples, n_concepts, -1)
+#         is_integer = isinteger(c)
+#
+#     if is_integer:
+#         def compute_mi(c, y):
+#             if isinstance(c, torch.Tensor):
+#                 c_np = c.detach().cpu().numpy().squeeze()
+#                 y_np = y.detach().cpu().numpy().squeeze()
+#                 return mutual_info_score(c_np, y_np)
+#             else:
+#                 return mutual_info_score(c.squeeze(-1),y)
+#
+#     else:
+#         if not isinstance(c, torch.Tensor):
+#             def compute_mi(c, y):
+#                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+#                 noise = 1e-10 * np.mean(c) * np.random.randn(*c.shape)
+#                 return np.float64(
+#                     compute_mi_cd(c + noise, y, n_neighbors=n_neighbors)
+#                 ).item()
+#         else:
+#             def compute_mi(c, y):
+#                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+#                 noise = 1e-10 * torch.mean(c) * torch.randn(*c.shape, device=c.device)
+#                 return np.float64(
+#                     compute_mi_cd_torch(c + noise, y, k=n_neighbors)
+#                 ).item()
+#
+#     I = np.zeros((n_concepts))
+#     for ii in range(n_concepts):
+#         I[ii] = compute_mi(c[:, ii], y)
+#     if normalise:
+#         IYY = norm_mi(y)
+#         I /= IYY
+#     return I
+
+
 def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=True):
     """
     Computes the concepts-task mutual information matrix for a set of concept representations.
@@ -681,49 +806,27 @@ def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=Tr
     n_samples = c.shape[0]
     if n_concepts is None:
         n_concepts = c.shape[1]
+    y = to_numpy(y)
+    c = to_numpy(c)
+    c = c.reshape(n_samples, n_concepts, -1)
 
     # We assume y is always integer:
     def norm_mi(y):
-        if isinstance(y, torch.Tensor):
-            # thought about cloning here maybe
-            y_np = y.cpu().detach().numpy()
-        else:
-            y_np = y
-        return mutual_info_score(y_np, y_np)
+        return mutual_info_score(y, y)
 
-    if isinstance(c, torch.Tensor):
-        torch.reshape(c, (n_samples, n_concepts))
-        if torch.is_floating_point(c):
-            is_integer =  torch.allclose(c, c.floor())
-        else:
-            is_integer = True
-    else:
-        y = to_numpy(y)
-        c = to_numpy(c)
-        c = c.reshape(n_samples, n_concepts, -1)
-        is_integer = isinteger(c)
+    if isinteger(c):
 
-    if is_integer:
         def compute_mi(c, y):
-            c_np = c.detach().cpu().numpy().squeeze()
-            y_np = y.detach().cpu().numpy().squeeze()
-            return mutual_info_score(c_np, y_np)
+            return mutual_info_score(c.squeeze(-1), y)
 
     else:
-        if not isinstance(c, torch.Tensor):
-            def compute_mi(c, y):
-                # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
-                noise = 1e-10 * np.mean(c) * np.random.randn(*c.shape)
-                return np.float64(
-                    compute_mi_cd(c + noise, y, n_neighbors=n_neighbors)
-                ).item()
-        else:
-            def compute_mi(c, y):
-                # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
-                noise = 1e-10 * torch.mean(c) * torch.randn(*c.shape, device=c.device)
-                return np.float64(
-                    compute_mi_cd_torch(c + noise, y, k=n_neighbors)
-                ).item()
+
+        def compute_mi(c, y):
+            # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+            noise = 1e-10 * np.mean(c) * np.random.randn(*c.shape)
+            return np.float64(
+                compute_mi_cd(c + noise, y, n_neighbors=n_neighbors)
+            ).item()
 
     I = np.zeros((n_concepts))
     for ii in range(n_concepts):

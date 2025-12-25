@@ -181,12 +181,13 @@ class LossTracker(Callback):
         self.val_loss_temp.append(outputs["val_loss"].item())
         self.val_y_accuracy_temp.append(outputs["val_y_accuracy"])
 
-        if torch.cuda.is_available():
-            device = torch.device('cuda')
-        elif torch.backends.mps.is_available():
-            device = torch.device('mps')
-        else:
-            device = torch.device("cpu")
+        # if torch.cuda.is_available():
+        #     device = torch.device('cuda')
+        # elif torch.backends.mps.is_available():
+        #     device = torch.device('mps')
+        # else:
+        #     device = torch.device("cpu")
+        device = torch.device('cpu')
         if not self.black_box:
             self.val_c_accuracy_temp.append(outputs["val_c_accuracy"])
         if self.track_leakage:
@@ -239,12 +240,13 @@ class LossTracker(Callback):
                 (trainer.current_epoch == trainer.max_epochs - 1)
             ):
 
-                if torch.cuda.is_available():
-                    device = torch.device('cuda')
-                elif torch.backends.mps.is_available():
-                    device = torch.device('mps')
-                else:
-                    device = torch.device("cpu")
+                # if torch.cuda.is_available():
+                #     device = torch.device('cuda')
+                # elif torch.backends.mps.is_available():
+                #     device = torch.device('mps')
+                # else:
+                #     device = torch.device("cpu")
+                device = torch.device('cpu')
                 if device == 'cpu':
                     all_c_learnt = torch.cat(self.val_c_learnt_temp).numpy()
                     all_c_truth = torch.cat(self.val_c_true_temp).numpy()

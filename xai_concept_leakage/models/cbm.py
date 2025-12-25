@@ -718,13 +718,13 @@ class ConceptBottleneckModel(pl.LightningModule):
         outputs = self._forward(x)
         c_sem = outputs[0]
 
-        if torch.cuda.is_available():
-            device = torch.device('cuda')
-        elif torch.backends.mps.is_available():
-            device = torch.device('mps')
-        else:
-            device = torch.device("cpu")
-
+        # if torch.cuda.is_available():
+        #     device = torch.device('cuda')
+        # elif torch.backends.mps.is_available():
+        #     device = torch.device('mps')
+        # else:
+        #     device = torch.device("cpu")
+        device = torch.device('cpu')
         result["c_learnt"] = c_sem.detach().to(device)
         result["c_true"] = c.detach().to(device)
         result["y_true"] = y.detach().to(device)
@@ -733,13 +733,14 @@ class ConceptBottleneckModel(pl.LightningModule):
         return result
 
     def on_test_epoch_end(self):
-        if torch.cuda.is_available():
-            device = torch.device('cuda')
-        elif torch.backends.mps.is_available():
-            device = torch.device('mps')
-        else:
-            device = torch.device("cpu")
+        # if torch.cuda.is_available():
+        #     device = torch.device('cuda')
+        # elif torch.backends.mps.is_available():
+        #     device = torch.device('mps')
+        # else:
+        #     device = torch.device("cpu")
 
+        device = torch.device('cpu')
         if device == 'cpu':
             all_c_learnt = torch.cat([out['c_learnt'] for out in self._test_step_outputs]).numpy()
             all_c_truth = torch.cat([out['c_true'] for out in self._test_step_outputs]).numpy()
