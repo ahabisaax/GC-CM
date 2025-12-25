@@ -79,21 +79,21 @@ runs:
 #       c2y_max_epochs: 100
 
 # SOFT:
-     - architecture: 'ConceptBottleneckModel'
-       run_name: "auto"
-       bool: False
-       extra_dims: 0
-       sigmoidal_prob: True
-       grid_variables: ['concept_loss_weight', 'cbm_learning_rate']
-       concept_loss_weight: [0.1, 0.5, 1]
-       cbm_optimizer: adam
-       cbm_learning_rate: [0.0001, 0.001, 0.01, 0.05]
-       early_stopping_monitor: 'val_loss'
-       early_stopping_delta: 0.0
-       early_stopping_mode: min
-       gradient_clip_val: 0
-       patience: 20
-       max_epochs: 250
+#     - architecture: 'ConceptBottleneckModel'
+#       run_name: "auto"
+#       bool: False
+#       extra_dims: 0
+#       sigmoidal_prob: True
+#       grid_variables: ['concept_loss_weight', 'cbm_learning_rate']
+#       concept_loss_weight: [0.1, 0.5, 1]
+#       cbm_optimizer: adam
+#       cbm_learning_rate: [0.0001, 0.001, 0.01, 0.05]
+#       early_stopping_monitor: 'val_loss'
+#       early_stopping_delta: 0.0
+#       early_stopping_mode: min
+#       gradient_clip_val: 0
+#       patience: 20
+#       max_epochs: 250
 
 # LOGITS:
     # - architecture: 'ConceptBottleneckModel'
