@@ -3,7 +3,7 @@
 #$ -o ~/Scratch/xai-crcbm/logs/test_run_ttoy.out
 #$ -e ~/Scratch/xai-crcbm/logs/test_run_ttoy.err
 #$ -pe smp 8
-#$ -l h_rt=8:00:00
+#$ -l h_rt=12:00:00
 #$ -l mem=8G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
