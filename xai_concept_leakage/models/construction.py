@@ -174,7 +174,8 @@ def construct_model(
             "adversarial_lambda_scheduler_warmup": config.get("adversarial_lambda_scheduler_warmup"),
             "adversarial_scheduler": config.get("adversarial_scheduler"),
             "adversarial_loss_type": config.get("adversarial_loss_type", 'gradient'),
-            "n_critic_steps": config.get("n_critic_steps", 1)
+            "n_critic_steps": config.get("n_critic_steps", 1),
+            "compute_mi_on_gpu": config.get("compute_mi_on_gpu", False)
         }
 
     elif "ConceptBottleneckModel" in config["architecture"]:
@@ -194,6 +195,7 @@ def construct_model(
             "x2c_model": x2c_model,
             "c2y_model": c2y_model,
             "c2y_layers": config.get("c2y_layers", []),
+            "compute_mi_on_gpu": config.get("compute_mi_on_gpu", False)
         }
     else:
         raise ValueError(f'Invalid architecture "{config["architecture"]}"')

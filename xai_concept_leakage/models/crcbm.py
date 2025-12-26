@@ -58,6 +58,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         output_interventions=False,
         use_concept_groups=False,
         top_k_accuracy=None,
+        compute_mi_on_gpu=False
     ):
         """
         Constructs a joint Concept Bottleneck Model (CBM) as defined by
@@ -274,6 +275,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         self.sigmoidal_prob = sigmoidal_prob
         self.sigmoidal_extra_capacity = sigmoidal_extra_capacity
         self.use_concept_groups = use_concept_groups
+        self.compute_mi_on_gpu = compute_mi_on_gpu
 
     def _unpack_batch(self, batch):
         x = batch[0]
@@ -1007,13 +1009,10 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         outputs = self._forward(x)
         c_sem = outputs[0]
 
-        # if torch.cuda.is_available():
-        #     device = torch.device('cuda')
-        # elif torch.backends.mps.is_available():
-        #     device = torch.device('mps')
-        # else:
-        #     device = torch.device("cpu")
-        device = torch.device('cpu')
+        if self.compute_mi_on_gpu:
+            device = torch.device('cuda' if torch.cuda.is_available() else 'mps')
+        else:
+            device = torch.device("cpu")
         result["c_learnt"] = c_sem.detach().to(device)
         result["c_true"] = c.detach().to(device)
         result["y_true"] = y.detach().to(device)
@@ -1025,18 +1024,11 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
         all_c_learnt = torch.cat([out['c_learnt'] for out in self._test_step_outputs])
         all_c_truth = torch.cat([out['c_true'] for out in self._test_step_outputs])
         all_y_true = torch.cat([out['y_true'] for out in self._test_step_outputs])
-        # if torch.cuda.is_available():
-        #     device = torch.device('cuda')
-        # elif torch.backends.mps.is_available():
-        #     device = torch.device('mps')
-        # else:
-        #     device = torch.device("cpu")
-        # if device == 'cpu':
-        all_c_learnt = all_c_learnt.numpy()
-        all_c_truth =all_c_truth.numpy()
-        all_y_true = all_y_true.numpy()
-
         n_concepts = all_c_truth.shape[1]
+        if not self.compute_mi_on_gpu:
+            all_c_learnt = all_c_learnt.numpy()
+            all_c_truth =all_c_truth.numpy()
+            all_y_true = all_y_true.numpy()
 
         norm_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
                                         c_true=all_c_truth,
@@ -1045,7 +1037,8 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                                         wrt_true=True,
                                         n_neighbors=3,
                                         normalise=True,
-                                        n_concepts=n_concepts
+                                        n_concepts=n_concepts,
+                                        compute_mi_on_gpu=self.compute_mi_on_gpu
                                         )
 
         mean_norm_icl_i = matrix_from_tril(norm_icl).sum(axis=1) / (n_concepts - 1)
@@ -1058,71 +1051,13 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                                         wrt_true=True,
                                         n_neighbors=3,
                                         normalise=True,
-                                        n_concepts=n_concepts
+                                        n_concepts=n_concepts,
+                                        compute_mi_on_gpu=self.compute_mi_on_gpu
                                         )
 
         mean_norm_ctl = norm_ctl_vec.sum()/len(norm_ctl_vec)
-
-        #this is the interconcept leakage which is independent of the task
-        # task_independent_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
-        #                                 c_true=all_c_truth,
-        #                                 y_true=all_y_true,
-        #                                 score_type="interconcept_cmi",
-        #                                 wrt_true=True,
-        #                                 apply_max=False,
-        #                                 n_neighbors=3,
-        #                                 normalise=False,
-        #                                 n_concepts=n_concepts
-        #                                 )
-        #
-        # task_independent_icl_i = matrix_from_tril(task_independent_icl).sum(axis=1) / (n_concepts - 1)
-        # task_independent_icl = task_independent_icl_i.sum() / len(task_independent_icl_i)
-
-        # unnormalised_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
-        #                                 c_true=all_c_truth,
-        #                                 y_true=all_y_true,
-        #                                 score_type="interconcept",
-        #                                 wrt_true=True,
-        #                                 apply_max=False,
-        #                                 n_neighbors=3,
-        #                                 normalise=False,
-        #                                 n_concepts=n_concepts
-        #                                 )
-
-        # unnormalised_icl_i = matrix_from_tril(unnormalised_icl).sum(axis=1) / (n_concepts - 1)
-        # unnormalised_icl = unnormalised_icl_i.sum() / len(unnormalised_icl_i)
-
-        # unnormalised_ctl_vec = compute_MI_score_model_training(c_pred=all_c_learnt,
-        #                                 c_true=all_c_truth,
-        #                                 y_true=all_y_true,
-        #                                 score_type="concepts_task",
-        #                                 wrt_true=True,
-        #                                 n_neighbors=3,
-        #                                 normalise=False,
-        #                                 n_concepts=n_concepts
-        #                                 )
-        # mean_unnorm_ctl = unnormalised_ctl_vec.sum()/len(unnormalised_ctl_vec)
-
-        # note we are already applying the max operation before this subtraction
-        # task_dependent_icl = unnormalised_icl - task_independent_icl
-
-        # if unnormalised_icl <= 0 or task_dependent_icl < 0:
-        #     task_icl_ratio = 0
-        # else:
-        #     task_icl_ratio = task_dependent_icl/ unnormalised_icl
-
-        task_icl_ratio=0
-        task_independent_icl = 0
-        task_dependent_icl = 0
-        unnormalised_icl = 0
-        mean_unnorm_ctl = 0
-        self.log('test_ctl_average', mean_unnorm_ctl)
         self.log('test_normalised_ctl_average', mean_norm_ctl)
         self.log('test_normalised_icl_average', mean_norm_icl)
-        self.log('test_icl_average', unnormalised_icl)
-        self.log('test_icl_task', task_dependent_icl)
-        self.log('test_icl_cmi', task_independent_icl)
-        self.log('test_ratio_task_related_icl', task_icl_ratio)
 
     def configure_optimizers(self):
         if self.use_adversarial:

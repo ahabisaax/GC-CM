@@ -239,14 +239,17 @@ class LossTracker(Callback):
                 ((trainer.current_epoch + add_1) % self.check == 0) or
                 (trainer.current_epoch == trainer.max_epochs - 1)
             ):
+                compute_mi_on_gpu = False
+                if torch.cuda.is_available():
+                    device = torch.device('cuda')
+                    compute_mi_on_gpu = True
+                elif torch.backends.mps.is_available():
+                    device = torch.device('mps')
+                    compute_mi_on_gpu = True
+                else:
+                    device = torch.device("cpu")
 
-                # if torch.cuda.is_available():
-                #     device = torch.device('cuda')
-                # elif torch.backends.mps.is_available():
-                #     device = torch.device('mps')
-                # else:
-                #     device = torch.device("cpu")
-                device = torch.device('cpu')
+                #device = torch.device('cpu')
                 if device == 'cpu':
                     all_c_learnt = torch.cat(self.val_c_learnt_temp).numpy()
                     all_c_truth = torch.cat(self.val_c_true_temp).numpy()
@@ -257,8 +260,6 @@ class LossTracker(Callback):
                     all_y_true = torch.cat(self.val_y_true_temp)
                 n_concepts = all_c_truth.shape[1]
 
-                print(f'SHAPE OF CONCEPT VECTOR {all_c_learnt.shape}')
-
                 norm_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
                                                            c_true=all_c_truth,
                                                            y_true=all_y_true,
@@ -266,7 +267,8 @@ class LossTracker(Callback):
                                                            wrt_true=True,
                                                            n_neighbors=3,
                                                            normalise=True,
-                                                           n_concepts=n_concepts
+                                                           n_concepts=n_concepts,
+                                                           compute_mi_on_gpu=compute_mi_on_gpu
                                                            )
                 mean_norm_icl_i = matrix_from_tril(norm_icl).sum(axis=1) / (n_concepts - 1)
                 mean_norm_icl = mean_norm_icl_i.sum() / len(mean_norm_icl_i)
@@ -277,83 +279,16 @@ class LossTracker(Callback):
                                                                wrt_true=True,
                                                                n_neighbors=3,
                                                                normalise=True,
-                                                               n_concepts=n_concepts
-                                                               )
+                                                               n_concepts=n_concepts,
+                                                               compute_mi_on_gpu = compute_mi_on_gpu)
 
                 mean_norm_ctl = norm_ctl_vec.sum() / len(norm_ctl_vec)
 
-                # task_independent_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
-                #                                                        c_true=all_c_truth,
-                #                                                        y_true=all_y_true,
-                #                                                        score_type="interconcept_cmi",
-                #                                                        wrt_true=True,
-                #                                                        apply_max=False,
-                #                                                        n_neighbors=3,
-                #                                                        normalise=False,
-                #                                                        n_concepts=n_concepts
-                #                                                        )
-
-                # task_independent_icl_i = matrix_from_tril(task_independent_icl).sum(axis=1) / (n_concepts - 1)
-                # task_independent_icl = task_independent_icl_i.sum() / len(task_independent_icl_i)
-
-                # unnormalised_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
-                #                                                    c_true=all_c_truth,
-                #                                                    y_true=all_y_true,
-                #                                                    score_type="interconcept",
-                #                                                    wrt_true=True,
-                #                                                    apply_max=False,
-                #                                                    n_neighbors=3,
-                #                                                    normalise=False,
-                #                                                    n_concepts=n_concepts
-                #                                                    )
-
-                # unnormalised_icl_i = matrix_from_tril(unnormalised_icl).sum(axis=1) / (n_concepts - 1)
-                # unnormalised_icl = unnormalised_icl_i.sum() / len(unnormalised_icl_i)
-
-                # unnormalised_ctl_vec = compute_MI_score_model_training(c_pred=all_c_learnt,
-                #                                                        c_true=all_c_truth,
-                #                                                        y_true=all_y_true,
-                #                                                        score_type="concepts_task",
-                #                                                        wrt_true=True,
-                #                                                        n_neighbors=3,
-                #                                                        normalise=False,
-                #                                                        n_concepts=n_concepts
-                #                                                        )
-                # mean_unnorm_ctl = unnormalised_ctl_vec.sum() / len(unnormalised_ctl_vec)
-                # task_dependent_icl = unnormalised_icl - task_independent_icl
-
-                # if unnormalised_icl <= 0 or task_dependent_icl < 0:
-                #     task_icl_ratio = 0
-                # else:
-                #     task_icl_ratio = task_dependent_icl / unnormalised_icl
-
-                # --- 6. Logging ---
-                # print(f"INTERCONCEPT LEAKAGE (Total Avg. Nats): {unnormalised_icl.item():.4f}")
-                # print(f"  - Input-Confounded: {task_independent_icl.item():.4f} (Adversary is blind to this)")
-                # print(f"  - Task-Confounded:  {task_dependent_icl.item():.4f} (Adversary attacks this)")
-                # print(f"  - Task-Confounded Ratio: {task_icl_ratio:.2%}")
-                mean_unnorm_ctl = 0
-                unnormalised_icl = 0
-                task_independent_icl = 0
-                task_dependent_icl = 0
-                task_icl_ratio = 0
-
                 print(f"INTERCONCEPT LEAKAGE Normalsed: {mean_norm_icl.item():.4f}")
                 print(f'CTL: {mean_norm_ctl}')
-                self.val_ctl.append(mean_unnorm_ctl)
                 self.val_norm_ctl.append(mean_norm_ctl)
                 self.val_norm_icl.append(mean_norm_icl)
-                self.val_icl.append(unnormalised_icl)
-                self.val_task_icl.append(task_dependent_icl)
-                self.val_input_icl.append(task_independent_icl)
-                pl_module.log('val_icl_total_nats', unnormalised_icl)
                 pl_module.log('normalised_val_total_icl',mean_norm_icl)
-
-                # Log the new decomposed metrics
-                pl_module.log('val_icl_cmi_nats', task_independent_icl)
-                pl_module.log('val_icl_task_nats', task_dependent_icl)
-                pl_module.log('val_icl_task_ratio', task_icl_ratio)
-                pl_module.log('val_ctl_unnormalised', mean_unnorm_ctl)
                 pl_module.log('val_ctl_normalised', mean_norm_ctl)
                 pareto_score = mean_y_accuracy - mean_norm_ctl
 

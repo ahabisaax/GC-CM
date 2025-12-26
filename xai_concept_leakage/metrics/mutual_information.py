@@ -271,16 +271,17 @@ def compute_mi_cd_torch(c, d, k=3):
     d = d.long().view(-1)
 
     # Normalize c
-    c_std = c.std(0)
-    c_std[c_std < 1e-6] = 1.0
-    c_norm = (c - c.mean(0)) / c_std
+    # c_std = c.std(0)
+    # c_std[c_std < 1e-6] = 1.0
+    # c_norm = (c - c.mean(0)) / c_std
+    c_norm = c
 
     radius = torch.zeros(N, device=device)
     k_counts = torch.zeros(N, device=device)
 
     # 1. Valid Classes
     unique_labels, counts = torch.unique(d, return_counts=True)
-    valid_labels = unique_labels[counts > k + 1]
+    valid_labels = unique_labels[counts > 1]
 
     if len(valid_labels) == 0:
         return 0.0
@@ -297,15 +298,9 @@ def compute_mi_cd_torch(c, d, k=3):
 
         c_subset = c_norm[mask]
         dist_sub = torch.cdist(c_subset, c_subset, p=p_norm)
-        values, _ = torch.topk(dist_sub, k_eff + 1, largest=False, sorted=True)
-        r = values[:, -1]
-
-        # FIX: Robust epsilon for duplicates
-        # If r is 0 (duplicates), we set it to 1e-5.
-        # cdist noise is usually < 1e-6.
-        r = torch.clamp(r - 1e-9, min=1e-9)
-
-        radius[mask] = r
+        sorted_dists, _ = torch.sort(dist_sub, dim=1)
+        r = sorted_dists[:, k_eff]
+        radius[mask] = torch.nextafter(r, torch.zeros_like(r))
         k_counts[mask] = float(k_eff)
 
     # 3. Filter
@@ -322,7 +317,7 @@ def compute_mi_cd_torch(c, d, k=3):
     nx = (dist_full < r_valid.unsqueeze(1)).float().sum(dim=1) - 1
 
     # Safety clamp
-    nx = torch.max(nx, k_valid - 1)
+    nx = torch.clamp(nx, min=0)
 
     # 5. Formula
     psi_N = torch.digamma(torch.tensor(N_valid, dtype=torch.float, device=device))
@@ -342,6 +337,7 @@ def compute_mi_cd_torch(c, d, k=3):
         return 0.0
 
     return max(0.0, mi.item())
+
 
 
 def compute_cmi_cd(c_1, c_2, d, n_neighbors):
@@ -399,86 +395,70 @@ def compute_cmi_cd(c_1, c_2, d, n_neighbors):
 from sklearn.metrics.cluster import mutual_info_score
 
 
-# def estimate_MI_interconcept(
-#     c, n_concepts=None, flatten=True, n_neighbors=3, normalise=True
-# ):
-#     """
-#     Computes the interconcept mutual information matrix for a set of concept representations.
-#     Parameters:
-#     - c :  numpy array or torch tensor of shape (n_samples, n_concepts, emb_dim)
-#         or (n_samples, n_concepts*emb_dim). In the latter case, n_concepts must be specified.
-#         emb_dim can be 1 (e.g. in CBM) or >1 (e.g. in CEMs).
-#     - n_concepts : int.
-#     - flatten : bool.
-#         If True, it flattens the lower-triangular part of the output to a 1D array of length
-#         n_concepts*(n_concepts-1)/2.
-#     - n_neighbors : int.
-#         Number of nearest neighbors to use for the MI estimation.
-#         This is only used if the input is continuous.
-#     - normalise : bool.
-#         If True, normalises the MI matrix by dividing by the sqrt of the concept entropies.
-#     """
-#
-#     n_samples = c.shape[0]
-#     if n_concepts is None:
-#         n_concepts = c.shape[1]
-#
-#     if isinstance(c, torch.Tensor):
-#         torch.reshape(c, (n_samples, n_concepts))
-#         if torch.is_floating_point(c):
-#             is_integer =  torch.allclose(c, c.floor())
-#         else:
-#             is_integer = True
-#     else:
-#         c = to_numpy(c)
-#         c = c.reshape(n_samples, n_concepts, -1)
-#         is_integer = isinteger(c)
-#
-#     if is_integer:
-#         def compute_mi(x, y):
-#             if isinstance(c, torch.Tensor):
-#                 x = x.cpu().detach().numpy()
-#                 y = y.cpu().detach().numpy()
-#
-#             # Also sklearn expects 1D arrays for labels, ensure shape is correct
-#                 if x.ndim > 1: x = x.reshape(-1)
-#                 if y.ndim > 1: y = y.reshape(-1)
-#                 return mutual_info_score(x,y)
-#
-#             return mutual_info_score(x.squeeze(-1), y.squeeze(-1))
-#
-#     else:
-#         if not isinstance(c, torch.Tensor):
-#             def compute_mi(x, y):
-#                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
-#                 noise_x = 1e-10 * np.mean(x) * np.random.randn(*x.shape)
-#                 noise_y = 1e-10 * np.mean(y) * np.random.randn(*y.shape)
-#                 return np.float64(
-#                     compute_mi_cc(x + noise_x, y + noise_y, n_neighbors=n_neighbors)
-#                 ).item()
-#         else:
-#             def compute_mi(x, y):
-#                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
-#                 noise_x = 1e-10 * torch.mean(x) * torch.randn(*x.shape, device=x.device)
-#                 noise_y = 1e-10 * torch.mean(y) * torch.randn(*y.shape, device=y.device)
-#                 return np.float64(
-#                     compute_mi_cc_torch(x + noise_x, y + noise_y, k=n_neighbors)
-#                 ).item()
-#
-#     I = np.zeros((n_concepts, n_concepts))
-#     for ii in range(n_concepts):
-#         for jj in range(ii + 1, n_concepts):
-#             I[ii, jj] = compute_mi(c[:, ii], c[:, jj])
-#     if normalise:
-#         diag_sqrt_MI = np.sqrt(
-#             [compute_mi(c[:, ii], c[:, ii]) for ii in range(n_concepts)]
-#         )
-#         I /= np.tensordot(diag_sqrt_MI, diag_sqrt_MI, axes=0) + 1e-10
-#     if flatten:
-#         output = extract_tril(I)
-#     else:
-#         output = I + I.T
-#     return output
+def estimate_MI_interconcept_gpu(
+    c, n_concepts=None, flatten=True, n_neighbors=3, normalise=True
+):
+    """
+    Computes the interconcept mutual information matrix for a set of concept representations.
+    Parameters:
+    - c :  numpy array or torch tensor of shape (n_samples, n_concepts, emb_dim)
+        or (n_samples, n_concepts*emb_dim). In the latter case, n_concepts must be specified.
+        emb_dim can be 1 (e.g. in CBM) or >1 (e.g. in CEMs).
+    - n_concepts : int.
+    - flatten : bool.
+        If True, it flattens the lower-triangular part of the output to a 1D array of length
+        n_concepts*(n_concepts-1)/2.
+    - n_neighbors : int.
+        Number of nearest neighbors to use for the MI estimation.
+        This is only used if the input is continuous.
+    - normalise : bool.
+        If True, normalises the MI matrix by dividing by the sqrt of the concept entropies.
+    """
+
+    n_samples = c.shape[0]
+    if n_concepts is None:
+        n_concepts = c.shape[1]
+
+    torch.reshape(c, (n_samples, n_concepts))
+    if torch.is_floating_point(c):
+        is_integer =  torch.allclose(c, c.floor())
+    else:
+        is_integer = True
+
+
+    if is_integer:
+        def compute_mi(x, y):
+            x = x.cpu().detach().numpy()
+            y = y.cpu().detach().numpy()
+
+        # Also sklearn expects 1D arrays for labels, ensure shape is correct
+            if x.ndim > 1: x = x.reshape(-1)
+            if y.ndim > 1: y = y.reshape(-1)
+            return mutual_info_score(x,y)
+
+    else:
+        def compute_mi(x, y):
+            # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+            noise_x = 1e-4 * torch.mean(x) * torch.randn(*x.shape, device=x.device)
+            noise_y = 1e-4 * torch.mean(y) * torch.randn(*y.shape, device=y.device)
+            return np.float64(
+                compute_mi_cc_torch(x + noise_x, y + noise_y, k=n_neighbors)
+            ).item()
+
+    I = np.zeros((n_concepts, n_concepts))
+    for ii in range(n_concepts):
+        for jj in range(ii + 1, n_concepts):
+            I[ii, jj] = compute_mi(c[:, ii], c[:, jj])
+    if normalise:
+        diag_sqrt_MI = np.sqrt(
+            [compute_mi(c[:, ii], c[:, ii]) for ii in range(n_concepts)]
+        )
+        I /= np.tensordot(diag_sqrt_MI, diag_sqrt_MI, axes=0) + 1e-10
+    if flatten:
+        output = extract_tril(I)
+    else:
+        output = I + I.T
+    return output
 
 def estimate_MI_interconcept(
     c, n_concepts=None, flatten=True, n_neighbors=3, normalise=True
@@ -712,79 +692,58 @@ def repeat_estimate_MI_interconcept(
             return avg, se
 
 
-# def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=True):
-#     """
-#     Computes the concepts-task mutual information matrix for a set of concept representations.
-#     Parameters:
-#     - c :  numpy array or torch tensor of shape (n_samples, n_concepts, emb_dim)
-#         or (n_samples, n_concepts*emb_dim). In the latter case, n_concepts must be specified.
-#         emb_dim can be 1 (e.g. in CBM) or >1 (e.g. in CEMs).
-#     - y :  numpy array or torch tensor of shape (n_samples, n_tasks).
-#         Task labels. Assuming they are categorical.
-#     - n_concepts : int.
-#     - n_neighbors : int.
-#         Number of nearest neighbors to use for the MI estimation.
-#         This is only used if the input is continuous.
-#     - normalise : bool.
-#         If True, normalises the MI matrix by dividing by the task entropies.
-#     """
-#     n_samples = c.shape[0]
-#     if n_concepts is None:
-#         n_concepts = c.shape[1]
-#
-#     # We assume y is always integer:
-#     def norm_mi(y):
-#         if isinstance(y, torch.Tensor):
-#             # thought about cloning here maybe
-#             y_np = y.cpu().detach().numpy()
-#         else:
-#             y_np = y
-#         return mutual_info_score(y_np, y_np)
-#
-#     if isinstance(c, torch.Tensor):
-#         torch.reshape(c, (n_samples, n_concepts))
-#         if torch.is_floating_point(c):
-#             is_integer =  torch.allclose(c, c.floor())
-#         else:
-#             is_integer = True
-#     else:
-#         y = to_numpy(y)
-#         c = to_numpy(c)
-#         c = c.reshape(n_samples, n_concepts, -1)
-#         is_integer = isinteger(c)
-#
-#     if is_integer:
-#         def compute_mi(c, y):
-#             if isinstance(c, torch.Tensor):
-#                 c_np = c.detach().cpu().numpy().squeeze()
-#                 y_np = y.detach().cpu().numpy().squeeze()
-#                 return mutual_info_score(c_np, y_np)
-#             else:
-#                 return mutual_info_score(c.squeeze(-1),y)
-#
-#     else:
-#         if not isinstance(c, torch.Tensor):
-#             def compute_mi(c, y):
-#                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
-#                 noise = 1e-10 * np.mean(c) * np.random.randn(*c.shape)
-#                 return np.float64(
-#                     compute_mi_cd(c + noise, y, n_neighbors=n_neighbors)
-#                 ).item()
-#         else:
-#             def compute_mi(c, y):
-#                 # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
-#                 noise = 1e-10 * torch.mean(c) * torch.randn(*c.shape, device=c.device)
-#                 return np.float64(
-#                     compute_mi_cd_torch(c + noise, y, k=n_neighbors)
-#                 ).item()
-#
-#     I = np.zeros((n_concepts))
-#     for ii in range(n_concepts):
-#         I[ii] = compute_mi(c[:, ii], y)
-#     if normalise:
-#         IYY = norm_mi(y)
-#         I /= IYY
-#     return I
+def estimate_MI_concepts_task_gpu(c, y, n_concepts=None, n_neighbors=3, normalise=True):
+    """
+    Computes the concepts-task mutual information matrix for a set of concept representations.
+    Parameters:
+    - c :  numpy array or torch tensor of shape (n_samples, n_concepts, emb_dim)
+        or (n_samples, n_concepts*emb_dim). In the latter case, n_concepts must be specified.
+        emb_dim can be 1 (e.g. in CBM) or >1 (e.g. in CEMs).
+    - y :  numpy array or torch tensor of shape (n_samples, n_tasks).
+        Task labels. Assuming they are categorical.
+    - n_concepts : int.
+    - n_neighbors : int.
+        Number of nearest neighbors to use for the MI estimation.
+        This is only used if the input is continuous.
+    - normalise : bool.
+        If True, normalises the MI matrix by dividing by the task entropies.
+    """
+    n_samples = c.shape[0]
+    if n_concepts is None:
+        n_concepts = c.shape[1]
+
+    # We assume y is always integer:
+    def norm_mi(y):
+        y_np = y.cpu().detach().numpy()
+        return mutual_info_score(y_np, y_np)
+
+    torch.reshape(c, (n_samples, n_concepts))
+    if torch.is_floating_point(c):
+        is_integer =  torch.allclose(c, c.floor())
+    else:
+        is_integer = True
+
+
+    if is_integer:
+        def compute_mi(c, y):
+            c_np = c.detach().cpu().numpy().squeeze()
+            y_np = y.detach().cpu().numpy().squeeze()
+            return mutual_info_score(c_np, y_np)
+    else:
+        def compute_mi(c, y):
+            # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
+            noise = 1e-4 * torch.mean(c) * torch.randn(*c.shape, device=c.device)
+            return np.float64(
+                compute_mi_cd_torch(c + noise, y, k=n_neighbors)
+            ).item()
+
+    I = np.zeros((n_concepts))
+    for ii in range(n_concepts):
+        I[ii] = compute_mi(c[:, ii], y)
+    if normalise:
+        IYY = norm_mi(y)
+        I /= IYY
+    return I
 
 
 def estimate_MI_concepts_task(c, y, n_concepts=None, n_neighbors=3, normalise=True):
@@ -846,24 +805,44 @@ def compute_MI_score_model_training(
         wrt_true=True,
         n_neighbors=3,
         normalise=True,
-        n_concepts=None):
+        n_concepts=None,
+        compute_mi_on_gpu=False):
     if score_type == "interconcept":
-
-        pred_mi = estimate_MI_interconcept(
-            c_pred,
-            n_concepts=n_concepts,
-            flatten=True,
-            n_neighbors=n_neighbors,
-            normalise=normalise,
-        )
-        if wrt_true:
-            true_mi = estimate_MI_interconcept(
-                c_true,
+        if compute_mi_on_gpu:
+            pred_mi = estimate_MI_interconcept_gpu(
+                c_pred,
                 n_concepts=n_concepts,
                 flatten=True,
                 n_neighbors=n_neighbors,
                 normalise=normalise,
             )
+
+        else:
+            pred_mi = estimate_MI_interconcept(
+                c_pred,
+                n_concepts=n_concepts,
+                flatten=True,
+                n_neighbors=n_neighbors,
+                normalise=normalise,
+            )
+
+        if wrt_true:
+            if compute_mi_on_gpu:
+                true_mi = estimate_MI_interconcept_gpu(
+                    c_true,
+                    n_concepts=n_concepts,
+                    flatten=True,
+                    n_neighbors=n_neighbors,
+                    normalise=normalise,
+                )
+            else:
+                true_mi = estimate_MI_interconcept(
+                    c_true,
+                    n_concepts=n_concepts,
+                    flatten=True,
+                    n_neighbors=n_neighbors,
+                    normalise=normalise,
+                )
             if apply_max:
                 out = np.maximum(0, pred_mi - true_mi)
             else:
@@ -897,21 +876,39 @@ def compute_MI_score_model_training(
             out = pred_mi
 
     elif score_type == "concepts_task":
-        pred_mi = estimate_MI_concepts_task(
-            c_pred,
-            y_true,
-            n_concepts=n_concepts,
-            n_neighbors=n_neighbors,
-            normalise=normalise,
-        )
-        if wrt_true:
-            true_mi = estimate_MI_concepts_task(
-                c_true,
+        if compute_mi_on_gpu:
+            pred_mi = estimate_MI_concepts_task_gpu(
+                c_pred,
                 y_true,
                 n_concepts=n_concepts,
                 n_neighbors=n_neighbors,
                 normalise=normalise,
             )
+        else:
+            pred_mi = estimate_MI_concepts_task(
+                c_pred,
+                y_true,
+                n_concepts=n_concepts,
+                n_neighbors=n_neighbors,
+                normalise=normalise,
+            )
+        if wrt_true:
+            if compute_mi_on_gpu:
+                true_mi = estimate_MI_concepts_task_gpu(
+                    c_true,
+                    y_true,
+                    n_concepts=n_concepts,
+                    n_neighbors=n_neighbors,
+                    normalise=normalise,
+                )
+            else:
+                true_mi = estimate_MI_concepts_task(
+                    c_true,
+                    y_true,
+                    n_concepts=n_concepts,
+                    n_neighbors=n_neighbors,
+                    normalise=normalise,
+                )
             if apply_max:
                 out = np.maximum(0, pred_mi - true_mi)
             else:
