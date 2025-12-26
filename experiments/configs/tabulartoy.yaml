@@ -1,5 +1,5 @@
 trials: 5
-results_dir: results/tabulartoy_25_10k_models_600epochs/
+results_dir: results/tabulartoy_25_10k_models_accuracy_gap/
 
 shared_params:
   # Dataset Configuration
@@ -73,21 +73,21 @@ runs:
 #       concept_loss_weight: 1
 
 # SOFT:
-     - architecture: 'ConceptBottleneckModel'
-       run_name: "auto"
-       bool: False
-       extra_dims: 0
-       sigmoidal_prob: True
-       grid_variables: ['concept_loss_weight', 'cbm_learning_rate']
-       concept_loss_weight: [0.1, 0.5, 1]
-       cbm_optimizer: adam
-       cbm_learning_rate: [0.0001, 0.001, 0.01, 0.05]
-       early_stopping_monitor: 'val_loss'
-       early_stopping_delta: 0.0
-       early_stopping_mode: min
-       gradient_clip_val: 0
-       patience: 20
-       max_epochs: 250
+#     - architecture: 'ConceptBottleneckModel'
+#       run_name: "auto"
+#       bool: False
+#       extra_dims: 0
+#       sigmoidal_prob: True
+#       grid_variables: ['concept_loss_weight']
+#       concept_loss_weight: [0.1, 0.5, 1]
+#       cbm_optimizer: adam
+#       cbm_learning_rate: 0.05
+#       early_stopping_monitor: 'val_loss'
+#       early_stopping_delta: 0.0
+#       early_stopping_mode: min
+#       gradient_clip_val: 0
+#       patience: 20
+#       max_epochs: 250
 
 
 #    - architecture: 'ConceptBottleneckModel'
@@ -122,18 +122,18 @@ runs:
        extra_dims: 0
        sigmoidal_prob: True
        use_adversarial: True
-       max_adversarial_lambda: 1
+       max_adversarial_lambda: [0.1, 0.2, 0.5, 1]
        adversarial_delay: 0
        adversarial_lambda_scheduler_warmup: None
        adversarial_scheduler: "none"
-       adversarial_loss_type: 'gradient'
+       adversarial_loss_type: 'accuracy'
        n_critic_steps: 1
-       accumulate_grad_batches: 64
+       accumulate_grad_batches: 1
        cbm_optimizer: adam
        adv_optimizer: adam
-       max_epochs: 600
+       max_epochs: 200
        cbm_learning_rate: 0.05
-       grid_variables: ['concept_loss_weight']
+       grid_variables: ['concept_loss_weight', 'max_adversarial_lambda']
        concept_loss_weight: [0.1, 0.5, 1.0]
        early_stopping_monitor: 'val_pareto_score'
        early_stopping_mode: max
