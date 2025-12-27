@@ -3,7 +3,7 @@
 #$ -o ~/Scratch/xai-crcbm/logs/test_run_ttoy.out
 #$ -e ~/Scratch/xai-crcbm/logs/test_run_ttoy.err
 #$ -pe smp 8
-#$ -l h_rt=6:00:00
+#$ -l h_rt=8:00:00
 #$ -l mem=8G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
@@ -30,7 +30,7 @@ export MKL_NUM_THREADS=$NSLOTS
 # --- 3. PATHS ---
 PROJECT_ROOT=~/Scratch/xai-crcbm
 #CHANGE FOR EACH DATASET
-RESULTS_DIR=$PROJECT_ROOT/results/tabulartoy_25_10k_models_accuracy_gap
+RESULTS_DIR=$PROJECT_ROOT/results/tabulartoy_25_10k_models_lambda_ablations
 CONFIG_PATH=$PROJECT_ROOT/experiments/configs/tabulartoy.yaml
 
 export PYTHONPATH=$PROJECT_ROOT:$PYTHONPATH

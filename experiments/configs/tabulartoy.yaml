@@ -1,11 +1,11 @@
 trials: 2
-results_dir: results/tabulartoy_25_10k_models_accuracy_gap/
+results_dir: results/tabulartoy_25_10k_models_lambda_ablations/
 
 shared_params:
   # Dataset Configuration
   dataset_config:
     dataset: tabulartoy
-    batch_size: 64
+    batch_size: 256
     num_workers: 8
     root_dir: data/TabularToy/tabulartoy_25_10k/ #for tabulartoy, this is where you find the pre-sampled dataset
     considered_concepts: ['0', '1', '2']
@@ -129,10 +129,10 @@ runs:
        adversarial_scheduler: "none"
        adversarial_loss_type: 'gradient'
        n_critic_steps: 1
-       accumulate_grad_batches: 1
+       accumulate_grad_batches: 16
        cbm_optimizer: adam
        adv_optimizer: adam
-       max_epochs: 300
+       max_epochs: 200
        cbm_learning_rate: 0.05
        grid_variables: ['max_adversarial_lambda']
        concept_loss_weight: 0.1
@@ -152,15 +152,15 @@ runs:
        max_adversarial_lambda: [0.95, 1]
        adversarial_delay: 0
        adversarial_lambda_scheduler_warmup: [100, 150, 200]
-       adversarial_scheduler: "linear"
+       adversarial_scheduler: ["linear" 'sigmoid']
        adversarial_loss_type: 'gradient'
        n_critic_steps: 1
-       accumulate_grad_batches: 1
+       accumulate_grad_batches: 16
        cbm_optimizer: adam
        adv_optimizer: adam
-       max_epochs: 300
+       max_epochs: 200
        cbm_learning_rate: 0.05
-       grid_variables: ['max_adversarial_lambda', 'adversarial_lambda_scheduler_warmup']
+       grid_variables: ['max_adversarial_lambda', 'adversarial_lambda_scheduler_warmup', 'adversarial_scheduler']
        concept_loss_weight: 0.1
        early_stopping_monitor: 'val_pareto_score'
        early_stopping_mode: max
