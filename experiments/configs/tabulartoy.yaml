@@ -36,7 +36,7 @@ shared_params:
   optimizer_c2y: adam
   c2y_max_epochs: 100
   linear_c2y: True
-  compute_mi_on_gpu: False
+  compute_mi_on_gpu: True
 
   n_hidden: 64
   emb_size: 16
