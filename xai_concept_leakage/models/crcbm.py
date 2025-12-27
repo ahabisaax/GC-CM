@@ -783,7 +783,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
             if self.adversarial_loss_type == 'gradient':
                 adversarial_term = - (adversarial_loss_weight * adversarial_loss)
             else:
-                leakage_gap = task_loss - adversarial_loss
+                leakage_gap = adversarial_loss - task_loss
                 hinge_penalty = torch.clamp(leakage_gap, min=0)
                 adversarial_term = adversarial_loss_weight * hinge_penalty
 
@@ -870,10 +870,13 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                 c_pred = latent
 
         # Now, with gradients enabled for the critic, get its prediction
-        if self.bool:
-            y_adv_logits = self.critic((c_pred > 0.5).float())
+        if self.adversarial_loss_type == 'gradient':
+            if self.bool:
+                y_adv_logits = self.critic((c_pred > 0.5).float())
+            else:
+                y_adv_logits = self.critic(c_pred)
         else:
-            y_adv_logits = self.critic(c_pred)
+            y_adv_logits = self.critic(c)
 
         # Calculate the critic's loss
         critic_loss = self.loss_adversarial(
