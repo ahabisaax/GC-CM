@@ -1,4 +1,4 @@
-trials: 5
+trials: 2
 results_dir: results/tabulartoy_25_10k_models_accuracy_gap/
 
 shared_params:
@@ -53,7 +53,7 @@ shared_params:
 
 
   momentum: 0.9
-  project_name: "Tabulartoy lr and longer training"
+  project_name: "Tabulartoy ablation lambda_adv"
   max_epochs: 250
   check_val_every_n_epoch: 5
 
@@ -123,19 +123,45 @@ runs:
        extra_dims: 0
        sigmoidal_prob: True
        use_adversarial: True
-       max_adversarial_lambda: [0.1, 0.2, 0.5, 1]
+       max_adversarial_lambda: [0.8, 0.9, 0.95, 1]
        adversarial_delay: 0
        adversarial_lambda_scheduler_warmup: None
        adversarial_scheduler: "none"
-       adversarial_loss_type: 'accuracy'
+       adversarial_loss_type: 'gradient'
        n_critic_steps: 1
        accumulate_grad_batches: 1
        cbm_optimizer: adam
        adv_optimizer: adam
-       max_epochs: 200
+       max_epochs: 300
        cbm_learning_rate: 0.05
-       grid_variables: ['concept_loss_weight', 'max_adversarial_lambda']
-       concept_loss_weight: [0.1, 0.5, 1.0]
+       grid_variables: ['max_adversarial_lambda']
+       concept_loss_weight: 0.1
+       early_stopping_monitor: 'val_pareto_score'
+       early_stopping_mode: max
+       early_stopping_delta: 0.0
+       patience: 400
+       gradient_clip_val: 1.0
+
+
+     - architecture: 'CriticRegularisedConceptBottleneckModel'
+       run_name: "auto"
+       bool: False
+       extra_dims: 0
+       sigmoidal_prob: True
+       use_adversarial: True
+       max_adversarial_lambda: [0.95, 1]
+       adversarial_delay: 0
+       adversarial_lambda_scheduler_warmup: [100, 150, 200]
+       adversarial_scheduler: "linear"
+       adversarial_loss_type: 'gradient'
+       n_critic_steps: 1
+       accumulate_grad_batches: 1
+       cbm_optimizer: adam
+       adv_optimizer: adam
+       max_epochs: 300
+       cbm_learning_rate: 0.05
+       grid_variables: ['max_adversarial_lambda', 'adversarial_lambda_scheduler_warmup']
+       concept_loss_weight: 0.1
        early_stopping_monitor: 'val_pareto_score'
        early_stopping_mode: max
        early_stopping_delta: 0.0
