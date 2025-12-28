@@ -30,7 +30,7 @@ export MKL_NUM_THREADS=$NSLOTS
 # --- 3. PATHS ---
 PROJECT_ROOT=~/Scratch/xai-crcbm
 #CHANGE FOR EACH DATASET
-RESULTS_DIR=$PROJECT_ROOT/results/dsprites_dep_0_models_lr_check
+RESULTS_DIR=$PROJECT_ROOT/results/dsprites_dep_0_models_lambda_ablations
 CONFIG_PATH=$PROJECT_ROOT/experiments/configs/dsprites.yaml
 
 export PYTHONPATH=$PROJECT_ROOT:$PYTHONPATH
