@@ -57,7 +57,7 @@ shared_params:
   check_val_every_n_epoch: 5
   momentum: 0.9
   compute_mi_on_gpu: True
-  project_name: "Dsprites lr and longer training"
+  project_name: "Dsprites ablation lambda_adv"
 
 
 
