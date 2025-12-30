@@ -63,14 +63,14 @@ def _evaluate_cbm(
                 eval_results[f"test_y_auc"],
                 eval_results[f"test_c_f1"],
                 eval_results[f"test_y_f1"],
-                eval_results[f'test_ctl_average'],
-                eval_results[f'test_icl_average'],
+                #eval_results[f'test_ctl_average'],
+                #eval_results[f'test_icl_average'],
                 # Get the unnormalized "nats" values
                 eval_results.get(f'test_normalised_ctl_average', np.nan),
                 eval_results.get(f'test_normalised_icl_average', np.nan),
                 eval_results.get(f'test_icl_input_avg_nats', np.nan),
-                eval_results.get(f'test_icl_task', np.nan),
-                eval_results.get(f'test_icl_cmi', np.nan)
+                #eval_results.get(f'test_icl_task', np.nan),
+                #eval_results.get(f'test_icl_cmi', np.nan)
                 ]
 
             top_k_vals = []
