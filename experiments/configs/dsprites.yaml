@@ -5,7 +5,7 @@ shared_params:
   # Dataset Configuration
   dataset_config:
     dataset: dsprites
-    batch_size: 256
+    batch_size: 64
     num_workers: 8
     root_dir: data/dsprites/dsprites_dep_0.npz # this is where you find the pre-sampled dataset
     sampling_percent: 1
@@ -122,13 +122,13 @@ runs:
        extra_dims: 0
        sigmoidal_prob: True
        use_adversarial: True
-       max_adversarial_lambda: [0.8, 0.9, 0.95, 1]
+       max_adversarial_lambda: [0.9, 0.95, 0.97, 0.99, 1]
        adversarial_delay: 0
        adversarial_lambda_scheduler_warmup: None
        adversarial_scheduler: "none"
        adversarial_loss_type: 'gradient'
        n_critic_steps: 1
-       accumulate_grad_batches: 16
+       accumulate_grad_batches: 64
        cbm_optimizer: adam
        adv_optimizer: adam
        max_epochs: 250
@@ -148,13 +148,13 @@ runs:
        extra_dims: 0
        sigmoidal_prob: True
        use_adversarial: True
-       max_adversarial_lambda: [0.95, 1]
+       max_adversarial_lambda: [0.95, 0.98, 1]
        adversarial_delay: 0
        adversarial_lambda_scheduler_warmup: [100, 150, 200]
        adversarial_scheduler: ["linear", 'sigmoid']
        adversarial_loss_type: 'gradient'
        n_critic_steps: 1
-       accumulate_grad_batches: 16
+       accumulate_grad_batches: 64
        cbm_optimizer: adam
        adv_optimizer: adam
        max_epochs: 250
