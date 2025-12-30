@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #$ -N CBM_Leakage_Run
-#$ -o ~/Scratch/xai-crcbm/logs/test_run_ttoy.out
-#$ -e ~/Scratch/xai-crcbm/logs/test_run_ttoy.err
+#$ -o ~/Scratch/xai-crcbm/logs/ttoy_$JOB_ID.out
+#$ -e ~/Scratch/xai-crcbm/logs/ttoy_$JOB_ID.err
 #$ -pe smp 8
 #$ -l h_rt=8:00:00
 #$ -l mem=8G

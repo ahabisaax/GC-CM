@@ -151,7 +151,7 @@ runs:
        max_adversarial_lambda: [0.95, 1]
        adversarial_delay: 0
        adversarial_lambda_scheduler_warmup: [100, 150, 200]
-       adversarial_scheduler: ["linear" 'sigmoid']
+       adversarial_scheduler: ["linear", 'sigmoid']
        adversarial_loss_type: 'gradient'
        n_critic_steps: 1
        accumulate_grad_batches: 16
