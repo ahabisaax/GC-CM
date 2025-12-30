@@ -132,7 +132,7 @@ runs:
        cbm_optimizer: adam
        adv_optimizer: adam
        max_epochs: 250
-       cbm_learning_rate: 0.05
+       cbm_learning_rate: 0.0001
        grid_variables: ['max_adversarial_lambda']
        concept_loss_weight: 0.1
        early_stopping_monitor: 'val_pareto_score'
@@ -148,7 +148,7 @@ runs:
        extra_dims: 0
        sigmoidal_prob: True
        use_adversarial: True
-       max_adversarial_lambda: [0.95, 0.98, 1]
+       max_adversarial_lambda: [0.95, 0.98, 0.99, 1]
        adversarial_delay: 0
        adversarial_lambda_scheduler_warmup: [100, 150, 200]
        adversarial_scheduler: ["linear", 'sigmoid']
@@ -158,7 +158,7 @@ runs:
        cbm_optimizer: adam
        adv_optimizer: adam
        max_epochs: 250
-       cbm_learning_rate: 0.05
+       cbm_learning_rate: 0.0001
        grid_variables: ['max_adversarial_lambda', 'adversarial_lambda_scheduler_warmup', 'adversarial_scheduler']
        concept_loss_weight: 0.1
        early_stopping_monitor: 'val_pareto_score'
