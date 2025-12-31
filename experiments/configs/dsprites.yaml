@@ -56,7 +56,7 @@ shared_params:
   early_stopping_delta: 0.0
   check_val_every_n_epoch: 5
   momentum: 0.9
-  compute_mi_on_gpu: True
+  compute_mi_on_gpu: False
   project_name: "Dsprites ablation lambda_adv"
 
 
