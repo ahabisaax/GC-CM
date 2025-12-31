@@ -240,17 +240,17 @@ class LossTracker(Callback):
                 (trainer.current_epoch == trainer.max_epochs - 1)
             ):
                 compute_mi_on_gpu = False
-                if torch.cuda.is_available():
-                    device = torch.device('cuda')
-                    compute_mi_on_gpu = True
-                elif torch.backends.mps.is_available():
-                    device = torch.device('mps')
-                    compute_mi_on_gpu = True
-                else:
-                    device = torch.device("cpu")
+                # if torch.cuda.is_available():
+                #     device = torch.device('cuda')
+                #     compute_mi_on_gpu = True
+                # elif torch.backends.mps.is_available():
+                #     device = torch.device('mps')
+                #     compute_mi_on_gpu = True
+                # else:
+                #     device = torch.device("cpu")
 
-                #device = torch.device('cpu')
-                if device == 'cpu':
+                device = torch.device('cpu')
+                if device == torch.device('cpu'):
                     all_c_learnt = torch.cat(self.val_c_learnt_temp).numpy()
                     all_c_truth = torch.cat(self.val_c_true_temp).numpy()
                     all_y_true = torch.cat(self.val_y_true_temp).numpy()
