@@ -1,4 +1,4 @@
-trials: 2
+trials: 5
 results_dir: results/dsprites_dep_0_models_lambda_ablations/
 
 shared_params:
@@ -50,7 +50,7 @@ shared_params:
   weight_decay: 0
   c_extractor_arch: dsprites_extractor
   cbm_optimizer: adam
-  cbm_learning_rate: 0.0001
+  cbm_learning_rate: 0.0005
   #adv_learning_rate: 0.0001
   adv_optimizer: adam
   early_stopping_delta: 0.0
@@ -122,7 +122,7 @@ runs:
        extra_dims: 0
        sigmoidal_prob: True
        use_adversarial: True
-       max_adversarial_lambda: [0.9, 0.95, 0.97, 0.99, 1]
+       max_adversarial_lambda: [ 0.95, 0.97, 0.99, 1]
        adversarial_delay: 0
        adversarial_lambda_scheduler_warmup: None
        adversarial_scheduler: "none"
@@ -148,18 +148,18 @@ runs:
        extra_dims: 0
        sigmoidal_prob: True
        use_adversarial: True
-       max_adversarial_lambda: [0.95, 0.98, 0.99, 1]
+       max_adversarial_lambda: [ 0.95, 0.97, 0.99, 1]
        adversarial_delay: 0
-       adversarial_lambda_scheduler_warmup: [100, 150, 200]
-       adversarial_scheduler: "linear"
+       adversarial_lambda_scheduler_warmup: None
+       adversarial_scheduler: "none"
        adversarial_loss_type: 'gradient'
        n_critic_steps: 1
        accumulate_grad_batches: 64
        cbm_optimizer: adam
        adv_optimizer: adam
        max_epochs: 250
-       cbm_learning_rate: 0.0001
-       grid_variables: ['max_adversarial_lambda', 'adversarial_lambda_scheduler_warmup']
+       cbm_learning_rate: 0.0005
+       grid_variables: ['max_adversarial_lambda']
        concept_loss_weight: 0.1
        early_stopping_monitor: 'val_pareto_score'
        early_stopping_mode: max
@@ -167,27 +167,3 @@ runs:
        patience: 400
        gradient_clip_val: 1.0
 
-     - architecture: 'CriticRegularisedConceptBottleneckModel'
-       run_name: "auto"
-       bool: False
-       extra_dims: 0
-       sigmoidal_prob: True
-       use_adversarial: True
-       max_adversarial_lambda: [0.95, 0.98, 0.99, 1]
-       adversarial_delay: 0
-       adversarial_lambda_scheduler_warmup: [100, 150, 200]
-       adversarial_scheduler: "sigmoid"
-       adversarial_loss_type: 'gradient'
-       n_critic_steps: 1
-       accumulate_grad_batches: 64
-       cbm_optimizer: adam
-       adv_optimizer: adam
-       max_epochs: 250
-       cbm_learning_rate: 0.0001
-       grid_variables: ['max_adversarial_lambda', 'adversarial_lambda_scheduler_warmup']
-       concept_loss_weight: 0.1
-       early_stopping_monitor: 'val_pareto_score'
-       early_stopping_mode: max
-       early_stopping_delta: 0.0
-       patience: 400
-       gradient_clip_val: 1.0
