@@ -353,14 +353,11 @@ def generate_auto_run_name(config):
     ds_config = config.get("dataset_config", {})
     bs = ds_config.get("batch_size", "NA")
     components.append(f"bs{bs}")
-
-    components.append(f"bs{bs}")
-
-    # <<< ADD THESE LINES HERE >>>
     acc = config.get("accumulate_grad_batches", 1)
     if acc > 1:
         effective_bs = bs * acc
         components.append(f"acc{acc}")
+        components.append(f"eff{effective_bs}")
 
     # 5. Adversarial Specifics (Only if adversarial)
     if config.get("use_adversarial", False):
