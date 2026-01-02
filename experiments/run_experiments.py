@@ -354,6 +354,14 @@ def generate_auto_run_name(config):
     bs = ds_config.get("batch_size", "NA")
     components.append(f"bs{bs}")
 
+    components.append(f"bs{bs}")
+
+    # <<< ADD THESE LINES HERE >>>
+    acc = config.get("accumulate_grad_batches", 1)
+    if acc > 1:
+        effective_bs = bs * acc
+        components.append(f"acc{acc}")
+
     # 5. Adversarial Specifics (Only if adversarial)
     if config.get("use_adversarial", False):
         # Lambda
@@ -368,10 +376,8 @@ def generate_auto_run_name(config):
         #delay = config.get("adversarial_delay", 0)
         #components.append(f"del{delay}")
 
-
     c_weight = config.get("concept_loss_weight", 1.0)
     components.append(f"lam_c{c_weight}")
-
     return "_".join(components)
 
 def _perform_model_selection(
