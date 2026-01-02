@@ -1,4 +1,4 @@
-trials: 5
+trials: 3
 results_dir: results/dsprites_dep_0_models_grad_batches_ablations/
 
 shared_params:
