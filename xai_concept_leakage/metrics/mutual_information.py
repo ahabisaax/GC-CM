@@ -274,7 +274,7 @@ def compute_mi_cd_torch(c, d, k=3):
     c_std = c.std(0)
     c_std[c_std < 1e-6] = 1.0
     c_norm = (c - c.mean(0)) / c_std
-    c_norm = c
+    #c_norm = c
 
     radius = torch.zeros(N, device=device)
     k_counts = torch.zeros(N, device=device)
