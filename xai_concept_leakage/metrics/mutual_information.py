@@ -289,8 +289,8 @@ def compute_mi_cd_torch(c, d, k=3):
     valid_mask = (d.unsqueeze(1) == valid_labels.unsqueeze(0)).any(dim=1)
 
     # 2. Conditional Radii
-    p_norm = 2
-    #    p_norm = float('inf')
+    #p_norm = 2
+    p_norm = float('inf')
 
     for label in valid_labels:
         mask = (d == label)
