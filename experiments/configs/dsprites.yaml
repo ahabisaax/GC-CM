@@ -115,33 +115,6 @@ runs:
 
 
  # CR-CBM:
-  # CR-CBM:
-     - architecture: 'CriticRegularisedConceptBottleneckModel'
-       run_name: "auto"
-       bool: False
-       extra_dims: 0
-       sigmoidal_prob: True
-       use_adversarial: True
-       max_adversarial_lambda: 1
-       adversarial_delay: 0
-       adversarial_lambda_scheduler_warmup: None
-       adversarial_scheduler: "none"
-       adversarial_loss_type: 'gradient'
-       n_critic_steps: 1
-       accumulate_grad_batches: 64
-       cbm_optimizer: adam
-       adv_optimizer: adam
-       max_epochs: 300
-       cbm_learning_rate: 0.0001
-       grid_variables: ['accumulate_grad_batches']
-       concept_loss_weight: 0.1
-       early_stopping_monitor: 'val_y_accuracy'
-       early_stopping_mode: max
-       early_stopping_delta: 0.0
-       patience: 400
-       gradient_clip_val: 1.0
-
-
      - architecture: 'CriticRegularisedConceptBottleneckModel'
        run_name: "auto"
        bool: False
