@@ -57,6 +57,7 @@ shared_params:
   check_val_every_n_epoch: 5
   momentum: 0.9
   compute_mi_on_gpu: False
+  compute_mi_mode: 'cpu'
   project_name: "Dsprites ablation grad_batches"
 
 
