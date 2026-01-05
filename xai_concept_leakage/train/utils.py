@@ -301,8 +301,8 @@ class LossTracker(Callback):
                     all_c_truth = torch.cat(self.val_c_true_temp).numpy()
                     all_y_true = torch.cat(self.val_y_true_temp).numpy()
                     duplication_factor = 7
-                    all_c_learnt = all_c_learnt.repeat(1, duplication_factor)  # (N, C*7)
-                    all_c_truth = all_c_truth.repeat(1, duplication_factor)
+                    all_c_learnt = np.tile(all_c_learnt, (1, duplication_factor))  # (N, C*7)
+                    all_c_truth = np.tile(all_c_truth, (1, duplication_factor))  # (N, C*7)
                     n_concepts = all_c_truth.shape[1]
                     ctl, icl = self.compute_leakage_metrics(all_c_learnt=all_c_learnt,
                                                                     all_c_truth=all_c_truth,
