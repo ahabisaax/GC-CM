@@ -206,7 +206,9 @@ def train_end_to_end_model(
             cb_loss = utils.LossTracker(use_adversarial=use_adversarial,
                                         adversarial_delay=adversarial_delay,
                                         check_leakage=5,
-                                        every_n_check_val=config.get("check_val_every_n_epoch", 5))
+                                        compute_mi_mode=config.get('compute_mi_mode', 'cpu'),
+                                        every_n_check_val=config.get("check_val_every_n_epoch", 5),
+                                        )
 
 
 
@@ -421,7 +423,8 @@ def train_end_to_end_model(
         cb_loss = utils.LossTracker(use_adversarial=use_adversarial,
                                     adversarial_delay=adversarial_delay,
                                     check_leakage=5,
-                                    every_n_check_val=config.get("check_val_every_n_epoch", 5))
+                                    every_n_check_val=config.get("check_val_every_n_epoch", 5),
+                                    compute_mi_mode=config.get('compute_mi_mode', 'cpu'))
         callbacks = [
             EarlyStopping(
                 monitor=config["early_stopping_monitor"],
@@ -1220,7 +1223,8 @@ def train_independent_model(
             print("[Training independent concept to label model]")
             cb_loss = utils.LossTracker(use_adversarial=False,
                                         adversarial_delay=-1,
-                                        black_box=True)
+                                        black_box=True,
+                                        compute_mi_mode=config.get('compute_mi_mode', 'cpu'))
 
             ind_c2y_trainer = pl.Trainer(
                 accelerator=accelerator,

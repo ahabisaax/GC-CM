@@ -83,6 +83,7 @@ def save_train_val_scores_n_losses_indep(
 class LossTracker(Callback):
     def __init__(self, use_adversarial,
                  adversarial_delay,
+                 compute_mi_mode='cpu',
                  black_box=False,
                  track_leakage=True, check_leakage=5,
                  every_n_check_val=1):
@@ -93,6 +94,7 @@ class LossTracker(Callback):
         self.track_leakage = track_leakage
         self.check = check_leakage
         self.val_every_n = every_n_check_val
+        self.compute_mi_mode = compute_mi_mode
 
         self.train_loss_temp = []
         self.train_y_accuracy_temp = []
@@ -121,6 +123,10 @@ class LossTracker(Callback):
                 self.val_input_icl = []
                 self.val_norm_icl = []
                 self.val_norm_ctl = []
+                if self.compute_mi_mode == 'both':
+                    self.val_c_learnt_temp_gpu = []
+                    self.val_c_true_temp_gpu = []
+                    self.val_y_true_temp_gpu = []
 
         self.train_critic_loss_temp = []
         self.train_critic_acc_temp = []
@@ -132,6 +138,37 @@ class LossTracker(Callback):
             return 1.0
         else:
             return np.mean(vec)
+
+    @staticmethod
+    def compute_leakage_metrics(all_c_learnt,
+                                all_c_truth,
+                                all_y_true,
+                                n_concepts,
+                                compute_mi_on_gpu):
+        norm_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
+                                                   c_true=all_c_truth,
+                                                   y_true=all_y_true,
+                                                   score_type="interconcept",
+                                                   wrt_true=True,
+                                                   n_neighbors=3,
+                                                   normalise=True,
+                                                   n_concepts=n_concepts,
+                                                   compute_mi_on_gpu=compute_mi_on_gpu
+                                                   )
+        mean_norm_icl_i = matrix_from_tril(norm_icl).sum(axis=1) / (n_concepts - 1)
+        mean_norm_icl = mean_norm_icl_i.sum() / len(mean_norm_icl_i)
+        norm_ctl_vec = compute_MI_score_model_training(c_pred=all_c_learnt,
+                                                       c_true=all_c_truth,
+                                                       y_true=all_y_true,
+                                                       score_type="concepts_task",
+                                                       wrt_true=True,
+                                                       n_neighbors=3,
+                                                       normalise=True,
+                                                       n_concepts=n_concepts,
+                                                       compute_mi_on_gpu=compute_mi_on_gpu)
+
+        mean_norm_ctl = norm_ctl_vec.sum() / len(norm_ctl_vec)
+        return mean_norm_ctl, mean_norm_icl
 
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
         if isinstance(outputs, list):
@@ -181,21 +218,40 @@ class LossTracker(Callback):
         self.val_loss_temp.append(outputs["val_loss"].item())
         self.val_y_accuracy_temp.append(outputs["val_y_accuracy"])
 
-        # if torch.cuda.is_available():
-        #     device = torch.device('cuda')
-        # elif torch.backends.mps.is_available():
-        #     device = torch.device('mps')
-        # else:
-        #     device = torch.device("cpu")
-        device = torch.device('cpu')
+        if self.compute_mi_mode == 'cpu':
+            device = torch.device('cpu')
+        elif self.compute_mi_mode == 'gpu':
+            if torch.cuda.is_available():
+                device = torch.device("cuda")
+            elif torch.backends.mps.is_available():
+                device = torch.device("mps")
+            else:
+                raise RuntimeError("No supported GPU backend found (CUDA or MPS).")
+
+        else:  #both in this case
+            device = torch.device('cpu')
+            if torch.cuda.is_available():
+                device_gpu = torch.device("cuda")
+            elif torch.backends.mps.is_available():
+                device_gpu = torch.device("mps")
+            else:
+                raise RuntimeError("No supported GPU backend found (CUDA or MPS).")
+
+
         if not self.black_box:
             self.val_c_accuracy_temp.append(outputs["val_c_accuracy"])
         if self.track_leakage:
             if "c_learnt" in outputs:
+                if self.compute_mi_mode == 'both':
+                    self.val_c_learnt_temp_gpu.append(outputs["c_learnt"].detach().to(device_gpu))
                 self.val_c_learnt_temp.append(outputs["c_learnt"].detach().to(device))
             if "c_true" in outputs:
+                if self.compute_mi_mode == 'both':
+                    self.val_c_true_temp_gpu.append(outputs["c_true"].detach().to(device_gpu))
                 self.val_c_true_temp.append(outputs["c_true"].detach().to(device))
             if "y_true" in outputs:
+                if self.compute_mi_mode == 'both':
+                    self.val_y_true_temp_gpu.append(outputs["y_true"].detach().to(device_gpu))
                 self.val_y_true_temp.append(outputs["y_true"].detach().to(device))
 
     def on_train_epoch_end(self, trainer, pl_module):
@@ -239,63 +295,63 @@ class LossTracker(Callback):
                 ((trainer.current_epoch + add_1) % self.check == 0) or
                 (trainer.current_epoch == trainer.max_epochs - 1)
             ):
-                compute_mi_on_gpu = False
-                # if torch.cuda.is_available():
-                #     device = torch.device('cuda')
-                #     compute_mi_on_gpu = True
-                # elif torch.backends.mps.is_available():
-                #     device = torch.device('mps')
-                #     compute_mi_on_gpu = True
-                # else:
-                #     device = torch.device("cpu")
 
-                device = torch.device('cpu')
-                if device == torch.device('cpu'):
+                if self.compute_mi_mode in ['cpu', 'both']:
                     all_c_learnt = torch.cat(self.val_c_learnt_temp).numpy()
                     all_c_truth = torch.cat(self.val_c_true_temp).numpy()
                     all_y_true = torch.cat(self.val_y_true_temp).numpy()
-                else:
+                    n_concepts = all_c_truth.shape[1]
+                    ctl, icl = self.compute_leakage_metrics(all_c_learnt=all_c_learnt,
+                                                                    all_c_truth=all_c_truth,
+                                                                    all_y_true=all_y_true,
+                                                                    n_concepts=n_concepts,
+                                                                    compute_mi_on_gpu=False)
+                    if self.compute_mi_mode == 'both':
+                        all_c_learnt_gpu = torch.cat(self.val_c_learnt_temp_gpu)
+                        all_c_truth_gpu = torch.cat(self.val_c_true_temp_gpu)
+                        all_y_true_gpu = torch.cat(self.val_y_true_temp_gpu)
+                        ctl_gpu, icl_gpu = self.compute_leakage_metrics(all_c_learnt=all_c_learnt_gpu,
+                                                     all_c_truth=all_c_truth_gpu,
+                                                     all_y_true=all_y_true_gpu,
+                                                     n_concepts=n_concepts,
+                                                     compute_mi_on_gpu=True)
+                        pl_module.log('normalised_val_total_icl_gpu', icl_gpu)
+                        pl_module.log('val_ctl_normalised_gpu', ctl_gpu)
+                        pl_module.log('val_ctl_diff_gpu_cpu', ctl_gpu - ctl)
+                        pl_module.log('val_icl_diff_gpu_cpu', icl_gpu - icl)
+
+
+
+
+                else:  #compute mode is gpu
                     all_c_learnt = torch.cat(self.val_c_learnt_temp)
                     all_c_truth = torch.cat(self.val_c_true_temp)
                     all_y_true = torch.cat(self.val_y_true_temp)
-                n_concepts = all_c_truth.shape[1]
+                    n_concepts = all_c_truth.shape[1]
+                    ctl, icl = self.compute_leakage_metrics(all_c_learnt=all_c_learnt,
+                                                                    all_c_truth=all_c_truth,
+                                                                    all_y_true=all_y_true,
+                                                                    n_concepts=n_concepts,
+                                                                    compute_mi_on_gpu=True)
 
-                norm_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
-                                                           c_true=all_c_truth,
-                                                           y_true=all_y_true,
-                                                           score_type="interconcept",
-                                                           wrt_true=True,
-                                                           n_neighbors=3,
-                                                           normalise=True,
-                                                           n_concepts=n_concepts,
-                                                           compute_mi_on_gpu=compute_mi_on_gpu
-                                                           )
-                mean_norm_icl_i = matrix_from_tril(norm_icl).sum(axis=1) / (n_concepts - 1)
-                mean_norm_icl = mean_norm_icl_i.sum() / len(mean_norm_icl_i)
-                norm_ctl_vec = compute_MI_score_model_training(c_pred=all_c_learnt,
-                                                               c_true=all_c_truth,
-                                                               y_true=all_y_true,
-                                                               score_type="concepts_task",
-                                                               wrt_true=True,
-                                                               n_neighbors=3,
-                                                               normalise=True,
-                                                               n_concepts=n_concepts,
-                                                               compute_mi_on_gpu = compute_mi_on_gpu)
 
-                mean_norm_ctl = norm_ctl_vec.sum() / len(norm_ctl_vec)
 
-                print(f"INTERCONCEPT LEAKAGE Normalsed: {mean_norm_icl.item():.4f}")
-                print(f'CTL: {mean_norm_ctl}')
-                self.val_norm_ctl.append(mean_norm_ctl)
-                self.val_norm_icl.append(mean_norm_icl)
-                pl_module.log('normalised_val_total_icl',mean_norm_icl)
-                pl_module.log('val_ctl_normalised', mean_norm_ctl)
-                pareto_score = mean_y_accuracy - mean_norm_ctl
+                print(f"ICL: {icl.item():.4f}")
+                print(f'CTL: {ctl.item()}')
+                self.val_norm_ctl.append(ctl)
+                self.val_norm_icl.append(icl)
+                pl_module.log('normalised_val_total_icl',icl)
+                pl_module.log('val_ctl_normalised', ctl)
+                pareto_score = mean_y_accuracy - ctl
 
             if self.track_leakage:
                 self.val_c_learnt_temp.clear()
                 self.val_c_true_temp.clear()
                 self.val_y_true_temp.clear()
+                if self.compute_mi_mode == 'both':
+                    self.val_y_true_temp_gpu.clear()
+                    self.val_c_true_temp_gpu.clear()
+                    self.val_c_learnt_temp_gpu.clear()
 
         pl_module.log("val_pareto_score", pareto_score)
 

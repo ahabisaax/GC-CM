@@ -37,7 +37,7 @@ shared_params:
   c2y_max_epochs: 100
   linear_c2y: True
   compute_mi_on_gpu: False
-
+  compute_mi_mode: 'both'
   n_hidden: 64
   emb_size: 16
 
@@ -53,9 +53,9 @@ shared_params:
 
 
   momentum: 0.9
-  project_name: "Tabulartoy ablation grad_batches"
+  project_name: "Tabulartoy gpu vs cpu leakage checks"
   max_epochs: 250
-  check_val_every_n_epoch: 5
+  check_val_every_n_epoch: 1
 
 runs:
 # HARD:
@@ -129,12 +129,12 @@ runs:
        adversarial_scheduler: "none"
        adversarial_loss_type: 'gradient'
        n_critic_steps: 1
-       accumulate_grad_batches: [1, 2, 4, 8, 16, 32, 64, 128]
+       accumulate_grad_batches: 1
        cbm_optimizer: adam
        adv_optimizer: adam
        max_epochs: 300
        cbm_learning_rate: 0.05
-       grid_variables: ['accumulate_grad_batches']
+       #grid_variables: ['accumulate_grad_batches']
        concept_loss_weight: 0.1
        early_stopping_monitor: 'val_y_accuracy'
        early_stopping_mode: max
