@@ -733,7 +733,7 @@ def estimate_MI_concepts_task_gpu(c, y, n_concepts=None, n_neighbors=3, normalis
     else:
         def compute_mi(c, y):
             # We add small noise to have the knn algorithm not fail as suggested in Kraskov et. al.
-            noise = 5e-5 * torch.mean(c) * torch.randn(*c.shape, device=c.device)
+            noise = 1e-4 * torch.mean(c) * torch.randn(*c.shape, device=c.device)
             return np.float64(
                 compute_mi_cd_torch(c + noise, y, k=n_neighbors)
             ).item()
