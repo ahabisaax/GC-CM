@@ -1,5 +1,5 @@
 trials: 5
-results_dir: results/tabulartoy_25_10k_models_grad_batches_ablations/
+results_dir: results/tabulartoy_25_10k_models_final_set/
 
 shared_params:
   # Dataset Configuration
@@ -37,7 +37,7 @@ shared_params:
   c2y_max_epochs: 100
   linear_c2y: True
   compute_mi_on_gpu: False
-  compute_mi_mode: 'both'
+  compute_mi_mode: 'cpu'
   n_hidden: 64
   emb_size: 16
 
@@ -53,9 +53,9 @@ shared_params:
 
 
   momentum: 0.9
-  project_name: "Tabulartoy gpu vs cpu leakage checks"
+  project_name: "Tabulartoy final crcbm"
   max_epochs: 250
-  check_val_every_n_epoch: 1
+  check_val_every_n_epoch: 5
 
 runs:
 # HARD:
@@ -107,13 +107,18 @@ runs:
     #   sigmoidal_prob: False
     #   concept_loss_weight: 1.
 
-# CEMs:
-    # - architecture: 'ConceptEmbeddingModel'
-    #   run_name: "CEM_10_pint025_emb16"
-    #   sigmoidal_prob: True
-    #   training_intervention_prob: 0.25
-    #   embedding_activation: "leakyrelu"
-    #   concept_loss_weight: 10
+ #CEMs:
+#     - architecture: 'ConceptEmbeddingModel'
+#       run_name: "CEM_10_pint025_emb16"
+#       sigmoidal_prob: True
+#       training_intervention_prob: 0.25
+#       embedding_activation: "leakyrelu"
+#       concept_loss_weight: 0.1
+#       cbm_optimizer: adam
+#       early_stopping_monitor: 'val_y_accuracy'
+#       early_stopping_mode: max
+#       early_stopping_delta: 0.0
+#       patience: 400
 
 
   # CR-CBM:
@@ -134,8 +139,8 @@ runs:
        adv_optimizer: adam
        max_epochs: 300
        cbm_learning_rate: 0.05
-       #grid_variables: ['accumulate_grad_batches']
-       concept_loss_weight: 0.1
+       grid_variables: ['concept_loss_weight']
+       concept_loss_weight: [0.1, 0.5, 1]
        early_stopping_monitor: 'val_y_accuracy'
        early_stopping_mode: max
        early_stopping_delta: 0.0
