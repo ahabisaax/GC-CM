@@ -1,5 +1,5 @@
-trials: 2
-results_dir: results/dsprites_dep_0_models_grad_batches_ablations/
+trials: 1
+results_dir: results/dsprites_dep_0_models_search_over_batchsize_lr/
 
 shared_params:
   # Dataset Configuration
@@ -58,7 +58,7 @@ shared_params:
   momentum: 0.9
   compute_mi_on_gpu: False
   compute_mi_mode: 'cpu'
-  project_name: "Dsprites ablation grad_batches"
+  project_name: "Dsprites ablation grad_batches and lr"
 
 
 
@@ -71,7 +71,7 @@ runs:
 #       sigmoidal_extra_capacity: False
 #       sigmoidal_prob: True
 #       accumulate_grad_batches: 1
-#       cbm_optimizer: adam
+#       cem_optimizer: adam
 #       concept_loss_weight:  1
 #       early_stopping_monitor: 'val_loss'
 #       early_stopping_mode: min
@@ -86,10 +86,10 @@ runs:
 #       bool: False
 #       extra_dims: 0
 #       sigmoidal_prob: True
-#       grid_variables: ['concept_loss_weight', 'cbm_learning_rate']
+#       grid_variables: ['concept_loss_weight', 'cem_learning_rate']
 #       concept_loss_weight: [0.1, 0.5, 1]
-#       cbm_optimizer: adam
-#       cbm_learning_rate: [0.0001, 0.001, 0.01, 0.05]
+#       cem_optimizer: adam
+#       cem_learning_rate: [0.0001, 0.001, 0.01, 0.05]
 #       early_stopping_monitor: 'val_loss'
 #       early_stopping_delta: 0.0
 #       early_stopping_mode: min
@@ -128,12 +128,12 @@ runs:
        adversarial_scheduler: "none"
        adversarial_loss_type: 'gradient'
        n_critic_steps: 1
-       accumulate_grad_batches: [1, 2, 4, 8, 16, 32, 64, 128]
+       accumulate_grad_batches: [1, 8, 16, 64]
        cbm_optimizer: adam
        adv_optimizer: adam
        max_epochs: 300
-       cbm_learning_rate: 0.0005
-       grid_variables: ['accumulate_grad_batches']
+       cbm_learning_rate: [0.00005, 0.0001, 0.0005, 0.001, 0.005]
+       grid_variables: ['accumulate_grad_batches', 'cbm_learning_rate']
        concept_loss_weight: 0.1
        early_stopping_monitor: 'val_y_accuracy'
        early_stopping_mode: max
