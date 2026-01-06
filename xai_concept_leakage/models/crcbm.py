@@ -259,7 +259,7 @@ class CriticRegularisedConceptBottleneckModel(pl.LightningModule):
                 self.lambda_scheduler = LagrangianLambdaScheduler(lr_lambda=0.1,
                                                                   init_lambda=1,
                                                                   max_lambda=self.max_adversarial_loss_weight)
-
+        self._test_step_outputs = None
         self.bool = bool
         self.concept_loss_weight = concept_loss_weight
         self.task_loss_weight = task_loss_weight
