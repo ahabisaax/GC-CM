@@ -203,9 +203,7 @@ def train_end_to_end_model(
             project=project_name, name=full_run_name, config=config, reinit=True
         ) as run:
             model_saved_path = os.path.join(result_dir, f"{full_run_name}.pt")
-            cb_loss = utils.LossTracker(use_adversarial=use_adversarial,
-                                        adversarial_delay=adversarial_delay,
-                                        check_leakage=5,
+            cb_loss = utils.LossTracker(check_leakage=5,
                                         compute_mi_mode=config.get('compute_mi_mode', 'cpu'),
                                         every_n_check_val=config.get("check_val_every_n_epoch", 5),
                                         )
@@ -420,9 +418,7 @@ def train_end_to_end_model(
                     f"{num_epochs} epochs in {training_time:.2f} seconds"
                 )
     else:
-        cb_loss = utils.LossTracker(use_adversarial=use_adversarial,
-                                    adversarial_delay=adversarial_delay,
-                                    check_leakage=5,
+        cb_loss = utils.LossTracker(check_leakage=5,
                                     every_n_check_val=config.get("check_val_every_n_epoch", 5),
                                     compute_mi_mode=config.get('compute_mi_mode', 'cpu'))
         callbacks = [
@@ -1104,9 +1100,7 @@ def train_independent_model(
     with enter_obj as run:
         # we do track  leakage as icl in x2c training
         #also use adversarial and delay are only to check if critic is involved for output type not leakage tracking
-        cb_loss = utils.LossTracker(use_adversarial=False,
-                                    adversarial_delay=-1,
-                                    track_leakage=False)
+        cb_loss = utils.LossTracker(track_leakage=False)
 
         if project_name and (rerun or (not chpt_exists)):
             my_logger = WandbLogger(
@@ -1221,9 +1215,7 @@ def train_independent_model(
 
             # Train the independent concept to label model
             print("[Training independent concept to label model]")
-            cb_loss = utils.LossTracker(use_adversarial=False,
-                                        adversarial_delay=-1,
-                                        black_box=True,
+            cb_loss = utils.LossTracker(black_box=True,
                                         compute_mi_mode=config.get('compute_mi_mode', 'cpu'))
 
             ind_c2y_trainer = pl.Trainer(

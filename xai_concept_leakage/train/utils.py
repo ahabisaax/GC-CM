@@ -81,16 +81,13 @@ def save_train_val_scores_n_losses_indep(
 
 
 class LossTracker(Callback):
-    def __init__(self, use_adversarial,
-                 adversarial_delay,
+    def __init__(self,
                  compute_mi_mode='cpu',
                  black_box=False,
                  track_leakage=True, check_leakage=5,
                  every_n_check_val=1):
         super().__init__()
         self.black_box = black_box
-        self.use_adversarial = use_adversarial
-        self.adversarial_delay = adversarial_delay
         self.track_leakage = track_leakage
         self.check = check_leakage
         self.val_every_n = every_n_check_val
