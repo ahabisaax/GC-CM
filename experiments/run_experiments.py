@@ -330,14 +330,19 @@ def generate_auto_run_name(config):
     components = []
 
     # 1. Model Type & Architecture
-    if config.get("architecture") == "IndependentConceptBottleneckModel":
+    architecture = config.get("architecture")
+    if  architecture == "IndependentConceptBottleneckModel":
         components.append("HardCBM")
-    elif not config.get("use_adversarial", False):
+    elif architecture == 'ConceptBottleneckModel':
         components.append("SoftCBM")
-    else:
+    elif architecture == 'CriticRegularisedConceptBottleneckModel':
         components.append("CRCBM")
-
-    opt = config.get("cbm_optimizer", "adam").lower()
+    elif architecture == 'ConceptEmbeddingModel':
+        components.append('CEM')
+    else:
+        architecture.append('CRCEM')
+    opt_key = 'cbm_optimizer' if 'cbm_optimizer' in config else 'cem_optimizer'
+    opt = config.get(opt_key, "adam").lower()
     components.append(opt)
 
     cbm_lr = config.get("cbm_learning_rate", 0.0)
