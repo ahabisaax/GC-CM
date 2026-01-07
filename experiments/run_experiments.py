@@ -340,7 +340,7 @@ def generate_auto_run_name(config):
     elif architecture == 'ConceptEmbeddingModel':
         components.append('CEM')
     else:
-        architecture.append('CRCEM')
+        components.append('CRCEM')
     opt_key = 'cbm_optimizer' if 'cbm_optimizer' in config else 'cem_optimizer'
     opt = config.get(opt_key, "adam").lower()
     components.append(opt)
