@@ -1,5 +1,5 @@
-trials: 1
-results_dir: results/dsprites_dep_0_models_search_over_batchsize_lr/
+trials: 5
+results_dir: results/dsprites_dep_0_models_final_set/
 
 shared_params:
   # Dataset Configuration
@@ -128,13 +128,13 @@ runs:
        adversarial_scheduler: "none"
        adversarial_loss_type: 'gradient'
        n_critic_steps: 1
-       accumulate_grad_batches: [1, 8, 16, 64]
+       accumulate_grad_batches: 1
        cbm_optimizer: adam
        adv_optimizer: adam
        max_epochs: 300
-       cbm_learning_rate: [0.00005, 0.0001, 0.0005, 0.001, 0.005]
-       grid_variables: ['accumulate_grad_batches', 'cbm_learning_rate']
-       concept_loss_weight: 0.1
+       cbm_learning_rate: 0.00005
+       grid_variables: ['concept_loss_weight']
+       concept_loss_weight: [0.1, 0.5, 1]
        early_stopping_monitor: 'val_y_accuracy'
        early_stopping_mode: max
        early_stopping_delta: 0.0
