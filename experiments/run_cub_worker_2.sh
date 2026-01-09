@@ -30,7 +30,7 @@ export MKL_NUM_THREADS=$NSLOTS
 # --- 3. PATHS ---
 PROJECT_ROOT=~/Scratch/xai-crcbm
 #CHANGE FOR EACH DATASET
-FINAL_RESULTS_DIR=$PROJECT_ROOT/results/cub_soft_cbm_lr
+FINAL_RESULTS_DIR=$PROJECT_ROOT/results/cub_hard_cbm_lr
 DATASET_TAR="CUB200.tar"
 
 
@@ -60,7 +60,7 @@ export PYTHONPATH="$LOCAL_WORKSPACE:$PYTHONPATH"
 echo "Running from: $(pwd)"
 
 
-LOCAL_CONFIG="experiments/configs/cub.yaml"
+LOCAL_CONFIG="experiments/configs/cub_2.yaml"
 LOCAL_RESULTS="$TMPDIR/results_temp"
 
 echo "Starting Training..."

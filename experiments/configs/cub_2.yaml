@@ -1,4 +1,4 @@
-results_dir: "results/cub_soft_cbm_lr/"
+results_dir: "results/cub_hard_cbm_lr/"
 trials: 1
 
 shared_params:
@@ -95,6 +95,7 @@ shared_params:
 
   skip_repr_evaluation: true
   max_epochs: 150
+  c2y_max_epochs: 150
   top_k_accuracy: null
   save_model: true
   patience: 100
@@ -124,24 +125,14 @@ shared_params:
   compute_mi_mode: 'cpu'
   accumulate_grad_batches: 1
   use_task_class_weights: True #False weighting of the task in loss
-  c2y_max_epochs: 150
 runs:
 
-  - architecture: "ConceptBottleneckModel"
-    run_name: "auto"
-    extra_dims: 200
-    concept_loss_weight: 0.1
-    sigmoidal_prob: true
-    embedding_activation: "leakyrelu"
-    cbm_optimizer: adam
-    cbm_learning_rate: [ 0.0001, 0.005, 0.01, 0.02, 0.05]
-    grid_variables: [ 'cbm_learning_rate' ]
-    early_stopping_monitor: 'val_loss'
-    early_stopping_delta: 0.0
-    early_stopping_mode: min
-    gradient_clip_val: 0
-    patience: 20
-    max_epochs: 250
+#  - architecture: "ConceptBottleneckModel"
+#    run_name: "DNN"
+#    extra_dims: 200
+#    concept_loss_weight: 0
+#    sigmoidal_prob: true
+#    embedding_activation: "leakyrelu"
 #
 #  - architecture: "ConceptBottleneckModel"
 #    run_name: "Joint CBM"
@@ -163,15 +154,21 @@ runs:
 #    embedding_activation: "leakyrelu"
 #    sigmoidal_extra_capacity: false
 #
-#  - architecture: "IndependentConceptBottleneckModel"
-#    run_name: "Independent CBM"
-#    concept_loss_weight: 1
-#    sigmoidal_prob: true
-#    embedding_activation: "leakyrelu"
-#    sigmoidal_extra_capacity: false
-#    learning_rate: [0.0001, 0.005, 0.01, 0.02]
-#    grid_variables: ['learning_rate']
-
+  - architecture: "IndependentConceptBottleneckModel"
+    run_name: "auto"
+    concept_loss_weight: 1
+    sigmoidal_prob: true
+    embedding_activation: "leakyrelu"
+    sigmoidal_extra_capacity: false
+    cbm_optimizer: adam
+    cbm_learning_rate: [ 0.0001, 0.005, 0.01, 0.02, 0.05]
+    grid_variables: [ 'cbm_learning_rate' ]
+    early_stopping_monitor: 'val_loss'
+    early_stopping_delta: 0.0
+    early_stopping_mode: min
+    gradient_clip_val: 0
+    patience: 20
+    max_epochs: 150
 #
 #  - architecture: "ConceptBottleneckModel"
 #    run_name: "Hybrid-CBM"
