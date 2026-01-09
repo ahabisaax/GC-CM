@@ -215,24 +215,6 @@ class LossTracker(Callback):
         self.val_loss_temp.append(outputs["val_loss"].item())
         self.val_y_accuracy_temp.append(outputs["val_y_accuracy"])
 
-        if self.compute_mi_mode == 'cpu':
-            device = torch.device('cpu')
-        elif self.compute_mi_mode == 'gpu':
-            if torch.cuda.is_available():
-                device = torch.device("cuda")
-            elif torch.backends.mps.is_available():
-                device = torch.device("mps")
-            else:
-                raise RuntimeError("No supported GPU backend found (CUDA or MPS).")
-
-        else:  #both in this case
-            device = torch.device('cpu')
-            if torch.cuda.is_available():
-                device_gpu = torch.device("cuda")
-            elif torch.backends.mps.is_available():
-                device_gpu = torch.device("mps")
-            else:
-                raise RuntimeError("No supported GPU backend found (CUDA or MPS).")
 
 
         if not self.black_box:
@@ -240,16 +222,16 @@ class LossTracker(Callback):
         if self.track_leakage:
             if "c_learnt" in outputs:
                 if self.compute_mi_mode == 'both':
-                    self.val_c_learnt_temp_gpu.append(outputs["c_learnt"].detach().to(device_gpu))
-                self.val_c_learnt_temp.append(outputs["c_learnt"].detach().to(device))
+                    self.val_c_learnt_temp_gpu.append(outputs["c_learnt"])
+                self.val_c_learnt_temp.append(outputs["c_learnt"])
             if "c_true" in outputs:
                 if self.compute_mi_mode == 'both':
-                    self.val_c_true_temp_gpu.append(outputs["c_true"].detach().to(device_gpu))
-                self.val_c_true_temp.append(outputs["c_true"].detach().to(device))
+                    self.val_c_true_temp_gpu.append(outputs["c_true"])
+                self.val_c_true_temp.append(outputs["c_true"])
             if "y_true" in outputs:
                 if self.compute_mi_mode == 'both':
-                    self.val_y_true_temp_gpu.append(outputs["y_true"].detach().to(device_gpu))
-                self.val_y_true_temp.append(outputs["y_true"].detach().to(device))
+                    self.val_y_true_temp_gpu.append(outputs["y_true"])
+                self.val_y_true_temp.append(outputs["y_true"])
 
     def on_train_epoch_end(self, trainer, pl_module):
         #         print("self.train_y_accuracy_temp:")
@@ -278,6 +260,25 @@ class LossTracker(Callback):
         self.val_loss_temp = []
         self.val_y_accuracy_temp = []
         pareto_score = 0
+        if self.compute_mi_mode == 'cpu':
+            device = torch.device('cpu')
+        elif self.compute_mi_mode == 'gpu':
+            if torch.cuda.is_available():
+                device = torch.device("cuda")
+            elif torch.backends.mps.is_available():
+                device = torch.device("mps")
+            else:
+                raise RuntimeError("No supported GPU backend found (CUDA or MPS).")
+
+        else:  #both in this case
+            device = torch.device('cpu')
+            if torch.cuda.is_available():
+                device_gpu = torch.device("cuda")
+            elif torch.backends.mps.is_available():
+                device_gpu = torch.device("mps")
+            else:
+                raise RuntimeError("No supported GPU backend found (CUDA or MPS).")
+
 
         if not self.black_box:
             mean_c_accuracy = self._avg_of_empty(self.val_c_accuracy_temp)
@@ -294,9 +295,10 @@ class LossTracker(Callback):
             ):
 
                 if self.compute_mi_mode in ['cpu', 'both']:
-                    all_c_learnt = torch.cat(self.val_c_learnt_temp).numpy()
-                    all_c_truth = torch.cat(self.val_c_true_temp).numpy()
-                    all_y_true = torch.cat(self.val_y_true_temp).numpy()
+
+                    all_c_learnt = torch.cat(self.val_c_learnt_temp).detach().to(device).numpy()
+                    all_c_truth = torch.cat(self.val_c_true_temp).detach().to(device).numpy()
+                    all_y_true = torch.cat(self.val_y_true_temp).detach().to(device).numpy()
                     # duplication_factor = 7
                     # all_c_learnt = np.tile(all_c_learnt, (1, duplication_factor))  # (N, C*7)
                     # all_c_truth = np.tile(all_c_truth, (1, duplication_factor))  # (N, C*7)
@@ -307,9 +309,9 @@ class LossTracker(Callback):
                                                                     n_concepts=n_concepts,
                                                                     compute_mi_on_gpu=False)
                     if self.compute_mi_mode == 'both':
-                        all_c_learnt_gpu = torch.cat(self.val_c_learnt_temp_gpu)
-                        all_c_truth_gpu = torch.cat(self.val_c_true_temp_gpu)
-                        all_y_true_gpu = torch.cat(self.val_y_true_temp_gpu)
+                        all_c_learnt_gpu = torch.cat(self.val_c_learnt_temp_gpu).detach().to(device_gpu)
+                        all_c_truth_gpu = torch.cat(self.val_c_true_temp_gpu).detach().to(device_gpu)
+                        all_y_true_gpu = torch.cat(self.val_y_true_temp_gpu).detach().to(device_gpu)
                         # all_c_learnt_gpu = all_c_learnt_gpu.repeat(1, duplication_factor)
                         # all_c_truth_gpu = all_c_truth_gpu.repeat(1, duplication_factor)
                         ctl_gpu, icl_gpu = self.compute_leakage_metrics(all_c_learnt=all_c_learnt_gpu,
@@ -326,9 +328,9 @@ class LossTracker(Callback):
 
 
                 else:  #compute mode is gpu
-                    all_c_learnt = torch.cat(self.val_c_learnt_temp)
-                    all_c_truth = torch.cat(self.val_c_true_temp)
-                    all_y_true = torch.cat(self.val_y_true_temp)
+                    all_c_learnt = torch.cat(self.val_c_learnt_temp).detach().to(device_gpu)
+                    all_c_truth = torch.cat(self.val_c_true_temp).detach().to(device_gpu)
+                    all_y_true = torch.cat(self.val_y_true_temp).detach().to(device_gpu)
                     n_concepts = all_c_truth.shape[1]
                     ctl, icl = self.compute_leakage_metrics(all_c_learnt=all_c_learnt,
                                                                     all_c_truth=all_c_truth,
