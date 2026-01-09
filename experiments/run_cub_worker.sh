@@ -3,8 +3,8 @@
 #$ -o ~/Scratch/xai-crcbm/logs/test_run_CUB.out
 #$ -e ~/Scratch/xai-crcbm/logs/test_run_CUB.err
 #$ -pe smp 8
-#$ -l h_rt=18:00:00
-#$ -l mem=8G
+#$ -l h_rt=24:00:00
+#$ -l mem=32G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
 #$ -l gpu=1
