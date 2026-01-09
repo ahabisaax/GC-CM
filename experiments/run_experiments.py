@@ -1158,7 +1158,7 @@ if __name__ == "__main__":
     run_specific_dir = os.path.join(results_dir, run_name)
     if not args.force_cpu:
         accelerator = "gpu"
-        devices = 1
+        devices = 'auto'
     else:
         accelerator = "cpu"
         devices = "auto"
