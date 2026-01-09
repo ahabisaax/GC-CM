@@ -13,7 +13,7 @@ import torch.nn as nn
 from pathlib import Path
 from torchvision.models import densenet121
 
-from  xai_concept_leakage.metrics.mutual_information import compute_MI_score_model_training, matrix_from_tril
+from  xai_concept_leakage.metrics.mutual_information import compute_MI_score_model_training, matrix_from_tril, compute_mi_matrix_parallel
 
 
 def extract_dims(train_dl):
@@ -84,7 +84,7 @@ class LossTracker(Callback):
     def __init__(self,
                  compute_mi_mode='cpu',
                  black_box=False,
-                 track_leakage=True, check_leakage=5,
+                 track_leakage=True, check_leakage=1,
                  every_n_check_val=1):
         super().__init__()
         self.black_box = black_box
@@ -142,29 +142,77 @@ class LossTracker(Callback):
                                 all_y_true,
                                 n_concepts,
                                 compute_mi_on_gpu):
-        norm_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
-                                                   c_true=all_c_truth,
-                                                   y_true=all_y_true,
-                                                   score_type="interconcept",
-                                                   wrt_true=True,
-                                                   n_neighbors=3,
-                                                   normalise=True,
-                                                   n_concepts=n_concepts,
-                                                   compute_mi_on_gpu=compute_mi_on_gpu
-                                                   )
-        mean_norm_icl_i = matrix_from_tril(norm_icl).sum(axis=1) / (n_concepts - 1)
-        mean_norm_icl = mean_norm_icl_i.sum() / len(mean_norm_icl_i)
-        norm_ctl_vec = compute_MI_score_model_training(c_pred=all_c_learnt,
-                                                       c_true=all_c_truth,
-                                                       y_true=all_y_true,
-                                                       score_type="concepts_task",
-                                                       wrt_true=True,
-                                                       n_neighbors=3,
-                                                       normalise=True,
-                                                       n_concepts=n_concepts,
-                                                       compute_mi_on_gpu=compute_mi_on_gpu)
 
-        mean_norm_ctl = norm_ctl_vec.sum() / len(norm_ctl_vec)
+        mi_icl_learnt = compute_mi_matrix_parallel(
+            all_c_learnt,
+            d=None,  # c-c mode
+            n_neighbors=3,
+            n_jobs=32,
+            max_samples=None,
+            normalise=True,
+            flatten=True
+        )
+        mean_norm_mi_learnt = matrix_from_tril(mi_icl_learnt).sum(axis=1) / (n_concepts - 1)
+        mean_norm_mi_learnt = mean_norm_mi_learnt.sum() / len(mean_norm_mi_learnt)
+        mi_icl_true = compute_mi_matrix_parallel(
+            all_c_truth,
+            d=None,  # c-c mode
+            n_neighbors=3,
+            n_jobs=32,
+            max_samples=None,
+            normalise=True,
+            flatten=True
+        )
+
+        mean_norm_mi_truth = matrix_from_tril(mi_icl_true).sum(axis=1)/ (n_concepts-1)
+        mean_norm_mi_truth = mean_norm_mi_truth.mean()
+
+        mean_norm_icl = np.maximum(0, mean_norm_mi_learnt- mean_norm_mi_truth)
+
+
+        mi_c_learnt_y = compute_mi_matrix_parallel(
+            all_c_learnt,
+            d=all_y_true,  # c-d mode
+            n_neighbors=3,
+            n_jobs=32,
+            max_samples=None,
+            normalise=False,
+            flatten=False
+        )
+        mi_c_true_y = compute_mi_matrix_parallel(
+            all_c_truth,
+            d=all_y_true,  # c-d mode
+            n_neighbors=3,
+            n_jobs=32,
+            max_samples=None,
+            normalise=False,
+            flatten=False
+        )
+
+        mean_norm_ctl = np.maximum(0, (mi_c_learnt_y.sum() / len(mi_c_learnt_y) - mi_c_true_y.mean()))
+        #norm_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
+        #                                            c_true=all_c_truth,
+        #                                            y_true=all_y_true,
+        #                                            score_type="interconcept",
+        #                                            wrt_true=True,
+        #                                            n_neighbors=3,
+        #                                            normalise=True,
+        #                                            n_concepts=n_concepts,
+        #                                            compute_mi_on_gpu=compute_mi_on_gpu
+        #                                            )
+        # mean_norm_icl_i = matrix_from_tril(norm_icl).sum(axis=1) / (n_concepts - 1)
+        # mean_norm_icl = mean_norm_icl_i.sum() / len(mean_norm_icl_i)
+        # norm_ctl_vec = compute_MI_score_model_training(c_pred=all_c_learnt,
+        #                                                c_true=all_c_truth,
+        #                                                y_true=all_y_true,
+        #                                                score_type="concepts_task",
+        #                                                wrt_true=True,
+        #                                                n_neighbors=3,
+        #                                                normalise=True,
+        #                                                n_concepts=n_concepts,
+        #                                                compute_mi_on_gpu=compute_mi_on_gpu)
+        #
+        # mean_norm_ctl = norm_ctl_vec.sum() / len(norm_ctl_vec)
         return mean_norm_ctl, mean_norm_icl
 
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):

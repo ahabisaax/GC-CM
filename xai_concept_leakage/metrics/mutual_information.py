@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from joblib import Parallel, delayed
 
 ##################################################################################################
 ### Helper functions:
@@ -386,6 +387,104 @@ def compute_cmi_cd(c_1, c_2, d, n_neighbors):
 
         total_cmi += p_y * mi_subset
     return total_cmi
+
+
+from joblib import Parallel, delayed
+import numpy as np
+
+
+def compute_mi_matrix_parallel(c, d=None, n_neighbors=3, normalise=False,
+                               flatten=False, max_samples=None, n_jobs=32):
+    """
+    Compute MI matrix for continuous-continuous OR continuous-discrete.
+
+    Parameters
+    ----------
+    c : ndarray, shape (n_samples, n_concepts)
+        Continuous concept activations
+    d : ndarray, shape (n_samples,) or None
+        If provided, computes MI between c and d (continuous-discrete).
+        If None, computes MI within c (continuous-continuous).
+    n_neighbors : int
+        Number of neighbors for KSG estimator
+    normalise : bool
+        Whether to normalize MI values
+    flatten : bool
+        Whether to return flattened lower triangle
+    max_samples : int or None
+        Maximum samples to use (subsampling)
+    n_jobs : int
+        Number of parallel jobs for outer loop
+
+    Returns
+    -------
+    I : ndarray
+        MI matrix or vector
+    """
+    if not isinstance(c, np.ndarray):
+        c = np.array(c)
+
+    n_samples, n_concepts = c.shape
+
+    # Subsample if needed
+    if max_samples is not None and n_samples > max_samples:
+        idx = np.random.choice(n_samples, max_samples, replace=False)
+        c = c[idx]
+        if d is not None:
+            d = d[idx]
+        n_samples = max_samples
+
+    # Determine which MI function to use
+    if d is None:
+        # Continuous-Continuous: MI within c
+        def compute_mi_pair(ii, jj):
+            x, y = c[:, ii], c[:, jj]
+            noise_x = 1e-10 * np.mean(x) * np.random.randn(*x.shape)
+            noise_y = 1e-10 * np.mean(y) * np.random.randn(*y.shape)
+            return compute_mi_cc(x + noise_x, y + noise_y,
+                                 n_neighbors=n_neighbors)  # Single-threaded inner
+
+        # Compute upper triangle
+        pairs = [(ii, jj) for ii in range(n_concepts) for jj in range(ii + 1, n_concepts)]
+        results = Parallel(n_jobs=n_jobs)(
+            delayed(compute_mi_pair)(ii, jj) for ii, jj in pairs
+        )
+
+        # Fill matrix
+        I = np.zeros((n_concepts, n_concepts))
+        for (ii, jj), mi_val in zip(pairs, results):
+            I[ii, jj] = mi_val
+
+        # Normalize if requested
+        if normalise:
+            diag_vals = Parallel(n_jobs=n_jobs)(
+                delayed(compute_mi_pair)(ii, ii) for ii in range(n_concepts)
+            )
+            diag_sqrt_MI = np.sqrt(diag_vals)
+            I /= np.outer(diag_sqrt_MI, diag_sqrt_MI) + 1e-10
+
+        if flatten:
+            output = extract_tril(I)
+        else:
+            output = I + I.T
+
+    else:
+        # Continuous-Discrete: MI between c and d
+        def compute_mi_cd_single(ii):
+            x = c[:, ii]
+            noise_x = 1e-10 * np.mean(x) * np.random.randn(*x.shape)
+            return compute_mi_cd(x + noise_x, d,
+                                 n_neighbors=n_neighbors,
+                                 )  # Single-threaded inner
+
+        # Compute MI for each concept with discrete variable
+        output = np.array(
+            Parallel(n_jobs=n_jobs)(
+                delayed(compute_mi_cd_single)(ii) for ii in range(n_concepts)
+            )
+        )
+
+    return output
 
 
 
