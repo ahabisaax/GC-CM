@@ -277,7 +277,7 @@ runs:
        auto_lr: False
        n_critic_steps: 1
        accumulate_grad_batches: 1
-       cbm_learning_rate: 0.00001
+       cbm_learning_rate: 0.001
        concept_loss_weight: 0.1
        early_stopping_monitor: 'val_pareto_score'
        early_stopping_mode: max
