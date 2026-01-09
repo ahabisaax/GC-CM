@@ -118,9 +118,11 @@ shared_params:
 
   #adv_learning_rate: 0.05
   adv_optimizer: adam
-  project_name: "cub"
+  project_name: "cub checks"
   check_val_every_n_epoch: 1
-  #accumulate_grad_batches: 1
+  compute_mi_on_gpu: False
+  compute_mi_mode: 'cpu'
+  accumulate_grad_batches: 1
 runs:
 
 #  - architecture: "ConceptBottleneckModel"
@@ -275,7 +277,7 @@ runs:
        auto_lr: False
        n_critic_steps: 1
        accumulate_grad_batches: 32
-       cbm_learning_rate: 0.0001
+       cbm_learning_rate: 0.00001
        concept_loss_weight: 0.1
        early_stopping_monitor: 'val_pareto_score'
        early_stopping_mode: max
