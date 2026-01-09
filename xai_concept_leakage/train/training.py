@@ -985,8 +985,14 @@ def train_independent_model(
 
     # Let's construct the model we will need for this
     config_c2y = copy.deepcopy(config)
-    config_c2y["learning_rate"] = config_c2y["learning_rate_c2y"]
-    config_c2y["optimizer"] = config_c2y["optimizer_c2y"]
+    if 'learning_rate_c2y' in config_c2y:
+        config_c2y["learning_rate"] = config_c2y["learning_rate_c2y"]
+    else:
+        config_c2y['learning_rate'] = config['cbm_learning_rate']
+    if 'optimizer_c2y' in config_c2y:
+        config_c2y["optimizer"] = config_c2y["optimizer_c2y"]
+    else:
+        config_c2y['optimizer'] = config_c2y['cbm_optimizer']
     _, ind_c2y_model = construct_sequential_models(
         n_concepts,
         n_tasks,

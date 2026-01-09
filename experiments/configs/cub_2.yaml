@@ -125,6 +125,7 @@ shared_params:
   compute_mi_mode: 'cpu'
   accumulate_grad_batches: 1
   use_task_class_weights: True #False weighting of the task in loss
+  learning_rate_c2y:
 runs:
 
 #  - architecture: "ConceptBottleneckModel"
@@ -162,12 +163,12 @@ runs:
     sigmoidal_extra_capacity: false
     cbm_optimizer: adam
     cbm_learning_rate: [ 0.0001, 0.005, 0.01, 0.02, 0.05]
-    grid_variables: [ 'cbm_learning_rate' ]
+    grid_variables: ['cbm_learning_rate']
     early_stopping_monitor: 'val_loss'
     early_stopping_delta: 0.0
     early_stopping_mode: min
     gradient_clip_val: 0
-    patience: 20
+    patience: 200
     max_epochs: 150
 #
 #  - architecture: "ConceptBottleneckModel"
