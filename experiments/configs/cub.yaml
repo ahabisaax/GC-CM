@@ -6,7 +6,7 @@ shared_params:
   dataset_config:
     dataset: "cub"
     num_workers: 8
-    batch_size: 128
+    batch_size: 256
     root_dir: data/CUB200/
     sampling_percent: 1
     sampling_groups: true
