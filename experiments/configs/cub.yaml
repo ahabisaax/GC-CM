@@ -125,6 +125,7 @@ shared_params:
   accumulate_grad_batches: 1
   use_task_class_weights: True #False weighting of the task in loss
   c2y_max_epochs: 150
+
 runs:
 
   - architecture: "ConceptBottleneckModel"
@@ -134,8 +135,8 @@ runs:
     sigmoidal_prob: true
     embedding_activation: "leakyrelu"
     cbm_optimizer: adam
-    learning_rate: [ 0.0001, 0.005, 0.01, 0.02, 0.05]
-    grid_variables: [ 'learning_rate' ]
+    learning_rate: 0.01
+#    grid_variables: [ 'learning_rate' ]
     early_stopping_monitor: 'val_loss'
     early_stopping_delta: 0.0
     early_stopping_mode: min
