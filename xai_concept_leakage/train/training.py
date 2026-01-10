@@ -203,7 +203,7 @@ def train_end_to_end_model(
             project=project_name, name=full_run_name, config=config, reinit=True
         ) as run:
             model_saved_path = os.path.join(result_dir, f"{full_run_name}.pt")
-            cb_loss = utils.LossTracker(check_leakage=1,
+            cb_loss = utils.LossTracker(check_leakage=25,
                                         compute_mi_mode=config.get('compute_mi_mode', 'cpu'),
                                         every_n_check_val=config.get("check_val_every_n_epoch", 5),
                                         )
@@ -418,7 +418,7 @@ def train_end_to_end_model(
                     f"{num_epochs} epochs in {training_time:.2f} seconds"
                 )
     else:
-        cb_loss = utils.LossTracker(check_leakage=1,
+        cb_loss = utils.LossTracker(check_leakage=25,
                                     every_n_check_val=config.get("check_val_every_n_epoch", 5),
                                     compute_mi_mode=config.get('compute_mi_mode', 'cpu'))
         callbacks = [

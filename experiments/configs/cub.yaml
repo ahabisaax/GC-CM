@@ -119,7 +119,7 @@ shared_params:
   #adv_learning_rate: 0.05
   adv_optimizer: adam
   project_name: "cub checks"
-  check_val_every_n_epoch: 1
+  check_val_every_n_epoch: 5
   compute_mi_on_gpu: False
   compute_mi_mode: 'cpu'
   accumulate_grad_batches: 1

@@ -84,7 +84,7 @@ class LossTracker(Callback):
     def __init__(self,
                  compute_mi_mode='cpu',
                  black_box=False,
-                 track_leakage=True, check_leakage=1,
+                 track_leakage=True, check_leakage=25,
                  every_n_check_val=1):
         super().__init__()
         self.black_box = black_box
@@ -396,7 +396,6 @@ class LossTracker(Callback):
                 add_1 = 0
             else:
                 add_1 = 1
-            self.check = 25
             if self.track_leakage and (
                 ((trainer.current_epoch + add_1) % self.check == 0) or
                 (trainer.current_epoch == trainer.max_epochs - 1)
@@ -420,8 +419,6 @@ class LossTracker(Callback):
                         all_c_learnt_gpu = torch.cat(self.val_c_learnt_temp_gpu).detach().to(device_gpu)
                         all_c_truth_gpu = torch.cat(self.val_c_true_temp_gpu).detach().to(device_gpu)
                         all_y_true_gpu = torch.cat(self.val_y_true_temp_gpu).detach().to(device_gpu)
-                        # all_c_learnt_gpu = all_c_learnt_gpu.repeat(1, duplication_factor)
-                        # all_c_truth_gpu = all_c_truth_gpu.repeat(1, duplication_factor)
                         ctl_gpu, icl_gpu = self.compute_leakage_metrics(all_c_learnt=all_c_learnt_gpu,
                                                      all_c_truth=all_c_truth_gpu,
                                                      all_y_true=all_y_true_gpu,
