@@ -344,8 +344,10 @@ def generate_auto_run_name(config):
     opt_key = 'cbm_optimizer' if 'cbm_optimizer' in config else 'cem_optimizer'
     opt = config.get(opt_key, "adam").lower()
     components.append(opt)
-
-    cbm_lr = config.get("cbm_learning_rate", 0.0)
+    if "cbm_learning_rate" in config:
+        cbm_lr = config.get("cbm_learning_rate", 0.0)
+    else:
+        cbm_lr = config.get('learning_rate', 0.0)
 
     def fmt_lr(lr):
         return f"{lr:.0e}".replace("0e", "e") if lr < 0.01 else f"{lr}"
