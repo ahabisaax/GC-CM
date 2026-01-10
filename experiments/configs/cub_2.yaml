@@ -125,7 +125,6 @@ shared_params:
   compute_mi_mode: 'cpu'
   accumulate_grad_batches: 1
   use_task_class_weights: True #False weighting of the task in loss
-  learning_rate_c2y:
 runs:
 
 #  - architecture: "ConceptBottleneckModel"
@@ -169,7 +168,7 @@ runs:
     early_stopping_mode: min
     gradient_clip_val: 0
     patience: 200
-    max_epochs: 150
+    max_epochs: 1
 #
 #  - architecture: "ConceptBottleneckModel"
 #    run_name: "Hybrid-CBM"
