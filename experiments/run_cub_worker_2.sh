@@ -2,12 +2,12 @@
 #$ -N CBM_Leakage_Run
 #$ -o ~/Scratch/xai-crcbm/logs/CUB_$JOB_ID.out
 #$ -e ~/Scratch/xai-crcbm/logs/CUB_$JOB_ID.err
-#$ -pe smp 1
+#$ -pe smp 16
 #$ -l h_rt=24:00:00
-#$ -l mem=32G
+#$ -l mem=16G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
-#$ -l gpu=1
+#$ -l gpu=8
 
 # --- 1. LOAD MODULES ---
 module purge
@@ -30,7 +30,7 @@ export MKL_NUM_THREADS=$NSLOTS
 # --- 3. PATHS ---
 PROJECT_ROOT=~/Scratch/xai-crcbm
 #CHANGE FOR EACH DATASET
-FINAL_RESULTS_DIR=$PROJECT_ROOT/results/cub_hard_cbm_lr
+FINAL_RESULTS_DIR=$PROJECT_ROOT/results/cub_hard_0.01
 DATASET_TAR="CUB200.tar"
 
 

@@ -1,5 +1,5 @@
-results_dir: "results/cub_hard_cbm_lr/"
-trials: 1
+results_dir: "results/cub_hard_0.01/"
+trials: 5
 
 shared_params:
   model_selection_trials: 3
@@ -161,8 +161,8 @@ runs:
     embedding_activation: "leakyrelu"
     sigmoidal_extra_capacity: false
     cbm_optimizer: adam
-    cbm_learning_rate: [ 0.0001, 0.005, 0.01, 0.02, 0.05]
-    grid_variables: ['cbm_learning_rate']
+    cbm_learning_rate: 0.01
+    #grid_variables: ['cbm_learning_rate']
     early_stopping_monitor: 'val_loss'
     early_stopping_delta: 0.0
     early_stopping_mode: min
