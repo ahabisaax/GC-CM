@@ -7,7 +7,7 @@
 #$ -l mem=8G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
-#$ -l gpu=8
+#$ -l gpu=4
 
 # --- 1. LOAD MODULES ---
 module purge
