@@ -2,7 +2,7 @@
 #$ -N CBM_Leakage_Run
 #$ -o ~/Scratch/xai-crcbm/logs/CUB_$JOB_ID.out
 #$ -e ~/Scratch/xai-crcbm/logs/test_run_$JOB_ID.err
-#$ -pe smp 16
+#$ -pe smp 8
 #$ -l h_rt=24:00:00
 #$ -l mem=16G
 #$ -l tmpfs=20G
