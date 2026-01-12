@@ -4,7 +4,7 @@
 #$ -e ~/Scratch/xai-crcbm/logs/test_run_$JOB_ID.err
 #$ -pe smp 8
 #$ -l h_rt=24:00:00
-#$ -l mem=16G
+#$ -l mem=8G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
 #$ -l gpu=8
