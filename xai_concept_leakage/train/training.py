@@ -222,6 +222,7 @@ def train_end_to_end_model(
                 accelerator=accelerator,
                 devices=devices,
                 max_epochs=config["max_epochs"],
+                strategy='auto',
                 check_val_every_n_epoch=config.get("check_val_every_n_epoch", 5),
                 callbacks=[
                     EarlyStopping(

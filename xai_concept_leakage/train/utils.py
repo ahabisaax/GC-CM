@@ -149,7 +149,7 @@ class LossTracker(Callback):
             all_c_learnt,
             d=None,
             n_neighbors=3,
-            n_jobs=32,
+            n_jobs=8,
             max_samples=None,
             normalise=True,
             flatten=True
@@ -159,7 +159,7 @@ class LossTracker(Callback):
             all_c_truth,
             d=None,
             n_neighbors=3,
-            n_jobs=32,
+            n_jobs=8,
             max_samples=None,
             normalise=True,
             flatten=True
@@ -214,9 +214,9 @@ class LossTracker(Callback):
             all_c_learnt,
             d=all_y_true,
             n_neighbors=3,
-            n_jobs=32,
+            n_jobs=8,
             max_samples=None,
-            normalise=False,
+            normalise=True,
             flatten=False
         )
 
@@ -224,9 +224,9 @@ class LossTracker(Callback):
             all_c_truth,
             d=all_y_true,
             n_neighbors=3,
-            n_jobs=32,
+            n_jobs=8,
             max_samples=None,
-            normalise=False,
+            normalise=True,
             flatten=False
         )
 
