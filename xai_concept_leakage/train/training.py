@@ -220,7 +220,6 @@ def train_end_to_end_model(
             )
             trainer = pl.Trainer(
                 accelerator=accelerator,
-                strategy='auto',
                 devices=devices,
                 max_epochs=config["max_epochs"],
                 check_val_every_n_epoch=config.get("check_val_every_n_epoch", 5),
