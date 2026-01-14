@@ -3,11 +3,11 @@
 #$ -o ~/Scratch/xai-crcbm/logs/CUB_$JOB_ID.out
 #$ -e ~/Scratch/xai-crcbm/logs/test_run_$JOB_ID.err
 #$ -pe smp 8
-#$ -l h_rt=2:00:00
-#$ -l mem=8G
+#$ -l h_rt=22:00:00
+#$ -l mem=24G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
-#$ -l gpu=4
+#$ -l gpu=1
 
 # --- 1. LOAD MODULES ---
 module purge

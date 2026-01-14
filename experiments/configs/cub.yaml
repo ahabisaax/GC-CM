@@ -138,7 +138,7 @@ runs:
     early_stopping_mode: min
     gradient_clip_val: 0
     patience: 200
-    max_epochs: 250
+    max_epochs: 150
 #
 #  - architecture: "ConceptBottleneckModel"
 #    run_name: "Joint CBM"

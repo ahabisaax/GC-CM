@@ -149,7 +149,7 @@ class LossTracker(Callback):
             all_c_learnt,
             d=None,
             n_neighbors=3,
-            n_jobs=8,
+            n_jobs=32,
             max_samples=None,
             normalise=True,
             flatten=True
@@ -159,62 +159,62 @@ class LossTracker(Callback):
             all_c_truth,
             d=None,
             n_neighbors=3,
-            n_jobs=8,
+            n_jobs=32,
             max_samples=None,
             normalise=True,
             flatten=True
         )
 
         # Debug: Check the raw values
-        print("=" * 50)
-        print("ICL DEBUG")
-        print("=" * 50)
-        print(f"mi_icl_learnt shape: {mi_icl_learnt.shape}")
-        print(
-            f"mi_icl_learnt stats: min={mi_icl_learnt.min():.4f}, max={mi_icl_learnt.max():.4f}, mean={mi_icl_learnt.mean():.4f}")
-        print(f"mi_icl_learnt non-zero: {(mi_icl_learnt > 0).sum()} / {len(mi_icl_learnt)}")
-
-        print(f"\nmi_icl_true shape: {mi_icl_true.shape}")
-        print(
-            f"mi_icl_true stats: min={mi_icl_true.min():.4f}, max={mi_icl_true.max():.4f}, mean={mi_icl_true.mean():.4f}")
-        print(f"mi_icl_true non-zero: {(mi_icl_true > 0).sum()} / {len(mi_icl_true)}")
-
-        # Reconstruct matrices
-        mi_matrix_learnt = matrix_from_tril(mi_icl_learnt)
-        mi_matrix_true = matrix_from_tril(mi_icl_true)
-
-        print(f"\nReconstructed matrix shapes: {mi_matrix_learnt.shape}, {mi_matrix_true.shape}")
-        print(f"Learnt matrix diagonal: {np.diag(mi_matrix_learnt)[:5]}")  # Should be zeros if normalized
-        print(f"True matrix diagonal: {np.diag(mi_matrix_true)[:5]}")
-
-        # Per-concept average MI
-        per_concept_mi_learnt = mi_matrix_learnt.sum(axis=1) / (n_concepts - 1)
-        per_concept_mi_true = mi_matrix_true.sum(axis=1) / (n_concepts - 1)
-
-        print(f"\nPer-concept MI (learnt): {per_concept_mi_learnt[:5]}")
-        print(f"Per-concept MI (true): {per_concept_mi_true[:5]}")
-
-        # Overall averages
-        mean_mi_learnt = per_concept_mi_learnt.mean()
-        mean_mi_true = per_concept_mi_true.mean()
-
-        print(f"\nOverall mean MI (learnt): {mean_mi_learnt:.6f}")
-        print(f"Overall mean MI (true): {mean_mi_true:.6f}")
-        print(f"Difference: {mean_mi_learnt - mean_mi_true:.6f}")
-
-        mean_norm_icl = np.maximum(0, mean_mi_learnt - mean_mi_true)
-        print(f"Final ICL: {mean_norm_icl:.6f}")
-
-        # CTL computation with diagnostics
-        print("\n" + "=" * 50)
-        print("CTL DEBUG")
-        print("=" * 50)
+        # print("=" * 50)
+        # print("ICL DEBUG")
+        # print("=" * 50)
+        # print(f"mi_icl_learnt shape: {mi_icl_learnt.shape}")
+        # print(
+        #     f"mi_icl_learnt stats: min={mi_icl_learnt.min():.4f}, max={mi_icl_learnt.max():.4f}, mean={mi_icl_learnt.mean():.4f}")
+        # print(f"mi_icl_learnt non-zero: {(mi_icl_learnt > 0).sum()} / {len(mi_icl_learnt)}")
+        #
+        # print(f"\nmi_icl_true shape: {mi_icl_true.shape}")
+        # print(
+        #     f"mi_icl_true stats: min={mi_icl_true.min():.4f}, max={mi_icl_true.max():.4f}, mean={mi_icl_true.mean():.4f}")
+        # print(f"mi_icl_true non-zero: {(mi_icl_true > 0).sum()} / {len(mi_icl_true)}")
+        #
+        # # Reconstruct matrices
+        # mi_matrix_learnt = matrix_from_tril(mi_icl_learnt)
+        # mi_matrix_true = matrix_from_tril(mi_icl_true)
+        #
+        # print(f"\nReconstructed matrix shapes: {mi_matrix_learnt.shape}, {mi_matrix_true.shape}")
+        # print(f"Learnt matrix diagonal: {np.diag(mi_matrix_learnt)[:5]}")  # Should be zeros if normalized
+        # print(f"True matrix diagonal: {np.diag(mi_matrix_true)[:5]}")
+        #
+        # # Per-concept average MI
+        # per_concept_mi_learnt = mi_matrix_learnt.sum(axis=1) / (n_concepts - 1)
+        # per_concept_mi_true = mi_matrix_true.sum(axis=1) / (n_concepts - 1)
+        #
+        # print(f"\nPer-concept MI (learnt): {per_concept_mi_learnt[:5]}")
+        # print(f"Per-concept MI (true): {per_concept_mi_true[:5]}")
+        #
+        # # Overall averages
+        # mean_mi_learnt = per_concept_mi_learnt.mean()
+        # mean_mi_true = per_concept_mi_true.mean()
+        #
+        # print(f"\nOverall mean MI (learnt): {mean_mi_learnt:.6f}")
+        # print(f"Overall mean MI (true): {mean_mi_true:.6f}")
+        # print(f"Difference: {mean_mi_learnt - mean_mi_true:.6f}")
+        #
+        # mean_norm_icl = np.maximum(0, mean_mi_learnt - mean_mi_true)
+        # print(f"Final ICL: {mean_norm_icl:.6f}")
+        #
+        # # CTL computation with diagnostics
+        # print("\n" + "=" * 50)
+        # print("CTL DEBUG")
+        # print("=" * 50)
 
         mi_c_learnt_y = compute_mi_matrix_parallel(
             all_c_learnt,
             d=all_y_true,
             n_neighbors=3,
-            n_jobs=8,
+            n_jobs=32,
             max_samples=None,
             normalise=True,
             flatten=False
@@ -224,7 +224,7 @@ class LossTracker(Callback):
             all_c_truth,
             d=all_y_true,
             n_neighbors=3,
-            n_jobs=8,
+            n_jobs=32,
             max_samples=None,
             normalise=True,
             flatten=False
