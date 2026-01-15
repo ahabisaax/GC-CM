@@ -180,29 +180,24 @@ class LossTracker(Callback):
         # print(f"mi_icl_true non-zero: {(mi_icl_true > 0).sum()} / {len(mi_icl_true)}")
         #
         # # Reconstruct matrices
-        # mi_matrix_learnt = matrix_from_tril(mi_icl_learnt)
-        # mi_matrix_true = matrix_from_tril(mi_icl_true)
-        #
-        # print(f"\nReconstructed matrix shapes: {mi_matrix_learnt.shape}, {mi_matrix_true.shape}")
-        # print(f"Learnt matrix diagonal: {np.diag(mi_matrix_learnt)[:5]}")  # Should be zeros if normalized
-        # print(f"True matrix diagonal: {np.diag(mi_matrix_true)[:5]}")
-        #
-        # # Per-concept average MI
-        # per_concept_mi_learnt = mi_matrix_learnt.sum(axis=1) / (n_concepts - 1)
-        # per_concept_mi_true = mi_matrix_true.sum(axis=1) / (n_concepts - 1)
-        #
-        # print(f"\nPer-concept MI (learnt): {per_concept_mi_learnt[:5]}")
-        # print(f"Per-concept MI (true): {per_concept_mi_true[:5]}")
-        #
+        mi_matrix_learnt = matrix_from_tril(mi_icl_learnt)
+        mi_matrix_true = matrix_from_tril(mi_icl_true)
+
+        print(f"\nReconstructed matrix shapes: {mi_matrix_learnt.shape}, {mi_matrix_true.shape}")
+        print(f"Learnt matrix diagonal: {np.diag(mi_matrix_learnt)[:5]}")  # Should be zeros if normalized
+        print(f"True matrix diagonal: {np.diag(mi_matrix_true)[:5]}")
+
+        # Per-concept average MI
+        per_concept_mi_learnt = mi_matrix_learnt.sum(axis=1) / (n_concepts - 1)
+        per_concept_mi_true = mi_matrix_true.sum(axis=1) / (n_concepts - 1)
+
+        print(f"\nPer-concept MI (learnt): {per_concept_mi_learnt[:5]}")
+        print(f"Per-concept MI (true): {per_concept_mi_true[:5]}")
+
         # # Overall averages
-        # mean_mi_learnt = per_concept_mi_learnt.mean()
-        # mean_mi_true = per_concept_mi_true.mean()
-        #
-        # print(f"\nOverall mean MI (learnt): {mean_mi_learnt:.6f}")
-        # print(f"Overall mean MI (true): {mean_mi_true:.6f}")
-        # print(f"Difference: {mean_mi_learnt - mean_mi_true:.6f}")
-        #
-        # mean_norm_icl = np.maximum(0, mean_mi_learnt - mean_mi_true)
+        mean_mi_learnt = per_concept_mi_learnt.mean()
+        mean_mi_true = per_concept_mi_true.mean()
+        mean_norm_icl = np.maximum(0, mean_mi_learnt - mean_mi_true)
         # print(f"Final ICL: {mean_norm_icl:.6f}")
         #
         # # CTL computation with diagnostics
