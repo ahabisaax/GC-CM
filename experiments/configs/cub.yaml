@@ -128,7 +128,7 @@ runs:
   - architecture: "ConceptBottleneckModel"
     run_name: "auto"
     extra_dims: 0
-    concept_loss_weight: 0.1
+    concept_loss_weight: 0.5
     sigmoidal_prob: true
     embedding_activation: "leakyrelu"
     cbm_optimizer: adam
