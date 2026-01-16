@@ -132,13 +132,14 @@ runs:
     sigmoidal_prob: true
     embedding_activation: "leakyrelu"
     cbm_optimizer: adam
-    learning_rate: 0.01
+    learning_rate: 0.0001
     early_stopping_monitor: 'val_loss'
     early_stopping_delta: 0.0
     early_stopping_mode: min
     gradient_clip_val: 0
     patience: 200
-    max_epochs: 150
+    max_epochs: 250
+    weight_decay: 4.0e-06
 #
 #  - architecture: "ConceptBottleneckModel"
 #    run_name: "Joint CBM"
