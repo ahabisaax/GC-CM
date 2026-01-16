@@ -11,6 +11,7 @@ import xai_concept_leakage.models.cem as models_cem
 import xai_concept_leakage.models.cbm as models_cbm
 import xai_concept_leakage.models.crcbm as models_crcbm
 import xai_concept_leakage.models.intcbm as models_intcbm
+import xai_concept_leakage.models.crcem as models_crcem
 import xai_concept_leakage.train.utils as utils
 
 
@@ -177,6 +178,35 @@ def construct_model(
             "n_critic_steps": config.get("n_critic_steps", 1),
             "compute_mi_on_gpu": config.get("compute_mi_on_gpu", False)
         }
+    elif "CriticRegularisedConceptEmbeddingModel" in config['architecture']:
+        model_cls = models_crcem.CriticRegularisedConceptEmbeddingModel
+        extra_params = {
+            "n_hidden": config["n_hidden"],  # added
+            "emb_size": config["emb_size"],
+            "shared_prob_gen": config.get("shared_prob_gen", True),
+            "intervention_policy": intervention_policy,
+            "training_intervention_prob": config.get(
+                "training_intervention_prob",
+                0.25,
+            ),
+            "embedding_activation": config.get("embedding_activation", "leakyrelu"),
+            "active_intervention_values": active_intervention_values,
+            "inactive_intervention_values": inactive_intervention_values,
+            "c2y_model": c2y_model,
+            "c2y_layers": config.get("c2y_layers", []),
+            "adversarial_delay": config.get("adversarial_delay"),
+            "max_adversarial_lambda": config.get("max_adversarial_lambda"),
+            "use_adversarial": config.get("use_adversarial", True),
+            "cbm_optimizer": config["cbm_optimizer"],
+            "adversarial_optimizer": config.get("adv_optimizer"),
+            "cem_learning_rate": config.get("cbm_learning_rate"),
+            "adv_learning_rate": config.get("adv_learning_rate"),
+            "adversarial_lambda_scheduler_warmup": config.get("adversarial_lambda_scheduler_warmup"),
+            "adversarial_scheduler": config.get("adversarial_scheduler"),
+            "adversarial_loss_type": config.get("adversarial_loss_type", 'gradient'),
+            "n_critic_steps": config.get("n_critic_steps", 1),
+            "compute_mi_on_gpu": config.get("compute_mi_on_gpu", False)
+        }
 
     elif "ConceptBottleneckModel" in config["architecture"]:
         model_cls = models_cbm.ConceptBottleneckModel
@@ -215,7 +245,10 @@ def construct_model(
         c_extractor_arch = config["c_extractor_arch"]
 
     # Create model
-    if model_cls ==  models_crcbm.CriticRegularisedConceptBottleneckModel:
+    if model_cls in {
+        models_crcbm.CriticRegularisedConceptBottleneckModel,
+        models_crcem.CriticRegularisedConceptEmbeddingModel
+    }:
         return model_cls(
             n_concepts=n_concepts,
             n_tasks=n_tasks,
