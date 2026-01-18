@@ -7,6 +7,7 @@ from torchvision.models import resnet50
 from xai_concept_leakage.metrics.accs import compute_accuracy
 from xai_concept_leakage.models.cbm import ConceptBottleneckModel
 import xai_concept_leakage.train.utils as utils
+from xai_concept_leakage.metrics.mutual_information import matrix_from_tril, compute_MI_score_model_training
 
 
 ################################################################################
@@ -403,3 +404,42 @@ class ConceptEmbeddingModel(ConceptBottleneckModel):
             tail_results.append(contexts[:, :, : self.emb_size])
             tail_results.append(contexts[:, :, self.emb_size :])
         return tuple([c_sem, c_pred, y] + tail_results)
+
+    def on_test_epoch_end(self):
+        all_c_learnt = torch.cat([out['c_learnt'] for out in self._test_step_outputs])
+        all_c_truth = torch.cat([out['c_true'] for out in self._test_step_outputs])
+        all_y_true = torch.cat([out['y_true'] for out in self._test_step_outputs])
+        n_concepts = all_c_truth.shape[1]
+
+        all_c_learnt = all_c_learnt.numpy()
+        all_c_truth =all_c_truth.numpy()
+        all_y_true = all_y_true.numpy()
+
+        norm_icl = compute_MI_score_model_training(c_pred=all_c_learnt,
+                                        c_true=all_c_truth,
+                                        y_true=all_y_true,
+                                        score_type="interconcept",
+                                        wrt_true=True,
+                                        n_neighbors=3,
+                                        normalise=True,
+                                        n_concepts=n_concepts,
+                                        compute_mi_on_gpu=False
+                                        )
+
+        mean_norm_icl_i = matrix_from_tril(norm_icl).sum(axis=1) / (n_concepts - 1)
+        mean_norm_icl =  mean_norm_icl_i.sum()/len(mean_norm_icl_i)
+
+        norm_ctl_vec = compute_MI_score_model_training(c_pred=all_c_learnt,
+                                        c_true=all_c_truth,
+                                        y_true=all_y_true,
+                                        score_type="concepts_task",
+                                        wrt_true=True,
+                                        n_neighbors=3,
+                                        normalise=True,
+                                        n_concepts=n_concepts,
+                                        compute_mi_on_gpu=False
+                                        )
+
+        mean_norm_ctl = norm_ctl_vec.sum()/len(norm_ctl_vec)
+        self.log('test_normalised_ctl_average', mean_norm_ctl)
+        self.log('test_normalised_icl_average', mean_norm_icl)
