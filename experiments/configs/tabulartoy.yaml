@@ -131,7 +131,7 @@ runs:
        embedding_activation: "leakyrelu"
        cbm_learning_rate: 0.00005
        concept_loss_weight: 0.1
-       grid_variables: [ 'concept_loss_weight' ]
+       #grid_variables: [ 'concept_loss_weight' ]
        use_adversarial: True
        max_adversarial_lambda: 1
        adversarial_delay: 0
