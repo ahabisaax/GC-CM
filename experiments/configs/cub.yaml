@@ -297,4 +297,4 @@ runs:
        early_stopping_delta: 0.0
        gradient_clip_val: 0.0
        patience: 200
-       max_epochs: 200
+       max_epochs: 400
