@@ -58,7 +58,7 @@ shared_params:
   momentum: 0.9
   project_name: "TTOY CRCEM"
   max_epochs: 250
-  check_val_every_n_epoch: 1
+  check_val_every_n_epoch: 25
 
 runs:
 # HARD:
@@ -129,7 +129,7 @@ runs:
        sigmoidal_prob: True
        training_intervention_prob: 0.25
        embedding_activation: "leakyrelu"
-       cbm_learning_rate: 0.00005
+       cbm_learning_rate: 0.00001
        concept_loss_weight: 0.1
        #grid_variables: [ 'concept_loss_weight' ]
        use_adversarial: True

@@ -661,9 +661,6 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
                      adversarial_term,
                      concept_loss,
                    train=train)
-            print(f'CEM STEP TASK LOSS: {task_loss.item()}')
-            print(f'CEM STEP CONCEPT LOSS: {concept_loss_scalar}')
-            print(f'CEM STEP ADVERSARIAL LOSS: {adversarial_term}')
             loss = (
                 self.concept_loss_weight * concept_loss
                 + task_loss + adversarial_term)
@@ -761,7 +758,6 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
             y_adv_logits if y_adv_logits.shape[-1] > 1 else y_adv_logits.reshape(-1),
             y,
         )
-        print(f'CRITIC STEP LOSS : {critic_loss.item()}')
 
         # For good observability, let's compute the critic's accuracy as well
         _, (y_adv_accuracy, y_adv_auc, _) = compute_accuracy(
