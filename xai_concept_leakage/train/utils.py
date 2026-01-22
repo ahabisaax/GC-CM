@@ -5,6 +5,7 @@ import multiprocessing
 import numpy as np
 import os
 import pytorch_lightning as pl
+import wandb
 from pytorch_lightning.callbacks import Callback
 import sklearn.metrics
 import torch
@@ -401,15 +402,33 @@ class LossTracker(Callback):
                     all_c_learnt = torch.cat(self.val_c_learnt_temp).detach().to(device).numpy()
                     all_c_truth = torch.cat(self.val_c_true_temp).detach().to(device).numpy()
                     all_y_true = torch.cat(self.val_y_true_temp).detach().to(device).numpy()
-                    # duplication_factor = 7
-                    # all_c_learnt = np.tile(all_c_learnt, (1, duplication_factor))  # (N, C*7)
-                    # all_c_truth = np.tile(all_c_truth, (1, duplication_factor))  # (N, C*7)
+
                     n_concepts = all_c_truth.shape[1]
                     ctl, icl = self.compute_leakage_metrics(all_c_learnt=all_c_learnt,
                                                                     all_c_truth=all_c_truth,
                                                                     all_y_true=all_y_true,
                                                                     n_concepts=n_concepts,
                                                                     compute_mi_on_gpu=False)
+                    if self.current_epoch % 40 == 0:
+
+                        # As binarization occurs, this will look like a 'U' shape
+                        pl_module.log({
+                            f"binarization/epoch_{self.current_epoch}_dist": wandb.Histogram(all_c_learnt.flatten()),
+                            "epoch": self.current_epoch
+                        })
+
+                        # (How close is each concept to its target?)
+                        avg_confidence = np.mean(np.abs(all_c_learnt - 0.5) * 2)
+                        pl_module.log("stats/binarization_index", avg_confidence)
+
+                        # Visualizes the 'sharpness' of the bottleneck
+                        pl_module.log({
+                            "binarization/bottleneck_sample": wandb.Image(
+                                all_c_learnt[:50, :20],
+                                caption=f"Bottleneck Activations Epoch {self.current_epoch}"
+                            )
+                        })
+
                     if self.compute_mi_mode == 'both':
                         all_c_learnt_gpu = torch.cat(self.val_c_learnt_temp_gpu).detach().to(device_gpu)
                         all_c_truth_gpu = torch.cat(self.val_c_true_temp_gpu).detach().to(device_gpu)
