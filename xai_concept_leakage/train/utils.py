@@ -413,7 +413,7 @@ class LossTracker(Callback):
 
                     # As binarization occurs, this will look like a 'U' shape
                     pl_module.log(
-                        f"binarization/epoch_{trainer.current_epoch}_dist", wandb.Histogram(all_c_learnt.flatten())
+                        {f"binarization/epoch_{trainer.current_epoch}_dist": wandb.Histogram(all_c_learnt.flatten())}
                     )
 
                     # (How close is each concept to its target?)
