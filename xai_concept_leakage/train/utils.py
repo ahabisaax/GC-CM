@@ -409,25 +409,25 @@ class LossTracker(Callback):
                                                                     all_y_true=all_y_true,
                                                                     n_concepts=n_concepts,
                                                                     compute_mi_on_gpu=False)
-                    if self.current_epoch % 40 == 0:
 
-                        # As binarization occurs, this will look like a 'U' shape
-                        pl_module.log({
-                            f"binarization/epoch_{self.current_epoch}_dist": wandb.Histogram(all_c_learnt.flatten()),
-                            "epoch": self.current_epoch
-                        })
 
-                        # (How close is each concept to its target?)
-                        avg_confidence = np.mean(np.abs(all_c_learnt - 0.5) * 2)
-                        pl_module.log("stats/binarization_index", avg_confidence)
+                    # As binarization occurs, this will look like a 'U' shape
+                    pl_module.log({
+                        f"binarization/epoch_{trainer.current_epoch}_dist": wandb.Histogram(all_c_learnt.flatten()),
+                        "epoch": trainer.current_epoch
+                    })
 
-                        # Visualizes the 'sharpness' of the bottleneck
-                        pl_module.log({
-                            "binarization/bottleneck_sample": wandb.Image(
-                                all_c_learnt[:50, :20],
-                                caption=f"Bottleneck Activations Epoch {self.current_epoch}"
-                            )
-                        })
+                    # (How close is each concept to its target?)
+                    avg_confidence = np.mean(np.abs(all_c_learnt - 0.5) * 2)
+                    pl_module.log("stats/binarization_index", avg_confidence)
+
+                    # Visualizes the 'sharpness' of the bottleneck
+                    pl_module.log({
+                        "binarization/bottleneck_sample": wandb.Image(
+                            all_c_learnt[:50, :20],
+                            caption=f"Bottleneck Activations Epoch {trainer.current_epoch}"
+                        )
+                    })
 
                     if self.compute_mi_mode == 'both':
                         all_c_learnt_gpu = torch.cat(self.val_c_learnt_temp_gpu).detach().to(device_gpu)
