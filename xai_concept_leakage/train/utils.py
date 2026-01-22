@@ -413,11 +413,13 @@ class LossTracker(Callback):
 
                     # As binarization occurs, this will look like a 'U' shape
                     if pl_module.logger and hasattr(pl_module.logger, "experiment"):
-                        pl_module.logger.experiment.log({
-                            f"binarization": wandb.Histogram(
-                                all_c_learnt.flatten()
-                            ),
-                        })
+                        pl_module.logger.experiment.log(
+                            {
+                                "binarization": wandb.Histogram(all_c_learnt.flatten(),
+                                                                num_bins=50)
+                            },
+                            step=pl_module.current_epoch
+                        )
 
                     # (How close is each concept to its target?)
                     avg_confidence = np.mean(np.abs(all_c_learnt - 0.5) * 2)
