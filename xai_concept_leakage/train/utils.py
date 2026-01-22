@@ -417,7 +417,6 @@ class LossTracker(Callback):
                             f"binarization/epoch_{trainer.current_epoch}_dist": wandb.Histogram(
                                 all_c_learnt.flatten()
                             ),
-                            "epoch": trainer.current_epoch
                         })
 
                     # (How close is each concept to its target?)
