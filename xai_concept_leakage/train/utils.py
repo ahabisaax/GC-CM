@@ -414,7 +414,7 @@ class LossTracker(Callback):
                     # As binarization occurs, this will look like a 'U' shape
                     if pl_module.logger and hasattr(pl_module.logger, "experiment"):
                         pl_module.logger.experiment.log({
-                            f"binarization/epoch_{trainer.current_epoch}_dist": wandb.Histogram(
+                            f"binarization": wandb.Histogram(
                                 all_c_learnt.flatten()
                             ),
                         })
