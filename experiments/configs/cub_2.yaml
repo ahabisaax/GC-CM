@@ -120,7 +120,7 @@ shared_params:
   #adv_learning_rate: 0.05
   adv_optimizer: adam
   project_name: "cub checks"
-  check_val_every_n_epoch: 5
+  check_val_every_n_epoch: 1
   compute_mi_on_gpu: False
   compute_mi_mode: 'cpu'
   accumulate_grad_batches: 1
@@ -163,12 +163,13 @@ runs:
     cbm_optimizer: adam
     cbm_learning_rate: 0.01
     #grid_variables: ['cbm_learning_rate']
-    early_stopping_monitor: 'val_loss'
+    early_stopping_monitor: 'val_y_accuracy'
     early_stopping_delta: 0.0
-    early_stopping_mode: min
+    early_stopping_mode: max
     gradient_clip_val: 0
-    patience: 200
+    patience: 300
     max_epochs: 150
+    c2y_max_epochs: 150
 #
 #  - architecture: "ConceptBottleneckModel"
 #    run_name: "Hybrid-CBM"
