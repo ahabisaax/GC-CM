@@ -125,21 +125,21 @@ shared_params:
 
 runs:
 
-#  - architecture: "ConceptBottleneckModel"
-#    run_name: "auto"
-#    extra_dims: 0
-#    concept_loss_weight: 0.5
-#    sigmoidal_prob: true
-#    embedding_activation: "leakyrelu"
-#    cbm_optimizer: adam
-#    learning_rate: 0.0001
-#    early_stopping_monitor: 'val_loss'
-#    early_stopping_delta: 0.0
-#    early_stopping_mode: min
-#    gradient_clip_val: 0
-#    patience: 200
-#    max_epochs: 250
-#    weight_decay: 4.0e-06
+  - architecture: "ConceptBottleneckModel"
+    run_name: "auto"
+    extra_dims: 0
+    concept_loss_weight: 1
+    sigmoidal_prob: true
+    embedding_activation: "leakyrelu"
+    cbm_optimizer: adam
+    learning_rate: 0.0001
+    early_stopping_monitor: 'val_loss'
+    early_stopping_delta: 0.0
+    early_stopping_mode: min
+    gradient_clip_val: 0
+    patience: 200
+    max_epochs: 250
+    weight_decay: 4.0e-06
 #
 #  - architecture: "ConceptBottleneckModel"
 #    run_name: "Joint CBM"
@@ -274,27 +274,27 @@ runs:
 #    calibration_epochs: 30
 
  # CR-CBM:
-     - architecture: 'CriticRegularisedConceptBottleneckModel'
-       run_name: "auto"
-       bool: False
-       extra_dims: 0
-       sigmoidal_prob: True
-       use_adversarial: True
-       max_adversarial_lambda: 1.0
-       adversarial_delay: 0
-       adversarial_lambda_scheduler_warmup: null  # Changed 'None' to 'null'
-       adversarial_scheduler: "none"
-       adaptive_lambda_beta: 0.99
-       adaptive_lambda_scale: 0.5
-       auto_lr: False
-       n_critic_steps: 1
-       accumulate_grad_batches: 1
-       cbm_learning_rate: 0.0001
-       #grid_variables: ['cbm_learning_rate']
-       concept_loss_weight: 1
-       early_stopping_monitor: 'val_y_accuracy'
-       early_stopping_mode: max
-       early_stopping_delta: 0.0
-       gradient_clip_val: 1.0
-       patience: 200
-       max_epochs: 300
+#     - architecture: 'CriticRegularisedConceptBottleneckModel'
+#       run_name: "auto"
+#       bool: False
+#       extra_dims: 0
+#       sigmoidal_prob: True
+#       use_adversarial: True
+#       max_adversarial_lambda: 1.0
+#       adversarial_delay: 0
+#       adversarial_lambda_scheduler_warmup: null  # Changed 'None' to 'null'
+#       adversarial_scheduler: "none"
+#       adaptive_lambda_beta: 0.99
+#       adaptive_lambda_scale: 0.5
+#       auto_lr: False
+#       n_critic_steps: 1
+#       accumulate_grad_batches: 1
+#       cbm_learning_rate: 0.0001
+#       #grid_variables: ['cbm_learning_rate']
+#       concept_loss_weight: 1
+#       early_stopping_monitor: 'val_y_accuracy'
+#       early_stopping_mode: max
+#       early_stopping_delta: 0.0
+#       gradient_clip_val: 1.0
+#       patience: 200
+#       max_epochs: 300
