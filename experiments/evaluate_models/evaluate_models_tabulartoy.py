@@ -15,13 +15,30 @@ if __name__ == "__main__":
     ##################################################################################################
     ### Config:
     ##################################################################################################
-    checkpoint_classes = [
-        "CBM_" + "Sigmoid_01",
-        "CBM_" + "Sigmoid_5",
-    ]
-    n_fold = 5
-    results_folder = master_folder + "results/tabulartoy_25_10k_models/"
-    save_path = master_folder + "results/results_tabulartoy_25_10k.dict"
+    # Automatically discover all model folders in tabulartoy_25_10k_models_crcem
+    results_folder = master_folder + "results/tabulartoy_25_10k_models_crcem/"
+    
+    # Get all model subdirectories
+    model_dirs = [d for d in os.listdir(results_folder) 
+                  if os.path.isdir(os.path.join(results_folder, d)) and d != 'auto']
+    
+    print(f"Found {len(model_dirs)} model directories:")
+    for model_dir in model_dirs:
+        print(f"  - {model_dir}")
+    
+    # Generate checkpoint names for all models with their folds
+    checkpoint_names = []
+    for model_dir in model_dirs:
+        # Find all .pt files in the directory
+        model_path = os.path.join(results_folder, model_dir)
+        pt_files = [f for f in os.listdir(model_path) if f.endswith('.pt')]
+        # Extract checkpoint names (with .pt extension)
+        for pt_file in pt_files:
+            checkpoint_names.append(os.path.join(model_dir, pt_file))
+    
+    print(f"\nTotal checkpoints to evaluate: {len(checkpoint_names)}")
+    
+    save_path = master_folder + "results/results_tabulartoy_25_10k_crcem.dict"
     repeats = 5
     rerun = True
 
@@ -32,7 +49,8 @@ if __name__ == "__main__":
     interconcept_repeats = repeats
     concepts_task_repeats = repeats
 
-    list_observables = ["accuracies", "interventions", "leakage_scores"]
+    # Only evaluate CEM_leakage_scores
+    list_observables = ["CEM_leakage_scores"]
 
     ##################################################################################################
     ### Dataloading:
@@ -59,7 +77,6 @@ if __name__ == "__main__":
     ##################################################################################################
     ### Evaluate:
     ##################################################################################################
-    checkpoint_names = model_names_fold_from_classes(checkpoint_classes, n_fold=n_fold)
 
     results = evaluate_CBM(
         checkpoint_names=checkpoint_names,

@@ -1,9 +1,13 @@
 import joblib
 from pathlib import Path
 from mergedeep import merge
+import os
+import re
 
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.decomposition import PCA
 
 import torch
 from sklearn.linear_model import LogisticRegression, LinearRegression
@@ -53,6 +57,7 @@ def predict_c_y(
     soft_prob_out=False,
     c_sem_out=False,
     vec_emb_out=False,
+    config_path=None
 ):
     """
     Return predicted concepts and task labels on the given dataloader dl by the model specified at model_path.
@@ -67,7 +72,8 @@ def predict_c_y(
     - vec_emb_out: if True, return the concept embeddings c_pos and c_neg.
     """
     model, trainer, config = external_load_model_trainer(
-        dl, model_path, x2c_extractor, output_config=True
+        dl, model_path, x2c_extractor, output_config=True,
+        config_path=config_path
     )
     model.eval()
     model_type_vec = config["architecture"] in [
@@ -75,6 +81,7 @@ def predict_c_y(
         "CEM",
         "IntAwareConceptEmbeddingModel",
         "IntCEM",
+        "CriticRegularisedConceptEmbeddingModel"
     ]
     with torch.no_grad():
         if model_type_vec:
@@ -85,6 +92,7 @@ def predict_c_y(
                     y=None,
                     train=False,
                     output_embeddings=vec_emb_out,
+                    output_latent=False
                 )
                 for batch in dl
             ]
@@ -891,6 +899,64 @@ def extract_y_acc_interventions_from_output(model_name, test_results, policies):
     return out
 
 
+def plot_pca_structure(data, y_true, save_path, title="PCA Structure by Task Label"):
+    """
+    Plots the 2D PCA of 'data' (e.g., c_sem or c_pred), colored by 'y_true'.
+
+    Args:
+        data: Tensor or Array [Batch_Size, Features]
+              (Pass c_sem, c_pred, or flattened c_pos here)
+        y_true: Tensor or Array [Batch_Size]
+        title: String for the plot title
+    """
+
+    # 1. Convert to Numpy (CPU)
+    def to_np(t):
+        if isinstance(t, torch.Tensor):
+            return t.detach().cpu().numpy()
+        return np.array(t)
+
+    X = to_np(data)
+    y = to_np(y_true)
+
+    # 2. Handle Dimension Safety
+    # If data is 3D (e.g., c_pos [Batch, Concepts, Dim]), flatten it
+    if len(X.shape) > 2:
+        X = X.reshape(X.shape[0], -1)
+
+    # 3. Compute PCA
+    # Ensure we don't ask for more components than features
+    n_components = min(2, X.shape[1])
+    pca = PCA(n_components=n_components)
+    X_pca = pca.fit_transform(X)
+
+    # 4. Plot
+    plt.figure(figsize=(10, 7))
+
+    # Use a distinct color palette (e.g., 'tab10' or 'viridis')
+    n_classes = len(np.unique(y))
+    palette = sns.color_palette("tab10", n_classes) if n_classes <= 10 else "viridis"
+
+    sns.scatterplot(
+        x=X_pca[:, 0],
+        y=X_pca[:, 1],
+        hue=y,
+        palette=palette,
+        alpha=0.7,
+        s=60,
+        legend='full'
+    )
+
+    plt.title(title, fontsize=15, fontweight='bold')
+    plt.xlabel(f"PC 1 ({pca.explained_variance_ratio_[0]:.1%} var)")
+    if n_components > 1:
+        plt.ylabel(f"PC 2 ({pca.explained_variance_ratio_[1]:.1%} var)")
+
+    plt.legend(title="Task Label (y)", bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.grid(True, linestyle='--', alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+
 ##################################################################################################
 ### Master results dictionary and single score extraction functions:
 ##################################################################################################
@@ -916,6 +982,7 @@ def evaluate_CBM(
     concepts_task_repeats=1,
     rerun=True,
     save_path=None,
+    config_path = None
 ):
     """
     Master function to evaluate a list of CBM or CEM models in a folder, identified by their checkpoint names.
@@ -963,8 +1030,22 @@ def evaluate_CBM(
     results = {}
 
     for checkpoint_name in checkpoint_names:
-        checkpoint_path = results_folder + checkpoint_name + ".pt"
-        model_type = model_type_from_name(checkpoint_path)
+        print(checkpoint_name)
+        checkpoint_path = results_folder + checkpoint_name
+        if 'CRCEM' in checkpoint_path:
+            model_type = 'CRCEM'
+        elif 'CEM' in checkpoint_path:
+            model_type = 'CEM'
+        elif 'Hard' in checkpoint_path:
+            model_type = 'hard'
+        else:
+            model_type = 'soft'
+
+        match = re.search(r'lam_c([\d\.]+)', checkpoint_path)
+        lambda_val = float(match.group(1))
+        print(f'lambda_val :{lambda_val}')
+        print(model_type)
+
         results_model = {}
         # Accuracies:
         if "accuracies" in list_observables:
@@ -1066,7 +1147,7 @@ def evaluate_CBM(
             merge(results_model, {test_dl_label: leakage_scores_dict})
 
         # Leakage scores for CEMs:
-        if (model_type in ["CEM"]) and ("CEM_leakage_scores" in list_observables):
+        if (model_type in ["CEM", 'CRCEM']) and ("CEM_leakage_scores" in list_observables):
             c_sem, c_pred, c_true, y_pred, y_true, c_pos, c_neg = predict_c_y(
                 dl=test_dl,
                 model_path=checkpoint_path,
@@ -1074,6 +1155,7 @@ def evaluate_CBM(
                 c_sem_out=True,
                 soft_prob_out=True,
                 vec_emb_out=True,
+                config_path=config_path
             )
 
             # Compute interconcept and concepts-task MIs on predicted concept representations pos, neg, mix:
@@ -1105,12 +1187,57 @@ def evaluate_CBM(
                     n_neighbors=n_neighbors,
                 )
                 CTL = [ctl_i.sum() / len(ctl_i) for ctl_i in wrap_single_array(CTL_i)]
+
+                dict_vector_types = {"mix": c_sem, "pos": c_pos, "neg": c_neg}
+                c_vec = dict_vector_types[suffix]
+                c_baseline = torch.randn_like(c_vec)
+
+                baseline_MI_i = compute_MI_score_CEM(
+                    [c_baseline, c_pred, c_true, y_pred, y_true, c_baseline, c_baseline],
+                    score_type="concepts_task",
+                    vector_type=suffix,
+                    repeats=interconcept_repeats,
+                    n_concepts=n_concepts,
+                    wrt_true=False,
+                    normalise=normalise_leakage_scores,
+                    n_neighbors=n_neighbors,
+                )
+                # Compute adjusted MI by subtracting baseline bias
+                CTL_i_adjusted = [CTL_i[i] - baseline_MI_i[i] for i in range(len(CTL_i))]
+                CTL_adjusted = [ctl_i.sum() / len(ctl_i) for ctl_i in wrap_single_array(CTL_i_adjusted)]
+                
+                # Print comparison of adjusted vs unadjusted MI
+                avg_unadjusted = np.mean(CTL)
+                avg_adjusted = np.mean(CTL_adjusted)
+                avg_diff = avg_unadjusted - avg_adjusted
+                print(f"  {suffix}: Unadjusted MI = {avg_unadjusted:.4f}, Adjusted MI = {avg_adjusted:.4f}, Avg Diff = {avg_diff:.4f}")
+                
+                if suffix == 'mix':
+                    emb_size = int(c_sem.shape[1]/n_concepts)
+                    c_sem_reshaped = c_sem.view(-1, n_concepts, emb_size)
+                    concept_vectors = c_sem_reshaped[:, 0, :]
+                    title = f'PCA Structure of {model_type} with with $\lambda_c={lambda_val}$'
+
+                    clean_title = title.translate(str.maketrans({' ': '_', '$': '', '\\': '', '=': ''}))
+                    base_filename = f"{clean_title}"
+
+                    # Check slots 1 through 4
+                    for idx in range(1, 5):
+                        save_path = f"{base_filename}_run{idx}.png"
+                        if not os.path.exists(save_path):
+                            plot_pca_structure(data=concept_vectors, y_true=y_true, title=title, save_path=save_path)
+                            print(f"Saved to {save_path}")
+                            break
+
                 leakage_scores_dict = {
                     "IC_MI_ij_tril" + "_" + suffix: ICL_ij_tril,
                     "IC_MI_i" + "_" + suffix: ICL_i,
                     "IC_MI" + "_" + suffix: ICL,
                     "CT_MI_i" + "_" + suffix: CTL_i,
                     "CT_MI" + "_" + suffix: CTL,
+                    "CT_MI_i_adjusted" + "_" + suffix: CTL_i_adjusted,
+                    "CT_MI_adjusted" + "_" + suffix: CTL_adjusted,
+                    "baseline_MI_i" + "_" + suffix: baseline_MI_i,
                 }
                 merge(results_model, {test_dl_label: leakage_scores_dict})
 
@@ -1182,7 +1309,7 @@ def evaluate_CBM(
         if Path(results_model_save_path).is_file():
             old_results_model = joblib.load(results_model_save_path)
             results_model = merge({}, old_results_model, results_model)
-        joblib.dump(results_model, results_model_save_path)
+        # joblib.dump(results_model, results_model_save_path)
         merge(results, {checkpoint_name: results_model})
     save_joblib(results, save_path)
     return results
