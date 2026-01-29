@@ -344,7 +344,7 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
         competencies=None,
         prev_interventions=None,
         output_embeddings=False,
-        output_latent=None,
+        output_latent=True,
         output_interventions=None,
     ):
         output_interventions = (
@@ -356,7 +356,7 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
         output_latent = (
             output_latent if output_latent is not None else self.output_latent
         )
-        output_latent = True
+
         if latent is None:
             pre_c = self.pre_concept_model(x)
             contexts = []
