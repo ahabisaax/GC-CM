@@ -394,6 +394,7 @@ def load_trained_model(
     output_interventions=False,
     enable_checkpointing=False,
     external_loader=False,
+    model_saved_path = None
 ):
     if "run_name" in config:
         run_name = config["run_name"]
@@ -409,7 +410,8 @@ def load_trained_model(
         sequential = True
     elif config["architecture"].startswith("Independent"):
         independent = True
-    model_saved_path = os.path.join(result_dir or ".", f"{full_run_name}.pt")
+    if model_saved_path is None:
+        model_saved_path = os.path.join(result_dir or ".", f"{full_run_name}.pt")
 
     if (
         ((intervention_policy is not None) or intervene)
@@ -428,7 +430,7 @@ def load_trained_model(
             output_latent=output_latent,
             output_interventions=output_interventions,
         )
-        model.load_state_dict(torch.load(model_saved_path))
+        model.load_state_dict(torch.load(model_saved_path, map_location=torch.device('cpu') ))
         trainer = pl.Trainer(
             accelerator=accelerator,
             devices=devices,
@@ -512,7 +514,11 @@ def load_trained_model(
             output_interventions=output_interventions,
         )
 
-    model.load_state_dict(torch.load(model_saved_path))
+    checkpoint = torch.load(model_saved_path, weights_only=False, map_location=torch.device('cpu'))
+    if isinstance(checkpoint, dict) and 'state_dict' in checkpoint:
+        model.load_state_dict(checkpoint['state_dict'])
+    else:
+        model.load_state_dict(checkpoint)
     return model
 
 
@@ -520,12 +526,15 @@ def load_config(model_path):
     return joblib.load(model_path.split("_fold", -1)[0] + "_experiment_config.joblib")
 
 
-def external_load_model_trainer(dl, model_path, x2c_extractor, output_config=False):
-    checkpoint = torch.load(model_path, weights_only=False)
-    config = load_config(model_path)
+def external_load_model_trainer(dl, model_path, x2c_extractor, output_config=False, config_path=None):
+    checkpoint = torch.load(model_path, weights_only=False, map_location=torch.device('cpu'))
+    if config_path is None:
+        config = load_config(model_path)
+    else:
+        config = joblib.load(config_path)
     data_folder = config["dataset_config"]["root_dir"]
 
-    config["split"] = int(model_path.split("fold")[-1][1]) - 1
+    # config["split"] = int(model_path.split("fold")[-1][1]) - 1
     if config["dataset_config"]["dataset"] == "tabulartoy":
         input_dim, _, _ = utils.extract_dims(dl)
         config["c_extractor_arch"] = x2c_extractor(input_dim, config)
@@ -539,11 +548,12 @@ def external_load_model_trainer(dl, model_path, x2c_extractor, output_config=Fal
         n_tasks=config["n_tasks"],
         n_concepts=config["n_concepts"],
         result_dir=model_path.replace(model_path.split("/")[-1], ""),
-        split=config["split"],
+        split=config.get("split",0),
         imbalance=config.get("loss_concept.weight"),
         task_class_weights=config.get("c2y_model.loss_task.weight"),
         intervene=True,
         external_loader=True,
+        model_saved_path= model_path
     )
     trainer = pl.Trainer(
         accelerator="auto",
