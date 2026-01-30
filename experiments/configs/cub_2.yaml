@@ -1,5 +1,5 @@
 results_dir: "results/cub_hard_0.01/"
-trials: 5
+trials: 1
 
 shared_params:
   model_selection_trials: 3
