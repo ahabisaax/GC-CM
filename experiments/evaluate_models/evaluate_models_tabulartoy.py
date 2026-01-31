@@ -1,5 +1,13 @@
 import os
 import sys
+import warnings
+
+# Suppress deprecation warnings
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+warnings.filterwarnings('ignore', category=UserWarning, module='pkg_resources')
+warnings.filterwarnings('ignore', message='.*pkg_resources.*')
+warnings.filterwarnings('ignore', message='.*UnsupportedFieldAttributeWarning.*')
+warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
 
 master_folder = os.getcwd().replace("/experiments/evaluate_models", "")
 sys.path.insert(0, master_folder)

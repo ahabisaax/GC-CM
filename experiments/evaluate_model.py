@@ -924,16 +924,17 @@ def plot_pca_structure(data, y_true, save_path, title="PCA Structure by Task Lab
     if len(X.shape) > 2:
         X = X.reshape(X.shape[0], -1)
 
-    # 3. Compute PCA
-    # Ensure we don't ask for more components than features
     n_components = min(2, X.shape[1])
     pca = PCA(n_components=n_components)
     X_pca = pca.fit_transform(X)
+    reg_pc1 = LinearRegression().fit(X_pca[:, 0].reshape(-1, 1), y)
+    r2_pc1 = reg_pc1.score(X_pca[:, 0].reshape(-1, 1), y)
 
-    # 4. Plot
+    reg_plane = LinearRegression().fit(X_pca[:, :2], y)
+    r2_pc1_pc2 = reg_plane.score(X_pca[:, :2], y)
+
     plt.figure(figsize=(10, 7))
 
-    # Use a distinct color palette (e.g., 'tab10' or 'viridis')
     n_classes = len(np.unique(y))
     palette = sns.color_palette("tab10", n_classes) if n_classes <= 10 else "viridis"
 
@@ -956,6 +957,7 @@ def plot_pca_structure(data, y_true, save_path, title="PCA Structure by Task Lab
     plt.grid(True, linestyle='--', alpha=0.3)
     plt.tight_layout()
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    return r2_pc1, r2_pc1_pc2
 
 ##################################################################################################
 ### Master results dictionary and single score extraction functions:
@@ -1189,11 +1191,15 @@ def evaluate_CBM(
                 CTL = [ctl_i.sum() / len(ctl_i) for ctl_i in wrap_single_array(CTL_i)]
 
                 dict_vector_types = {"mix": c_sem, "pos": c_pos, "neg": c_neg}
-                c_vec = dict_vector_types[suffix]
-                c_baseline = torch.randn_like(c_vec)
 
+                c_real = dict_vector_types[suffix]
+                if hasattr(c_real, 'cpu'):
+                    c_real = c_real.cpu().numpy()
+
+                perm_idx = torch.randperm(len(y_true))
+                y_shuffled = y_true[perm_idx] if isinstance(y_true, torch.Tensor) else y_true[perm_idx.numpy()]
                 baseline_MI_i = compute_MI_score_CEM(
-                    [c_baseline, c_pred, c_true, y_pred, y_true, c_baseline, c_baseline],
+                    [c_real, c_pred, c_true, y_pred, y_shuffled, c_real, c_real],
                     score_type="concepts_task",
                     vector_type=suffix,
                     repeats=interconcept_repeats,
@@ -1223,10 +1229,14 @@ def evaluate_CBM(
 
                     # Check slots 1 through 4
                     for idx in range(1, 5):
-                        save_path = f"{base_filename}_run{idx}.png"
-                        if not os.path.exists(save_path):
-                            plot_pca_structure(data=concept_vectors, y_true=y_true, title=title, save_path=save_path)
-                            print(f"Saved to {save_path}")
+                        png_path = f"{base_filename}_run{idx}.png"
+                        if not os.path.exists(png_path):
+                            r2_pc1, r2_pc1_pc2 = plot_pca_structure(data=concept_vectors, y_true=y_true, title=title, save_path=png_path)
+                            print(f"Saved to {png_path}")
+                            pca_dict = {
+                                'R2_pca_1': r2_pc1,
+                                'R2_plane': r2_pc1_pc2}
+                            merge(results_model, {test_dl_label: pca_dict})
                             break
 
                 leakage_scores_dict = {
@@ -1290,6 +1300,99 @@ def evaluate_CBM(
             )
             merge(results_model, {test_dl_label: MI_cvec_cgt_dict})
 
+            # Linear probes: per-concept analysis with train/test split to prevent overfitting
+            c_sem_train, c_pred_train, c_true_train, y_pred_train, y_true_train, c_pos_train, c_neg_train = predict_c_y(
+                dl=train_dl,
+                model_path=checkpoint_path,
+                x2c_extractor=x2c_extractor,
+                c_sem_out=True,
+                soft_prob_out=True,
+                vec_emb_out=True,
+                config_path=config_path
+            )
+
+            z_mix_train = c_sem_train.cpu().numpy() if torch.is_tensor(c_sem_train) else c_sem_train
+            y_labels_train = y_true_train.cpu().numpy().ravel() if torch.is_tensor(y_true_train) else y_true_train.ravel()
+            c_labels_train = c_true_train.cpu().numpy() if torch.is_tensor(c_true_train) else c_true_train
+            c_pred_train = c_pred_train.cpu().numpy() if torch.is_tensor(c_pred_train) else c_pred_train
+
+            z_mix_test = c_sem.cpu().numpy() if torch.is_tensor(c_sem) else c_sem
+            y_labels_test = y_true.cpu().numpy().ravel() if torch.is_tensor(y_true) else y_true.ravel()
+            c_labels_test = c_true.cpu().numpy() if torch.is_tensor(c_true) else c_true
+            c_pred_test = c_pred.cpu().numpy() if torch.is_tensor(c_pred) else c_pred
+
+            emb_size = int(z_mix_train.shape[1] / n_concepts)
+            z_mix_train_reshaped = z_mix_train.reshape(-1, n_concepts, emb_size)
+            z_mix_test_reshaped = z_mix_test.reshape(-1, n_concepts, emb_size)
+            
+            # Per-concept probe for task prediction (Y) with L2 regularization
+            linear_probe_y_per_concept = []
+            for i_c in range(n_concepts):
+                z_c_train = z_mix_train_reshaped[:, i_c, :]
+                z_c_test = z_mix_test_reshaped[:, i_c, :]
+                lr_model = LogisticRegression(max_iter=1000, random_state=42, C=1.0)  # Default L2 regularization
+                lr_model.fit(z_c_train, y_labels_train)
+                acc_y = lr_model.score(z_c_test, y_labels_test)
+                linear_probe_y_per_concept.append(acc_y)
+            
+            linear_probe_y_avg = np.mean(linear_probe_y_per_concept)
+
+
+            linear_probe_all_concepts_model = LogisticRegression(max_iter=1000, random_state=42, C=1.0)
+            linear_probe_all_concepts_model.fit(z_mix_train, y_labels_train)
+            all_concepts_accuracy = linear_probe_all_concepts_model.score(z_mix_test, y_labels_test)
+
+            c_train_hard = (c_pred_train > 0.5).astype(int)
+            c_test_hard = (c_pred_test > 0.5).astype(int)
+            linear_probe_hard = LogisticRegression(max_iter=1000, random_state=42)
+            linear_probe_hard.fit(c_train_hard, y_labels_train)
+            binarised_concept_accuracy = linear_probe_hard.score(c_test_hard, y_labels_test)
+
+            
+            # Per-concept probe for concept prediction (self and others)
+            linear_probe_c_self = []
+            linear_probe_c_others_per_concept = []
+            
+            for i_c in range(n_concepts):
+                z_c_train = z_mix_train_reshaped[:, i_c, :]
+                z_c_test = z_mix_test_reshaped[:, i_c, :]
+                
+                # Predict own concept (self)
+                lr_self = LogisticRegression(max_iter=1000, random_state=42, C=1.0)
+                lr_self.fit(z_c_train, c_labels_train[:, i_c])
+                acc_self = lr_self.score(z_c_test, c_labels_test[:, i_c])
+                linear_probe_c_self.append(acc_self)
+                
+                # Predict other concepts
+                acc_others = []
+                for j_c in range(n_concepts):
+                    if j_c != i_c:
+                        lr_other = LogisticRegression(max_iter=1000, random_state=42, C=1.0)
+                        lr_other.fit(z_c_train, c_labels_train[:, j_c])
+                        acc_other = lr_other.score(z_c_test, c_labels_test[:, j_c])
+                        acc_others.append(acc_other)
+                
+                linear_probe_c_others_per_concept.append(np.mean(acc_others))
+            
+            linear_probe_c_self_avg = np.mean(linear_probe_c_self)
+            linear_probe_c_others_avg = np.mean(linear_probe_c_others_per_concept)
+
+            # Print results
+            print(f"  Linear Probe Y per concept: {[f'{acc:.3f}' for acc in linear_probe_y_per_concept]}, Avg: {linear_probe_y_avg:.4f}")
+            print(f"  Linear Probe C (self) per concept: {[f'{acc:.3f}' for acc in linear_probe_c_self]}, Avg: {linear_probe_c_self_avg:.4f}")
+            print(f"  Linear Probe C (others) per concept: {[f'{acc:.3f}' for acc in linear_probe_c_others_per_concept]}, Avg: {linear_probe_c_others_avg:.4f}")
+
+            linear_probe_dict = {
+                "linear_probe_y_per_concept": linear_probe_y_per_concept,
+                "linear_probe_y_avg": linear_probe_y_avg,
+                "linear_probe_c_self_per_concept": linear_probe_c_self,
+                "linear_probe_c_self_avg": linear_probe_c_self_avg,
+                "linear_probe_c_others_per_concept": linear_probe_c_others_per_concept,
+                "linear_probe_c_others_avg": linear_probe_c_others_avg,
+                'linear_probe_y_all_concept': all_concepts_accuracy,
+                'linear_probe_binarised_concept': binarised_concept_accuracy}
+            merge(results_model, {test_dl_label: linear_probe_dict})
+
             # Assess alignment leakage:
             aligned_unaligned_CTL_dict = (
                 aligned_unaligned_MI_score_concept_task_weighted(
@@ -1305,11 +1408,11 @@ def evaluate_CBM(
             merge(results_model, {test_dl_label: aligned_unaligned_CTL_dict})
 
         # Save single model results (or update them if they already exist):
-        results_model_save_path = results_folder + checkpoint_name + ".dict"
+        results_model_save_path = results_folder + checkpoint_name.split('.pt')[0] + ".dict"
         if Path(results_model_save_path).is_file():
             old_results_model = joblib.load(results_model_save_path)
             results_model = merge({}, old_results_model, results_model)
-        # joblib.dump(results_model, results_model_save_path)
+        joblib.dump(results_model, results_model_save_path)
         merge(results, {checkpoint_name: results_model})
     save_joblib(results, save_path)
     return results
