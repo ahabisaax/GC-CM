@@ -168,7 +168,7 @@ runs:
     early_stopping_mode: max
     gradient_clip_val: 0
     patience: 300
-    max_epochs: 150
+    max_epochs: 300
     c2y_max_epochs: 150
 #
 #  - architecture: "ConceptBottleneckModel"
