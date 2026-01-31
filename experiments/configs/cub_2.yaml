@@ -162,7 +162,7 @@ runs:
     embedding_activation: "leakyrelu"
     sigmoidal_extra_capacity: false
     cbm_optimizer: adam
-    cbm_learning_rate: 0.01
+    cbm_learning_rate: 0.0001
     early_stopping_monitor: 'val_y_accuracy'
     early_stopping_delta: 0.0
     early_stopping_mode: max
