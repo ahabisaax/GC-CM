@@ -1,5 +1,5 @@
 trials: 1
-results_dir: results/tabulartoy_25_10k_models_crcem/
+results_dir: results/tabulartoy_25_10k_models_crcem_pareto/
 
 shared_params:
   # Dataset Configuration
