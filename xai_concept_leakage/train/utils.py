@@ -469,7 +469,7 @@ class LossTracker(Callback):
                 self.val_norm_icl.append(icl)
                 pl_module.log('normalised_val_total_icl',icl)
                 pl_module.log('val_ctl_normalised', ctl)
-                pareto_score = mean_y_accuracy - 0.2*ctl.item()
+                pareto_score = mean_y_accuracy - ctl.item()
 
             if self.track_leakage:
                 self.val_c_learnt_temp.clear()
