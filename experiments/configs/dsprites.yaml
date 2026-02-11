@@ -1,5 +1,5 @@
-trials: 5
-results_dir: results/dsprites_dep_0_models_final_set/
+trials: 2
+results_dir: results/dsprites_dep_0_models_crcem/
 
 shared_params:
   # Dataset Configuration
@@ -58,7 +58,7 @@ shared_params:
   momentum: 0.9
   compute_mi_on_gpu: False
   compute_mi_mode: 'cpu'
-  project_name: "Dsprites ablation grad_batches and lr"
+  project_name: "Dsprites CEM"
 
 
 
@@ -106,21 +106,61 @@ runs:
     #   sigmoidal_prob: False
     #   concept_loss_weight: 1.
 
+
+# CR-CBM:
+#     - architecture: 'CriticRegularisedConceptBottleneckModel'
+#       run_name: "auto"
+#       bool: False
+#       extra_dims: 0
+#       sigmoidal_prob: True
+#       use_adversarial: True
+#       max_adversarial_lambda: 1
+#       adversarial_delay: 0
+#       adversarial_lambda_scheduler_warmup: None
+#       adversarial_scheduler: "none"
+#       adversarial_loss_type: 'gradient'
+#       n_critic_steps: 1
+#       accumulate_grad_batches: 1
+#       cbm_optimizer: adam
+#       adv_optimizer: adam
+#       max_epochs: 300
+#       cbm_learning_rate: 0.00005
+#       grid_variables: ['concept_loss_weight']
+#       concept_loss_weight: [0.1, 0.5, 1]
+#       early_stopping_monitor: 'val_y_accuracy'
+#       early_stopping_mode: max
+#       early_stopping_delta: 0.0
+#       patience: 400
+#       gradient_clip_val: 1.0
+
 # CEMs:
-    # - architecture: 'ConceptEmbeddingModel'
-    #   run_name: "CEM_10_pint025_emb16"
-    #   sigmoidal_prob: True
-    #   training_intervention_prob: 0.25
-    #   embedding_activation: "leakyrelu"
-    #   concept_loss_weight: 10
-
-
- # CR-CBM:
-     - architecture: 'CriticRegularisedConceptBottleneckModel'
+     - architecture: 'ConceptEmbeddingModel'
        run_name: "auto"
-       bool: False
-       extra_dims: 0
        sigmoidal_prob: True
+       training_intervention_prob: 0.25
+       embedding_activation: "leakyrelu"
+       concept_loss_weight: 0.1
+       grid_variables: ['cbm_learning_rate']
+       cbm_optimizer: adam
+       patience: 400
+       cbm_learning_rate: [0.0005, 0.005, 0.01,  0.05]
+       max_epochs: 300
+       early_stopping_monitor: 'val_y_accuracy'
+       early_stopping_mode: max
+       early_stopping_delta: 0.0
+
+
+
+
+# #CRCEMs:
+     - architecture: 'CriticRegularisedConceptEmbeddingModel'
+       run_name: "auto"
+       sigmoidal_prob: True
+       training_intervention_prob: 0.25
+       embedding_activation: "leakyrelu"
+       cbm_learning_rate: [0.00005, 0.0005, 0.005, 0.01]
+       concept_loss_weight: 0.1
+       grid_variables: ['cbm_learning_rate']
        use_adversarial: True
        max_adversarial_lambda: 1
        adversarial_delay: 0
@@ -132,12 +172,9 @@ runs:
        cbm_optimizer: adam
        adv_optimizer: adam
        max_epochs: 300
-       cbm_learning_rate: 0.00005
-       grid_variables: ['concept_loss_weight']
-       concept_loss_weight: [0.1, 0.5, 1]
-       early_stopping_monitor: 'val_y_accuracy'
-       early_stopping_mode: max
-       early_stopping_delta: 0.0
        patience: 400
        gradient_clip_val: 1.0
+       early_stopping_monitor: val_pareto_score
+       early_stopping_mode: max
+       early_stopping_delta: 0.0
 
