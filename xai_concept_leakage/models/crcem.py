@@ -4,6 +4,7 @@ import numpy as np
 import pytorch_lightning as pl
 import torch
 import sklearn.metrics
+import torch.nn.functional as F
 
 from torchvision.models import resnet50
 
@@ -58,7 +59,9 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
         adversarial_lambda_scheduler_warmup=None,
         adv_learning_rate=0.01,
         n_critic_steps=1,
-        compute_mi_on_gpu=False
+        compute_mi_on_gpu=False,
+        concept_vector_regularisation=True,
+        entropy_maximisation=True
     ):
         """
         Constructs a Concept Embedding Model (CEM) as defined by
@@ -145,6 +148,8 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
         self.pre_concept_model = c_extractor_arch(output_dim=n_hidden)
         self.training_intervention_prob = training_intervention_prob
         self.output_latent = output_latent
+        self.concept_regularisation = concept_vector_regularisation
+        self.entropy_maximisation= entropy_maximisation
         if self.training_intervention_prob != 0:
             self.ones = torch.ones(n_concepts)
 
@@ -464,9 +469,15 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
         y_adv_pred=None
     ):
         if self.use_adversarial and self.current_epoch >= self.adversarial_delay:
-            adversarial_loss = (self.loss_adversarial(
-                y_adv_pred if y_adv_pred.shape[-1] > 1 else y_adv_pred.reshape(-1),
-                y,))
+            if self.entropy_maximisation:
+                num_classes = y_adv_pred.size(-1)
+                uniform_targets = torch.full_like(y_adv_pred, fill_value=1.0 / num_classes)
+                adversarial_loss = - F.cross_entropy(y_adv_pred, uniform_targets)
+
+            else:
+                adversarial_loss = (self.loss_adversarial(
+                    y_adv_pred if y_adv_pred.shape[-1] > 1 else y_adv_pred.reshape(-1),
+                    y,))
 
             adversarial_loss_scalar = adversarial_loss.detach()
         else:
@@ -611,12 +622,8 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
         y_adv_pred = None
         if self.use_adversarial and self.current_epoch >= self.adversarial_delay:
             if self.adversarial_loss_type == 'gradient':
-                # if self.bool:
-                #     y_adv_pred = self.critic((c_logits > 0.5).float())
-                # else:
                 y_adv_pred = self.critic(c_pred)
             else:
-                #this is the accuracy gap method
                 y_adv_pred = self.critic(c)
 
         adversarial_loss, adversarial_loss_scalar = self._extra_losses(
@@ -665,8 +672,16 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
                 self.concept_loss_weight * concept_loss
                 + task_loss + adversarial_term)
 
+            if self.concept_regularisation:
+                l2_penalty = (contexts ** 2).mean()
+                loss += 1e-2 * l2_penalty
+
         else:
             loss = task_loss + adversarial_term
+            if self.concept_regularisation:
+                l2_penalty = (contexts ** 2).mean()
+                loss += 1e-2 * l2_penalty
+
             concept_loss_scalar = 0.0
         # compute accuracy
         (c_accuracy, c_auc, c_f1), (y_accuracy, y_auc, y_f1) = compute_accuracy(

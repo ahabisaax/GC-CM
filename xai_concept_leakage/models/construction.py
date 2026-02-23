@@ -189,6 +189,8 @@ def construct_model(
                 "training_intervention_prob",
                 0.25,
             ),
+            'concept_vector_regularisation': config.get("concept_vector_regularisation", True),
+            'entropy_maximisation': config.get('entropy_maximisation', True),
             "embedding_activation": config.get("embedding_activation", "leakyrelu"),
             "active_intervention_values": active_intervention_values,
             "inactive_intervention_values": inactive_intervention_values,
