@@ -158,9 +158,9 @@ runs:
        sigmoidal_prob: True
        training_intervention_prob: 0.25
        embedding_activation: "leakyrelu"
-       cbm_learning_rate: [0.00005, 0.0001]
+       cbm_learning_rate: 0.00003
        concept_loss_weight: 0.1
-       grid_variables: ['cbm_learning_rate']
+       grid_variables: ['entropy_maximisation', 'concept_vector_regularisation']
        use_adversarial: True
        max_adversarial_lambda: 1
        adversarial_delay: 0
@@ -174,8 +174,13 @@ runs:
        max_epochs: 400
        patience: 400
        gradient_clip_val: 1.0
-       emb_size: 1
+       emb_size: 16
        early_stopping_monitor: val_pareto_score
        early_stopping_mode: max
        early_stopping_delta: 0.0
+       concept_vector_regularisation: [ True, False]
+       entropy_maximisation: [True, False]
+
+
+
 
