@@ -158,7 +158,7 @@ runs:
        sigmoidal_prob: True
        training_intervention_prob: 0.25
        embedding_activation: "leakyrelu"
-       cbm_learning_rate: [0.00001, 0.00003]
+       cbm_learning_rate: [0.00005, 0.0001]
        concept_loss_weight: 0.1
        grid_variables: ['cbm_learning_rate']
        use_adversarial: True
@@ -167,7 +167,7 @@ runs:
        adversarial_lambda_scheduler_warmup: None
        adversarial_scheduler: "none"
        adversarial_loss_type: 'gradient'
-       n_critic_steps: 3
+       n_critic_steps: 1
        accumulate_grad_batches: 1
        cbm_optimizer: adam
        adv_optimizer: adam
