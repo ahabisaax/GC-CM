@@ -16,6 +16,18 @@ from xai_concept_leakage.metrics.mutual_information import matrix_from_tril, com
 
 
 
+class GradientReversalFunction(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, x, lambda_):
+        ctx.save_for_backward(lambda_)
+        return x.clone()
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        (lambda_,) = ctx.saved_tensors
+        return -lambda_ * grad_output, None
+
+
 ################################################################################
 ## OUR MODEL
 ################################################################################
@@ -619,25 +631,6 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
             probs, dim=-1
         ) + contexts[:, :, self.emb_size:] * (1 - torch.unsqueeze(probs, dim=-1))
         c_pred = c_pred.view((-1, self.emb_size * self.n_concepts))
-        y_adv_pred = None
-        if self.use_adversarial and self.current_epoch >= self.adversarial_delay:
-            if self.adversarial_loss_type == 'gradient':
-                y_adv_pred = self.critic(c_pred)
-            else:
-                y_adv_pred = self.critic(c)
-
-        adversarial_loss, adversarial_loss_scalar = self._extra_losses(
-                    x=x,
-                    y=y,
-                    c=c,
-                    c_sem=c_sem,
-                    c_pred=c_logits,
-                    y_pred=y_logits,
-                    y_adv_pred = y_adv_pred,
-                    competencies=competencies,
-                    prev_interventions=prev_interventions,
-                )
-
         if self.task_loss_weight != 0:
             task_loss = self.loss_task(
                 y_logits if y_logits.shape[-1] > 1 else y_logits.reshape(-1),
@@ -648,16 +641,47 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
             task_loss = 0
             task_loss_scalar = 0
 
-        if self.use_adversarial:
+        y_adv_pred = None
+        adversarial_loss_scalar = 0
+        adversarial_term = 0
+
+        if self.use_adversarial and self.adversarial_loss_type == 'grl':
+            if self.current_epoch >= self.adversarial_delay:
+                adversarial_loss_weight = self.get_lambda_scheduler(task_loss_scalar, 0.0)
+                grl_c_pred = GradientReversalFunction.apply(
+                    c_pred,
+                    torch.tensor(adversarial_loss_weight, dtype=c_pred.dtype, device=c_pred.device),
+                )
+                y_adv_pred = self.critic(grl_c_pred)
+                adversarial_term = self.loss_adversarial(
+                    y_adv_pred if y_adv_pred.shape[-1] > 1 else y_adv_pred.reshape(-1),
+                    y,
+                )
+                adversarial_loss_scalar = adversarial_term.detach().item()
+        elif self.use_adversarial:
+            if self.current_epoch >= self.adversarial_delay:
+                if self.adversarial_loss_type == 'gradient':
+                    y_adv_pred = self.critic(c_pred)
+                else:
+                    y_adv_pred = self.critic(c)
+            adversarial_loss, adversarial_loss_scalar = self._extra_losses(
+                x=x,
+                y=y,
+                c=c,
+                c_sem=c_sem,
+                c_pred=c_logits,
+                y_pred=y_logits,
+                y_adv_pred=y_adv_pred,
+                competencies=competencies,
+                prev_interventions=prev_interventions,
+            )
             adversarial_loss_weight = self.get_lambda_scheduler(task_loss_scalar, adversarial_loss_scalar)
             if self.adversarial_loss_type == 'gradient':
-                adversarial_term = - (adversarial_loss_weight * adversarial_loss)
+                adversarial_term = -(adversarial_loss_weight * adversarial_loss)
             else:
                 leakage_gap = adversarial_loss - task_loss
                 hinge_penalty = torch.clamp(leakage_gap, min=0)
                 adversarial_term = adversarial_loss_weight * hinge_penalty
-        else:
-            adversarial_term = 0
 
         if self.concept_loss_weight != 0:
             concept_loss = self.loss_concept(c_sem, c)
@@ -791,7 +815,45 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
 
 
     def training_step(self, batch, batch_no, optimizer_idx=0):
-        if self.use_adversarial:
+        if self.use_adversarial and self.adversarial_loss_type == 'grl':
+            # GRL: single optimizer, one combined step per batch.
+            # No separate critic step needed — the GRL in _run_cem_step handles
+            # the adversarial gradient direction.
+            loss, result = self._run_cem_step(batch, batch_no, train=True)
+            for name, val in result.items():
+                if self.n_tasks <= 2:
+                    prog_bar = (
+                        ("auc" in name)
+                        or ("mask_accuracy" in name)
+                        or ("current_steps" in name)
+                        or ("num_rollouts" in name)
+                    )
+                else:
+                    prog_bar = (
+                        ("c_auc" in name)
+                        or ("y_accuracy" in name)
+                        or ("mask_accuracy" in name)
+                        or ("current_steps" in name)
+                        or ("num_rollouts" in name)
+                    )
+                self.log(name, val, prog_bar=prog_bar)
+            return {
+                "loss": loss,
+                "log": {
+                    "c_accuracy": result["c_accuracy"],
+                    "c_auc": result["c_auc"],
+                    "c_f1": result["c_f1"],
+                    "y_accuracy": result["y_accuracy"],
+                    "y_auc": result["y_auc"],
+                    "y_f1": result["y_f1"],
+                    "concept_loss": result["concept_loss"],
+                    "task_loss": result["task_loss"],
+                    "adversarial_loss": result["adversarial_loss"],
+                    "loss": result["loss"],
+                    "avg_c_y_acc": result["avg_c_y_acc"],
+                },
+            }
+        elif self.use_adversarial:
             if optimizer_idx == 1:
                 if self.current_epoch < self.adversarial_delay:
                     return None  # Tell PyTorch Lightning to skip this optimizer step
@@ -954,7 +1016,36 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
         self.log('test_normalised_icl_average', mean_norm_icl)
 
     def configure_optimizers(self):
-        if self.use_adversarial:
+        if self.use_adversarial and self.adversarial_loss_type == 'grl':
+            # GRL: single optimizer over all parameters (encoder + critic).
+            # The GradientReversalFunction handles the sign flip in the backward
+            # pass, so both the critic and the encoder update correctly from one
+            # shared optimizer step.
+            if self.cem_optimizer_name.lower() == "adam":
+                optimizer = torch.optim.Adam(
+                    self.parameters(),
+                    lr=self.cem_learning_rate,
+                    weight_decay=self.weight_decay,
+                )
+            elif self.cem_optimizer_name.lower() == "adamw":
+                optimizer = torch.optim.AdamW(
+                    self.parameters(),
+                    lr=self.cem_learning_rate,
+                    weight_decay=self.weight_decay,
+                    amsgrad=True,
+                    eps=1e-7,
+                )
+            else:
+                optimizer = torch.optim.SGD(
+                    filter(lambda p: p.requires_grad, self.parameters()),
+                    lr=self.cem_learning_rate,
+                    momentum=self.momentum,
+                    weight_decay=self.weight_decay,
+                )
+            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True)
+            return {"optimizer": optimizer, "lr_scheduler": lr_scheduler, "monitor": "loss"}
+
+        elif self.use_adversarial:
             if self.cem_optimizer_name.lower() == "adam":
                 cem_optimizer = torch.optim.Adam(
                     self.cem_params,
