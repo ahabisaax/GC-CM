@@ -207,7 +207,8 @@ def construct_model(
             "adversarial_scheduler": config.get("adversarial_scheduler"),
             "adversarial_loss_type": config.get("adversarial_loss_type", 'gradient'),
             "n_critic_steps": config.get("n_critic_steps", 1),
-            "compute_mi_on_gpu": config.get("compute_mi_on_gpu", False)
+            "compute_mi_on_gpu": config.get("compute_mi_on_gpu", False),
+            "shared_critic": config.get("shared_critic", False),
         }
 
     elif "ConceptBottleneckModel" in config["architecture"]:

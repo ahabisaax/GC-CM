@@ -73,7 +73,8 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
         n_critic_steps=1,
         compute_mi_on_gpu=False,
         concept_vector_regularisation=True,
-        entropy_maximisation=True
+        entropy_maximisation=True,
+        shared_critic=False,
     ):
         """
         Constructs a Concept Embedding Model (CEM) as defined by
@@ -279,7 +280,8 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
 
 
 
-        self.critic = copy.deepcopy(self.c2y_model)
+        self.shared_critic = shared_critic
+        self.critic = self.c2y_model if shared_critic else copy.deepcopy(self.c2y_model)
         self.sig = torch.nn.Sigmoid()
 
         self.loss_concept = torch.nn.BCELoss(weight=weight_loss)
@@ -851,6 +853,45 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
                     "avg_c_y_acc": result["avg_c_y_acc"],
                 },
             }
+        elif self.use_adversarial and self.shared_critic:
+            # Shared critic: single optimizer, one CEM step per batch.
+            # No separate critic step — the task head IS the critic, so
+            # task_loss already keeps it calibrated. The adversarial term
+            # in _run_cem_step provides gradient cancellation at the encoder.
+            loss, result = self._run_cem_step(batch, batch_no, train=True)
+            for name, val in result.items():
+                if self.n_tasks <= 2:
+                    prog_bar = (
+                        ("auc" in name)
+                        or ("mask_accuracy" in name)
+                        or ("current_steps" in name)
+                        or ("num_rollouts" in name)
+                    )
+                else:
+                    prog_bar = (
+                        ("c_auc" in name)
+                        or ("y_accuracy" in name)
+                        or ("mask_accuracy" in name)
+                        or ("current_steps" in name)
+                        or ("num_rollouts" in name)
+                    )
+                self.log(name, val, prog_bar=prog_bar)
+            return {
+                "loss": loss,
+                "log": {
+                    "c_accuracy": result["c_accuracy"],
+                    "c_auc": result["c_auc"],
+                    "c_f1": result["c_f1"],
+                    "y_accuracy": result["y_accuracy"],
+                    "y_auc": result["y_auc"],
+                    "y_f1": result["y_f1"],
+                    "concept_loss": result["concept_loss"],
+                    "task_loss": result["task_loss"],
+                    "adversarial_loss": result["adversarial_loss"],
+                    "loss": result["loss"],
+                    "avg_c_y_acc": result["avg_c_y_acc"],
+                },
+            }
         elif self.use_adversarial:
             if optimizer_idx == 1:
                 if self.current_epoch < self.adversarial_delay:
@@ -1036,6 +1077,35 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
             else:
                 optimizer = torch.optim.SGD(
                     filter(lambda p: p.requires_grad, self.parameters()),
+                    lr=self.cem_learning_rate,
+                    momentum=self.momentum,
+                    weight_decay=self.weight_decay,
+                )
+            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True)
+            return {"optimizer": optimizer, "lr_scheduler": lr_scheduler, "monitor": "loss"}
+
+        elif self.use_adversarial and self.shared_critic:
+            # Shared critic: critic IS the task head, so a separate adversarial
+            # optimizer would just double-update the same weights. Instead use a
+            # single optimizer over cem_params and let the adversarial term in
+            # the CEM step provide the cancellation signal at the encoder.
+            if self.cem_optimizer_name.lower() == "adam":
+                optimizer = torch.optim.Adam(
+                    self.cem_params,
+                    lr=self.cem_learning_rate,
+                    weight_decay=self.weight_decay,
+                )
+            elif self.cem_optimizer_name.lower() == "adamw":
+                optimizer = torch.optim.AdamW(
+                    self.cem_params,
+                    lr=self.cem_learning_rate,
+                    weight_decay=self.weight_decay,
+                    amsgrad=True,
+                    eps=1e-7,
+                )
+            else:
+                optimizer = torch.optim.SGD(
+                    filter(lambda p: p.requires_grad, self.cem_params),
                     lr=self.cem_learning_rate,
                     momentum=self.momentum,
                     weight_decay=self.weight_decay,
