@@ -497,65 +497,68 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
             adversarial_loss_scalar = 0
         return adversarial_loss, adversarial_loss_scalar
 
-    def _monitor_grad(self,
-                     batch_idx,
-                     task_loss,
-                     c_logits,
-                     adversarial_term,
-                     concept_loss,
-                      train):
-        if train and self.use_adversarial:
-            accumulate_grad = getattr(self.trainer, "accumulate_grad_batches", 1)
-            if isinstance(accumulate_grad, int):
-                if accumulate_grad ==1:
-                    log_frequency = 50 * accumulate_grad
-                else:
-                    log_frequency = 2 * accumulate_grad
-            else:
-                log_frequency = 50
-            should_log = (batch_idx % log_frequency == 0)
+    def _monitor_grad(self, batch_idx, task_loss, c_sem, contexts, adversarial_term, concept_loss, train):
+        """
+        Monitors gradient alignment of the three loss components at two points
+        in the computation graph:
+          - c_sem    : concept probability scalars, shape (batch, n_concepts)
+          - contexts : raw concept embedding vectors, shape (batch, n_concepts, 2*emb_size)
 
-            if should_log:
+        Both tensors are upstream of all three losses:
+          task_loss    -> c2y(c_logits) -> mixing -> c_sem / contexts
+          adversarial  -> critic(c_pred) -> mixing -> c_sem / contexts
+          concept_loss -> BCE(c_sem, c)  -> c_sem  -> prob_gen -> contexts
 
-                grads_task=None
-                if isinstance(task_loss, torch.Tensor) and task_loss.requires_grad:
-                    grads_task = torch.autograd.grad(
-                        task_loss, c_logits, retain_graph=True, allow_unused=True
-                    )[0]
+        For each reference tensor logs gradient norms, pairwise cosine
+        similarities, and residual norms (net gradient after summing two terms).
+        """
+        if not (train and self.use_adversarial):
+            return
 
-                # 2. Adversarial Gradient
-                grads_adv = None
-                if isinstance(adversarial_term, torch.Tensor) and adversarial_term.requires_grad:
-                    grads_adv = torch.autograd.grad(
-                        adversarial_term, c_logits, retain_graph=True, allow_unused=True
-                    )[0]
+        accumulate_grad = getattr(self.trainer, "accumulate_grad_batches", 1)
+        if isinstance(accumulate_grad, int):
+            log_frequency = 50 if accumulate_grad == 1 else 2 * accumulate_grad
+        else:
+            log_frequency = 50
+        if batch_idx % log_frequency != 0:
+            return
 
-                # 3. Concept Gradient
-                grads_conc = None
-                weighted_concept_loss = self.concept_loss_weight * concept_loss
-                if isinstance(weighted_concept_loss, torch.Tensor) and weighted_concept_loss.requires_grad:
-                    grads_conc = torch.autograd.grad(
-                        weighted_concept_loss, c_logits, retain_graph=True, allow_unused=True
-                    )[0]
+        weighted_concept_loss = self.concept_loss_weight * concept_loss
 
-                # --- Log Norms (How strong is the push?) ---
-                if grads_task is not None:
-                    self.log("grads/norm_task", grads_task.norm())
-                if grads_adv is not None:
-                    self.log("grads/norm_adv", grads_adv.norm())
-                if grads_conc is not None:
-                    self.log("grads/norm_conc", grads_conc.norm())
+        def _safe_grad(loss, tensor):
+            if not (isinstance(loss, torch.Tensor) and loss.requires_grad):
+                return None
+            g = torch.autograd.grad(loss, tensor, retain_graph=True, allow_unused=True)[0]
+            return g.detach().reshape(-1) if g is not None else None
 
+        def _cosine(a, b):
+            return (a @ b) / (a.norm() * b.norm() + 1e-8)
 
+        def _log_grads(prefix, ref_tensor):
+            g_task = _safe_grad(task_loss, ref_tensor)
+            g_adv  = _safe_grad(adversarial_term, ref_tensor)
+            g_conc = _safe_grad(weighted_concept_loss, ref_tensor)
 
-                # --- Log Alignment (Are they cancelling?) ---
-                if grads_task is not None and grads_adv is not None:
-                    g_task_flat = grads_task.view(-1)
-                    g_adv_flat = grads_adv.view(-1)
-                    cosine = torch.nn.functional.cosine_similarity(g_task_flat, g_adv_flat, dim=0)
-                    self.log("grads/cosine_task_vs_adv", cosine)
-                    residual = (g_task_flat + g_adv_flat).norm()
-                    self.log("grads/norm_residual_task_adv", residual)
+            if g_task is not None:
+                self.log(f"grads/{prefix}/norm_task", g_task.norm())
+            if g_adv is not None:
+                self.log(f"grads/{prefix}/norm_adv", g_adv.norm())
+            if g_conc is not None:
+                self.log(f"grads/{prefix}/norm_conc", g_conc.norm())
+
+            if g_task is not None and g_adv is not None:
+                self.log(f"grads/{prefix}/cosine_task_adv", _cosine(g_task, g_adv))
+                self.log(f"grads/{prefix}/norm_residual_task_adv", (g_task + g_adv).norm())
+
+            if g_task is not None and g_conc is not None:
+                self.log(f"grads/{prefix}/cosine_task_conc", _cosine(g_task, g_conc))
+                self.log(f"grads/{prefix}/norm_residual_task_conc", (g_task + g_conc).norm())
+
+            if g_adv is not None and g_conc is not None:
+                self.log(f"grads/{prefix}/cosine_adv_conc", _cosine(g_adv, g_conc))
+
+        _log_grads("c_sem", c_sem)
+        _log_grads("context", contexts)
 
 
     def get_lambda_scheduler(self,
@@ -688,10 +691,12 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
             concept_loss_scalar = concept_loss.detach().item()
             self._monitor_grad(batch_idx,
                      task_loss,
-                     c_logits,
+                     c_sem,
+                     contexts,
                      adversarial_term,
                      concept_loss,
                    train=train)
+
             loss = (
                 self.concept_loss_weight * concept_loss
                 + task_loss + adversarial_term)
