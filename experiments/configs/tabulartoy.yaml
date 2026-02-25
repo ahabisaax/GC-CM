@@ -1,5 +1,5 @@
 trials: 5
-results_dir: results/tabulartoy_25_10k_models_crcem_pareto/
+results_dir: results/tabulartoy_25_10k_models_crcem_ts/
 
 shared_params:
   # Dataset Configuration
@@ -130,8 +130,8 @@ runs:
        training_intervention_prob: 0.25
        embedding_activation: "leakyrelu"
        cbm_learning_rate: 0.001
-       concept_loss_weight: [0.1, 0.5, 1]
-       grid_variables: [ 'concept_loss_weight' ]
+       concept_loss_weight: 0.1
+       grid_variables: [ 'shared_critic' ]
        use_adversarial: True
        max_adversarial_lambda: 1
        adversarial_delay: 0
@@ -145,6 +145,9 @@ runs:
        max_epochs: 400
        patience: 400
        gradient_clip_val: 1.0
+       concept_vector_regularisation: False
+       entropy_maximisation: False
+       shared_critic: [True, False]
 
 #
   # CR-CBM:

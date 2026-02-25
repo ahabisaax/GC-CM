@@ -160,14 +160,14 @@ runs:
        embedding_activation: "leakyrelu"
        cbm_learning_rate: 0.00005
        concept_loss_weight: 0.1
-       #grid_variables: ['concept_vector_regularisation']
+       grid_variables: ['concept_vector_regularisation']
        use_adversarial: True
        max_adversarial_lambda: 1
        adversarial_delay: 0
        adversarial_lambda_scheduler_warmup: None
        adversarial_scheduler: "none"
-       adversarial_loss_type: 'gradient'
-       n_critic_steps: 3
+       adversarial_loss_type: 'grl'
+       n_critic_steps: 1
        accumulate_grad_batches: 1
        cbm_optimizer: adam
        adv_optimizer: adam
@@ -178,8 +178,9 @@ runs:
        early_stopping_monitor: val_pareto_score
        early_stopping_mode: max
        early_stopping_delta: 0.0
-       concept_vector_regularisation: True
+       concept_vector_regularisation: [True, False]
        entropy_maximisation: False
+       shared_critic: True
 
 
 
