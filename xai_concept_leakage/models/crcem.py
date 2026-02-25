@@ -550,13 +550,6 @@ class CriticRegularisedConceptEmbeddingModel(ConceptBottleneckModel):
                 self.log(f"grads/{prefix}/cosine_task_adv", _cosine(g_task, g_adv))
                 self.log(f"grads/{prefix}/norm_residual_task_adv", (g_task + g_adv).norm())
 
-            if g_task is not None and g_conc is not None:
-                self.log(f"grads/{prefix}/cosine_task_conc", _cosine(g_task, g_conc))
-                self.log(f"grads/{prefix}/norm_residual_task_conc", (g_task + g_conc).norm())
-
-            if g_adv is not None and g_conc is not None:
-                self.log(f"grads/{prefix}/cosine_adv_conc", _cosine(g_adv, g_conc))
-
         _log_grads("c_sem", c_sem)
         _log_grads("context", contexts)
 
