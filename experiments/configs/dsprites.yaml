@@ -34,7 +34,7 @@ shared_params:
   learning_rate_c2y: 0.0001
   optimizer_c2y: adam
   c2y_max_epochs: 100
-  c2y_layers: [64, 64]
+  c2y_layers: [128, 64]
   linear_c2y: False
 
   n_hidden: 64
@@ -154,35 +154,6 @@ runs:
 
 # #CRCEMs:
      - architecture: 'CriticRegularisedConceptEmbeddingModel'
-       run_name: "grl"
-       sigmoidal_prob: True
-       training_intervention_prob: 0.25
-       embedding_activation: "leakyrelu"
-       cbm_learning_rate: 0.00005
-       concept_loss_weight: 0.1
-       #grid_variables: ['concept_vector_regularisation']
-       use_adversarial: True
-       max_adversarial_lambda: 1
-       adversarial_delay: 0
-       adversarial_lambda_scheduler_warmup: None
-       adversarial_scheduler: "none"
-       adversarial_loss_type: 'grl'
-       n_critic_steps: 1
-       accumulate_grad_batches: 1
-       cbm_optimizer: adam
-       adv_optimizer: adam
-       max_epochs: 400
-       patience: 400
-       gradient_clip_val: 1.0
-       emb_size: 16
-       early_stopping_monitor: val_pareto_score
-       early_stopping_mode: max
-       early_stopping_delta: 0.0
-       concept_vector_regularisation: True
-       entropy_maximisation: False
-
-
-     - architecture: 'CriticRegularisedConceptEmbeddingModel'
        run_name: "auto"
        sigmoidal_prob: True
        training_intervention_prob: 0.25
@@ -196,7 +167,7 @@ runs:
        adversarial_lambda_scheduler_warmup: None
        adversarial_scheduler: "none"
        adversarial_loss_type: 'gradient'
-       n_critic_steps: 2
+       n_critic_steps: 3
        accumulate_grad_batches: 1
        cbm_optimizer: adam
        adv_optimizer: adam
