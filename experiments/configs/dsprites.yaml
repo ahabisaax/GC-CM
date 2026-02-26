@@ -151,37 +151,6 @@ runs:
 
 
 
-
-# #CRCEMs:
-     - architecture: 'CriticRegularisedConceptEmbeddingModel'
-       run_name: "shared-critic"
-       sigmoidal_prob: True
-       training_intervention_prob: 0.25
-       embedding_activation: "leakyrelu"
-       cbm_learning_rate: 0.000005
-       concept_loss_weight: 1
-       use_adversarial: True
-       max_adversarial_lambda: 1
-       adversarial_delay: 0
-       adversarial_lambda_scheduler_warmup: None
-       adversarial_scheduler: "none"
-       adversarial_loss_type: 'gradient'
-       n_critic_steps: 1
-       accumulate_grad_batches: 1
-       cbm_optimizer: adam
-       adv_optimizer: adam
-       max_epochs: 600
-       patience: 400
-       gradient_clip_val: 1.0
-       emb_size: 16
-       early_stopping_monitor: val_pareto_score
-       early_stopping_mode: max
-       early_stopping_delta: 0.0
-       concept_vector_regularisation: True
-       entropy_maximisation: False
-       shared_critic: True
-
-
      - architecture: 'CriticRegularisedConceptEmbeddingModel'
        run_name: "no_shared-critic"
        sigmoidal_prob: True
@@ -195,11 +164,11 @@ runs:
        adversarial_lambda_scheduler_warmup: None
        adversarial_scheduler: "none"
        adversarial_loss_type: 'gradient'
-       n_critic_steps: 1
+       n_critic_steps: 5
        accumulate_grad_batches: 1
        cbm_optimizer: adam
        adv_optimizer: adam
-       max_epochs: 600
+       max_epochs: 500
        patience: 400
        gradient_clip_val: 1.0
        emb_size: 16
