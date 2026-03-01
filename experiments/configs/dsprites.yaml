@@ -5,7 +5,7 @@ shared_params:
   # Dataset Configuration
   dataset_config:
     dataset: dsprites
-    batch_size: 256
+    batch_size: 64
     num_workers: 8
     root_dir: data/dsprites/dsprites_dep_0.npz # this is where you find the pre-sampled dataset
     sampling_percent: 1
@@ -156,7 +156,7 @@ runs:
        sigmoidal_prob: True
        training_intervention_prob: 0.25
        embedding_activation: "leakyrelu"
-       cbm_learning_rate: 0.000005
+       cbm_learning_rate: 0.000001
        concept_loss_weight: [0.1, 0.5, 1]
        use_adversarial: True
        max_adversarial_lambda: 1
@@ -178,6 +178,7 @@ runs:
        concept_vector_regularisation: False
        entropy_maximisation: False
        shared_critic: True
+       shared_prob_gen: False
 
 
 
