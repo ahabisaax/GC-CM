@@ -1,4 +1,4 @@
-trials: 5
+trials: 1
 results_dir: results/dsprites_dep_0_models_crcem_lr_checks/
 
 shared_params:
@@ -156,7 +156,7 @@ runs:
        sigmoidal_prob: True
        training_intervention_prob: 0.25
        embedding_activation: "leakyrelu"
-       cbm_learning_rate: [0.000005, 0.00001, 0.00003, 0.00005, 0.0001, 0.0003, 0.0005, 0.001]
+       cbm_learning_rate: [1e-6, 5e-7, 7e-7, 3e-7]
        concept_loss_weight: 0.1
        grid_variables: ['cbm_learning_rate']
        use_adversarial: True
@@ -179,7 +179,7 @@ runs:
        concept_vector_regularisation: False
        entropy_maximisation: False
        shared_critic: True
-       shared_prob_gen: False
+       shared_prob_gen: True
 
 
 
