@@ -156,7 +156,7 @@ runs:
        sigmoidal_prob: True
        training_intervention_prob: 0.25
        embedding_activation: "leakyrelu"
-       cbm_learning_rate: [1e-6, 5e-7, 7e-7, 3e-7]
+       cbm_learning_rate: [0.000001, 0.0000005, 0.0000007, 0.0000003]
        concept_loss_weight: 0.1
        grid_variables: ['cbm_learning_rate']
        use_adversarial: True
