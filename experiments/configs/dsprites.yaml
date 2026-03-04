@@ -5,7 +5,7 @@ shared_params:
   # Dataset Configuration
   dataset_config:
     dataset: dsprites
-    batch_size: 64
+    batch_size: 256
     num_workers: 8
     root_dir: data/dsprites/dsprites_dep_0.npz # this is where you find the pre-sampled dataset
     sampling_percent: 1
@@ -156,7 +156,7 @@ runs:
        sigmoidal_prob: True
        training_intervention_prob: 0.25
        embedding_activation: "leakyrelu"
-       cbm_learning_rate: [0.000001, 0.0000005, 0.0000007, 0.0000003]
+       cbm_learning_rate: [0.000005, 0.000003, 0.000001, 0.00001]
        concept_loss_weight: 0.1
        grid_variables: ['cbm_learning_rate']
        use_adversarial: True
@@ -166,7 +166,39 @@ runs:
        adversarial_scheduler: "none"
        adversarial_loss_type: 'grl'
        n_critic_steps: 1
-       accumulate_grad_batches: 1
+       accumulate_grad_batches: 4
+       cbm_optimizer: adam
+       adv_optimizer: adam
+       max_epochs: 500
+       patience: 400
+       gradient_clip_val: 1.0
+       emb_size: 16
+       early_stopping_monitor: val_pareto_score
+       early_stopping_mode: max
+       early_stopping_delta: 0.0
+       concept_vector_regularisation: False
+       entropy_maximisation: False
+       shared_critic: True
+       shared_prob_gen: True
+
+
+
+     - architecture: 'CriticRegularisedConceptEmbeddingModel'
+       run_name: "auto"
+       sigmoidal_prob: True
+       training_intervention_prob: 0.25
+       embedding_activation: "leakyrelu"
+       cbm_learning_rate: [0.000005, 0.000003, 0.000001, 0.00001]
+       concept_loss_weight: 0.1
+       grid_variables: ['cbm_learning_rate']
+       use_adversarial: True
+       max_adversarial_lambda: 1
+       adversarial_delay: 0
+       adversarial_lambda_scheduler_warmup: None
+       adversarial_scheduler: "none"
+       adversarial_loss_type: 'grl'
+       n_critic_steps: 1
+       accumulate_grad_batches: 2
        cbm_optimizer: adam
        adv_optimizer: adam
        max_epochs: 500
