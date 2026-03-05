@@ -3,7 +3,7 @@
 #$ -o ~/Scratch/xai-crcbm/logs/CUB_$JOB_ID.out
 #$ -e ~/Scratch/xai-crcbm/logs/CUB_$JOB_ID.err
 #$ -pe smp 8
-#$ -l h_rt=35:00:00
+#$ -l h_rt=18:00:00
 #$ -l mem=24G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
@@ -30,7 +30,7 @@ export MKL_NUM_THREADS=$NSLOTS
 # --- 3. PATHS ---
 PROJECT_ROOT=~/Scratch/xai-crcbm
 #CHANGE FOR EACH DATASET
-FINAL_RESULTS_DIR=$PROJECT_ROOT/results/cub_soft_0.01
+FINAL_RESULTS_DIR=$PROJECT_ROOT/results/cub_CEM
 DATASET_TAR="CUB200.tar"
 
 
