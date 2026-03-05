@@ -1,5 +1,5 @@
-results_dir: "results/cub_soft_cbm_0.01/"
-trials: 5
+results_dir: "results/cub_CEM/"
+trials: 1
 
 shared_params:
   model_selection_trials: 3
@@ -115,7 +115,7 @@ shared_params:
 
   #adv_learning_rate: 0.05
   adv_optimizer: adam
-  project_name: "cub checks"
+  project_name: "cub CEM"
   check_val_every_n_epoch: 5
   compute_mi_on_gpu: False
   compute_mi_mode: 'cpu'
@@ -125,21 +125,21 @@ shared_params:
 
 runs:
 
-  - architecture: "ConceptBottleneckModel"
-    run_name: "auto"
-    extra_dims: 0
-    concept_loss_weight: 1
-    sigmoidal_prob: true
-    embedding_activation: "leakyrelu"
-    cbm_optimizer: adam
-    learning_rate: 0.0001
-    early_stopping_monitor: 'val_loss'
-    early_stopping_delta: 0.0
-    early_stopping_mode: min
-    gradient_clip_val: 0
-    patience: 200
-    max_epochs: 250
-    weight_decay: 4.0e-06
+#  - architecture: "ConceptBottleneckModel"
+#    run_name: "auto"
+#    extra_dims: 0
+#    concept_loss_weight: 1
+#    sigmoidal_prob: true
+#    embedding_activation: "leakyrelu"
+#    cbm_optimizer: adam
+#    learning_rate: 0.0001
+#    early_stopping_monitor: 'val_loss'
+#    early_stopping_delta: 0.0
+#    early_stopping_mode: min
+#    gradient_clip_val: 0
+#    patience: 200
+#    max_epochs: 250
+#    weight_decay: 4.0e-06
 #
 #  - architecture: "ConceptBottleneckModel"
 #    run_name: "Joint CBM"
@@ -167,7 +167,7 @@ runs:
 #    sigmoidal_prob: true
 #    embedding_activation: "leakyrelu"
 #    sigmoidal_extra_capacity: false
-#    learning_rate: [0.0001, 0.005, 0.01, 0.02]
+#    learning_rate: 0.0001
 #    grid_variables: ['learning_rate']
 
 #
@@ -177,13 +177,22 @@ runs:
 #    concept_loss_weight: 5
 #    sigmoidal_prob: true
 #    embedding_activation: "leakyrelu"
-#
+
+
 #  - architecture: "ConceptEmbeddingModel"
-#    run_name: "CEM"
-#    concept_loss_weight: 1
-#    sigmoidal_prob: true
-#    training_intervention_prob: 0.25
-#    embedding_activation: "leakyrelu"
+       run_name: "auto"
+       sigmoidal_prob: True
+       training_intervention_prob: 0.25
+       embedding_activation: "leakyrelu"
+       concept_loss_weight: 0.1
+       grid_variables: ['cbm_learning_rate']
+       cbm_optimizer: adam
+       patience: 400
+       cbm_learning_rate: [0.0005, 0.005, 0.01,  0.05]
+       max_epochs: 300
+       early_stopping_monitor: 'val_y_accuracy'
+       early_stopping_mode: max
+       early_stopping_delta: 0.0
 #
 #  - architecture: "IntAwareConceptEmbeddingModel"
 #    run_name: "IntCEM"
