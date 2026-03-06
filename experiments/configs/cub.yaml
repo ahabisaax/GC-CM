@@ -112,6 +112,9 @@ shared_params:
   training_intervention_prob: 0
   #num_load_workers: 0
   cbm_optimizer: adam
+  n_hidden: 64
+  c2y_layers: [ 64, 64 ]
+  linear_c2y: False
 
   #adv_learning_rate: 0.05
   adv_optimizer: adam
