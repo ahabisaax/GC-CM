@@ -179,20 +179,20 @@ runs:
 #    embedding_activation: "leakyrelu"
 
 
-#  - architecture: "ConceptEmbeddingModel"
-       run_name: "auto"
-       sigmoidal_prob: True
-       training_intervention_prob: 0.25
-       embedding_activation: "leakyrelu"
-       concept_loss_weight: 0.1
-       grid_variables: ['cbm_learning_rate']
-       cbm_optimizer: adam
-       patience: 400
-       cbm_learning_rate: [0.0005, 0.005, 0.01,  0.05]
-       max_epochs: 300
-       early_stopping_monitor: 'val_y_accuracy'
-       early_stopping_mode: max
-       early_stopping_delta: 0.0
+  - architecture: "ConceptEmbeddingModel"
+    run_name: "auto"
+    sigmoidal_prob: True
+    training_intervention_prob: 0.25
+    embedding_activation: "leakyrelu"
+    concept_loss_weight: 0.1
+    grid_variables: ['cbm_learning_rate']
+    cbm_optimizer: adam
+    patience: 400
+    cbm_learning_rate: [0.0005, 0.005, 0.01,  0.05]
+    max_epochs: 300
+    early_stopping_monitor: 'val_y_accuracy'
+    early_stopping_mode: max
+    early_stopping_delta: 0.0
 #
 #  - architecture: "IntAwareConceptEmbeddingModel"
 #    run_name: "IntCEM"
