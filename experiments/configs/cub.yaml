@@ -98,7 +98,7 @@ shared_params:
   top_k_accuracy: null
   save_model: true
   patience: 100
-  emb_size: 16
+  emb_size: 32
   extra_dims: 0
   #concept_loss_weight: [1, 5, 10]
   learning_rate: 0.001
@@ -113,7 +113,7 @@ shared_params:
   #num_load_workers: 0
   cbm_optimizer: adam
   n_hidden: 64
-  c2y_layers: [ 64, 64 ]
+  c2y_layers: [ 512, 256 ]
   linear_c2y: False
 
   #adv_learning_rate: 0.05
@@ -191,7 +191,7 @@ runs:
     grid_variables: ['cbm_learning_rate']
     cbm_optimizer: adam
     patience: 400
-    cbm_learning_rate: [0.0005, 0.005, 0.01,  0.05]
+    cbm_learning_rate: [0.005, 0.01,  0.05]
     max_epochs: 300
     early_stopping_monitor: 'val_y_accuracy'
     early_stopping_mode: max
