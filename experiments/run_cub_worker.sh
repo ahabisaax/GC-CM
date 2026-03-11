@@ -3,7 +3,7 @@
 #$ -o ~/Scratch/xai-crcbm/logs/CUB_$JOB_ID.out
 #$ -e ~/Scratch/xai-crcbm/logs/CUB_$JOB_ID.err
 #$ -pe smp 8
-#$ -l h_rt=18:00:00
+#$ -l h_rt=6:00:00
 #$ -l mem=24G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
