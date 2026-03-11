@@ -290,7 +290,7 @@ def construct_model(
             ),
             concept_loss_weight=config["concept_loss_weight"],
             task_loss_weight=task_loss_weight,
-            learning_rate=config["learning_rate"],
+            learning_rate=config.get("cbm_learning_rate", config["learning_rate"]),
             weight_decay=config["weight_decay"],
             c_extractor_arch=utils.wrap_pretrained_model(c_extractor_arch),
             optimizer=config["cbm_optimizer"],
