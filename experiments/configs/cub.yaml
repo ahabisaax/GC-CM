@@ -6,7 +6,7 @@ shared_params:
   dataset_config:
     dataset: "cub"
     num_workers: 8
-    batch_size: 256
+    batch_size: 64
     root_dir: data/CUB200/
     sampling_percent: 1
     sampling_groups: true
@@ -98,7 +98,7 @@ shared_params:
   top_k_accuracy: null
   save_model: true
   patience: 100
-  emb_size: 32
+  emb_size: 16
   extra_dims: 0
   #concept_loss_weight: [1, 5, 10]
   learning_rate: 0.001
@@ -113,8 +113,8 @@ shared_params:
   #num_load_workers: 0
   cbm_optimizer: adam
   n_hidden: 64
-  c2y_layers: [ 512, 256 ]
-  linear_c2y: False
+  #c2y_layers: [ 512, 256 ]
+  linear_c2y: True
 
   #adv_learning_rate: 0.05
   adv_optimizer: adam
@@ -185,18 +185,18 @@ runs:
   - architecture: "ConceptEmbeddingModel"
     run_name: "auto"
     sigmoidal_prob: True
-    training_intervention_prob: 0.25
+    training_intervention_prob: 0
     embedding_activation: "leakyrelu"
     concept_loss_weight: 0.1
-    grid_variables: ['cbm_learning_rate']
     cbm_optimizer: adam
     patience: 400
-    cbm_learning_rate: [0.005, 0.01,  0.05]
+    cbm_learning_rate: 0.01
     max_epochs: 300
     early_stopping_monitor: 'val_y_accuracy'
     early_stopping_mode: max
     early_stopping_delta: 0.0
-#
+
+
 #  - architecture: "IntAwareConceptEmbeddingModel"
 #    run_name: "IntCEM"
 #    concept_loss_weight: 1
