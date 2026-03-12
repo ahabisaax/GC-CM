@@ -382,6 +382,11 @@ def generate_auto_run_name(config):
 
     c_weight = config.get("concept_loss_weight", 1.0)
     components.append(f"lam_c{c_weight}")
+
+    if config.get("use_adversarial", False):
+        if config.get("shared_critic", False):
+            components.append("shared_critic")
+
     return "_".join(components)
 
 def _perform_model_selection(
