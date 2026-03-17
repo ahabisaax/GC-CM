@@ -187,9 +187,9 @@ runs:
        sigmoidal_prob: True
        training_intervention_prob: 0.25
        embedding_activation: "leakyrelu"
-       cbm_learning_rate: [0.000003, 0.000001]
+       cbm_learning_rate: 0.000001
        concept_loss_weight: 0.1
-       grid_variables: ['cbm_learning_rate']
+#       grid_variables: ['cbm_learning_rate']
        use_adversarial: True
        max_adversarial_lambda: 1
        adversarial_delay: 0
@@ -210,7 +210,7 @@ runs:
        concept_vector_regularisation: False
        entropy_maximisation: False
        shared_critic: True
-       shared_prob_gen: True
+       shared_prob_gen: False
 
 
 
