@@ -1,5 +1,5 @@
-trials: 1
-results_dir: results/dsprites_dep_0_models_crcem_lr_checks/
+trials: 5
+results_dir: results/dsprites_ACBM_shared_critic
 
 shared_params:
   # Dataset Configuration
@@ -124,10 +124,10 @@ runs:
        accumulate_grad_batches: 1
        cbm_optimizer: adam
        adv_optimizer: adam
-       max_epochs: 300
+       max_epochs: 200
        cbm_learning_rate: 0.00005
-#       grid_variables: ['concept_loss_weight']
-       concept_loss_weight: 0.1
+       grid_variables: ['concept_loss_weight']
+       concept_loss_weight: [0.1, 0.5, 1]
        early_stopping_monitor: 'val_y_accuracy'
        early_stopping_mode: max
        early_stopping_delta: 0.0
