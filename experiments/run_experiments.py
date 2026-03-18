@@ -335,12 +335,14 @@ def generate_auto_run_name(config):
         components.append("HardCBM")
     elif architecture == 'ConceptBottleneckModel':
         components.append("SoftCBM")
-    elif architecture == 'CriticRegularisedConceptBottleneckModel':
+    elif architecture in ('CriticRegularisedConceptBottleneckModel', 'AdversarialConceptBottleneckModel'):
         components.append("CRCBM")
     elif architecture == 'ConceptEmbeddingModel':
         components.append('CEM')
-    else:
+    elif architecture in ('CriticRegularisedConceptEmbeddingModel', 'AdversarialConceptEmbeddingModel'):
         components.append('CRCEM')
+    else:
+        components.append(architecture)
     opt_key = 'cbm_optimizer' if 'cbm_optimizer' in config else 'cem_optimizer'
     opt = config.get(opt_key, "adam").lower()
     components.append(opt)

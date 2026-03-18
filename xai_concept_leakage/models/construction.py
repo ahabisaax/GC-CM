@@ -9,9 +9,9 @@ from torchvision.models import resnet18, resnet34, resnet50, densenet121
 
 import xai_concept_leakage.models.cem as models_cem
 import xai_concept_leakage.models.cbm as models_cbm
-import xai_concept_leakage.models.crcbm as models_crcbm
+import xai_concept_leakage.models.acbm as models_acbm
 import xai_concept_leakage.models.intcbm as models_intcbm
-import xai_concept_leakage.models.crcem as models_crcem
+import xai_concept_leakage.models.acem as models_acem
 import xai_concept_leakage.train.utils as utils
 
 
@@ -148,8 +148,8 @@ def construct_model(
             "int_model_use_bn": config.get("int_model_use_bn", False),
             "num_rollouts": config.get("num_rollouts", 1),
         }
-    elif "CriticRegularisedConceptBottleneckModel" in config['architecture']:
-        model_cls = models_crcbm.CriticRegularisedConceptBottleneckModel
+    elif "AdversarialConceptBottleneckModel" in config['architecture'] or "CriticRegularisedConceptBottleneckModel" in config['architecture']:
+        model_cls = models_acbm.AdversarialConceptBottleneckModel
         extra_params = {
             "bool": config["bool"],
             "extra_dims": config["extra_dims"],
@@ -176,10 +176,11 @@ def construct_model(
             "adversarial_scheduler": config.get("adversarial_scheduler"),
             "adversarial_loss_type": config.get("adversarial_loss_type", 'gradient'),
             "n_critic_steps": config.get("n_critic_steps", 1),
+            "shared_critic": config.get("shared_critic", False),
             "compute_mi_on_gpu": config.get("compute_mi_on_gpu", False)
         }
-    elif "CriticRegularisedConceptEmbeddingModel" in config['architecture']:
-        model_cls = models_crcem.CriticRegularisedConceptEmbeddingModel
+    elif "AdversarialConceptEmbeddingModel" in config['architecture'] or "CriticRegularisedConceptEmbeddingModel" in config['architecture']:
+        model_cls = models_acem.AdversarialConceptEmbeddingModel
         extra_params = {
             "n_hidden": config["n_hidden"],  # added
             "emb_size": config["emb_size"],
@@ -249,8 +250,8 @@ def construct_model(
 
     # Create model
     if model_cls in {
-        models_crcbm.CriticRegularisedConceptBottleneckModel,
-        models_crcem.CriticRegularisedConceptEmbeddingModel
+        models_acbm.AdversarialConceptBottleneckModel,
+        models_acem.AdversarialConceptEmbeddingModel,
     }:
         return model_cls(
             n_concepts=n_concepts,
