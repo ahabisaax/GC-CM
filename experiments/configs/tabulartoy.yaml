@@ -124,14 +124,14 @@ runs:
 
 
 # #CRCEMs:
-     - architecture: 'CriticRegularisedConceptEmbeddingModel'
+     - architecture: 'AdversarialConceptEmbeddingModel'
        run_name: "shared_critic"
        sigmoidal_prob: True
        training_intervention_prob: 0.25
        embedding_activation: "leakyrelu"
        cbm_learning_rate: 0.001
        concept_loss_weight: 0.1
-       grid_variables: [ 'shared_critic' ]
+#      grid_variables: [ 'shared_critic' ]
        use_adversarial: True
        max_adversarial_lambda: 1
        adversarial_delay: 0
@@ -150,14 +150,14 @@ runs:
        shared_critic: True
 
 
-     - architecture: 'CriticRegularisedConceptEmbeddingModel'
+     - architecture: 'AdversarialConceptEmbeddingModel'
        run_name: "no_shared_critic"
        sigmoidal_prob: True
        training_intervention_prob: 0.25
        embedding_activation: "leakyrelu"
        cbm_learning_rate: 0.001
        concept_loss_weight: 0.1
-       grid_variables: [ 'shared_critic' ]
+#       grid_variables: [ 'shared_critic' ]
        use_adversarial: True
        max_adversarial_lambda: 1
        adversarial_delay: 0

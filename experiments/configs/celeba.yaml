@@ -1,121 +1,69 @@
-trials: 5
-results_dir: results/celeba_models/
+trials: 1
+results_dir: results/celeba_CEM/
 
 shared_params:
-  # Dataset Configuration
   dataset_config:
     dataset: celeba
-    batch_size: 64
-    num_workers: 4
-    root_dir: data/ # this is where you find the pre-sampled dataset
+    batch_size: 512
+    num_workers: 8
+    root_dir: data/  # torchvision expects parent of celeba/ folder
     sampling_percent: 1
     test_subsampling: 1
     num_classes: 100
     use_binary_vector_class: false
     use_imbalance: true
     num_concepts: 40
-    selected_concepts: False
+    selected_concepts: false
     image_size: 64
 
-
-
-  # Intervention evaluation
   intervention_config:
-    competence_levels: [1] #[1, 0]
+    competence_levels: [1]
     intervention_freq: 1
-    intervention_batch_size: 64
+    intervention_batch_size: 256
     intervention_policies:
       - policy: "random"
         group_level: True
         use_prior: False
 
-
-  skip_repr_evaluation: True #Set to False to compute OIS, NIS and CAS
-  max_epochs: 700
-  #concept_loss_weight: 1
-  learning_rate: 0.001
-  bool: False
-  sigmoidal_prob: False
-  dropout_prob: 0.2
-  all_dropout: False
-
-  learning_rate_c2y: 0.001
-  optimizer_c2y: adam
-  c2y_max_epochs: 10
-  c2y_layers: [64, 64]
-  linear_c2y: False
-
-  n_hidden: 64
-  emb_size: 16
-
-  weight_loss: False #False weighting of the concepts in loss
-  use_task_class_weights: False #False weighting of the task in loss
+  skip_repr_evaluation: true
+  max_epochs: 150
   top_k_accuracy: null
-  save_model: True
-  patience: 1000
+  save_model: true
+  patience: 100
+  emb_size: 16
   extra_dims: 0
-  scheduler_step: 20
-  weight_decay: 0
+  learning_rate: 0.01
+  weight_decay: 4.0e-06
+  weight_loss: false
+  use_task_class_weights: false
   c_extractor_arch: "resnet34"
-  optimizer: adam
-  early_stopping_monitor: val_loss
-  early_stopping_mode: min
-  early_stopping_delta: 0.0
-  check_val_every_n_epoch: 10
+  optimizer: sgd
+  bool: false
   momentum: 0.9
-  cbm_optimizer: adam
-  cbm_learning_rate: 0.05
-  adv_learning_rate: 0.05
+  sigmoidal_prob: false
+  training_intervention_prob: 0
+  cbm_optimizer: sgd
+  n_hidden: 512
   adv_optimizer: adam
-  project_name: "shapes3d"
-
+  project_name: "celeba CEM"
+  check_val_every_n_epoch: 5
+  compute_mi_on_gpu: False
+  compute_mi_mode: 'cpu'
+  accumulate_grad_batches: 1
+  c2y_max_epochs: 150
 
 runs:
-# HARD:
-    # - architecture: 'IndependentConceptBottleneckModel'
-    #   run_name: "CBM_Hard"
-    #   bool: True
-    #   extra_dims: 0
-    #   sigmoidal_extra_capacity: False
-    #   sigmoidal_prob: True
 
- # SOFT:
-    - architecture: 'ConceptBottleneckModel'
-      run_name: "CBM_Sigmoid_1"
-      bool: False
-      extra_dims: 0
-      sigmoidal_prob: True
-      concept_loss_weight: 0.1
-
-# LOGITS:
-    # - architecture: 'ConceptBottleneckModel'
-    #   run_name: "CBM_Logit_1"
-    #   embedding_activation: "leakyrelu"
-    #   bool: False
-    #   extra_dims: 0
-    #   sigmoidal_prob: False
-    #   concept_loss_weight: 1.
-
-# CEMs:
-    # - architecture: 'ConceptEmbeddingModel'
-    #   run_name: "CEM_10_pint025_emb16"
-    #   sigmoidal_prob: True
-    #   training_intervention_prob: 0.25
-    #   embedding_activation: "leakyrelu"
-    #   concept_loss_weight: 10
-
-
-    - architecture: 'CriticRegularisedConceptBottleneckModel'
-      run_name: "critic_0delay_lambdac0.1_lambda_adv_1"
-      bool: False
-      extra_dims: 0
-      sigmoidal_prob: True
-      concept_loss_weight: 0.1
-      use_adversarial: True
-      max_adversarial_lambda: 1
-      adversarial_delay: 0
-      adversarial_lambda_scheduler_warmup: None
-      adversarial_scheduler: "none"      #['proportional', 'linear', 'lagrange', 'linear', 'none']
-      adaptive_lambda_beta: 0.99
-      adaptive_lambda_scale: 0.5
-      auto_lr: False
+  - architecture: "ConceptEmbeddingModel"
+    run_name: "auto"
+    sigmoidal_prob: True
+    training_intervention_prob: 0
+    embedding_activation: "leakyrelu"
+    concept_loss_weight: 0.1
+    cbm_optimizer: sgd
+    patience: 400
+    cbm_learning_rate: 0.01
+    max_epochs: 300
+    early_stopping_monitor: 'val_y_accuracy'
+    early_stopping_mode: max
+    early_stopping_delta: 0.0

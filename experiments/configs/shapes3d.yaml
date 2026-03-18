@@ -98,7 +98,7 @@ runs:
     #   concept_loss_weight: 10
 
 
-    - architecture: 'CriticRegularisedConceptBottleneckModel'
+    - architecture: 'AdversarialConceptBottleneckModel'
       run_name: "critic_0delay_lambdac0.1_lambda_adv_1"
       bool: False
       extra_dims: 0
