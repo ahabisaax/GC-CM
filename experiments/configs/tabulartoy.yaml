@@ -1,11 +1,11 @@
 trials: 5
-results_dir: results/tabulartoy_25_10k_models_crcem_critic/
+results_dir: results/tabulartoy_25_10k_models_acbm_shared_critic/
 
 shared_params:
   # Dataset Configuration
   dataset_config:
     dataset: tabulartoy
-    batch_size: 256
+    batch_size: 64
     num_workers: 8
     root_dir: data/TabularToy/tabulartoy_25_10k/ #for tabulartoy, this is where you find the pre-sampled dataset
     considered_concepts: ['0', '1', '2']
@@ -56,7 +56,7 @@ shared_params:
 
 
   momentum: 0.9
-  project_name: "TTOY CRCEM"
+  project_name: "Tabulartoy final crcbm"
   max_epochs: 240
   check_val_every_n_epoch: 1
 
@@ -124,65 +124,16 @@ runs:
 
 
 # #CRCEMs:
-     - architecture: 'AdversarialConceptEmbeddingModel'
-       run_name: "shared_critic"
-       sigmoidal_prob: True
-       training_intervention_prob: 0.25
-       embedding_activation: "leakyrelu"
-       cbm_learning_rate: 0.001
-       concept_loss_weight: 0.1
-#      grid_variables: [ 'shared_critic' ]
-       use_adversarial: True
-       max_adversarial_lambda: 1
-       adversarial_delay: 0
-       adversarial_lambda_scheduler_warmup: None
-       adversarial_scheduler: "none"
-       adversarial_loss_type: 'gradient'
-       n_critic_steps: 1
-       accumulate_grad_batches: 1
-       cbm_optimizer: adam
-       adv_optimizer: adam
-       max_epochs: 300
-       patience: 400
-       gradient_clip_val: 1.0
-       concept_vector_regularisation: False
-       entropy_maximisation: False
-       shared_critic: True
-
-
-     - architecture: 'AdversarialConceptEmbeddingModel'
-       run_name: "no_shared_critic"
-       sigmoidal_prob: True
-       training_intervention_prob: 0.25
-       embedding_activation: "leakyrelu"
-       cbm_learning_rate: 0.001
-       concept_loss_weight: 0.1
-#       grid_variables: [ 'shared_critic' ]
-       use_adversarial: True
-       max_adversarial_lambda: 1
-       adversarial_delay: 0
-       adversarial_lambda_scheduler_warmup: None
-       adversarial_scheduler: "none"
-       adversarial_loss_type: 'gradient'
-       n_critic_steps: 1
-       accumulate_grad_batches: 1
-       cbm_optimizer: adam
-       adv_optimizer: adam
-       max_epochs: 400
-       patience: 400
-       gradient_clip_val: 1.0
-       concept_vector_regularisation: False
-       entropy_maximisation: False
-       shared_critic: False
-#
-  # CR-CBM:
-#     - architecture: 'CriticRegularisedConceptBottleneckModel'
+#     - architecture: 'AdversarialConceptEmbeddingModel'
 #       run_name: "auto"
-#       bool: False
-#       extra_dims: 0
 #       sigmoidal_prob: True
+#       training_intervention_prob: 0.25
+#       embedding_activation: "leakyrelu"
+#       cbm_learning_rate: 0.001
+#       concept_loss_weight: 0.1
+##      grid_variables: [ 'shared_critic' ]
 #       use_adversarial: True
-#       max_adversarial_lambda:  1
+#       max_adversarial_lambda: 1
 #       adversarial_delay: 0
 #       adversarial_lambda_scheduler_warmup: None
 #       adversarial_scheduler: "none"
@@ -192,14 +143,64 @@ runs:
 #       cbm_optimizer: adam
 #       adv_optimizer: adam
 #       max_epochs: 300
-#       cbm_learning_rate: 0.05
-#       grid_variables: ['concept_loss_weight']
-#       concept_loss_weight: [0.1, 0.5, 1]
-#       early_stopping_monitor: val_pareto_score
-#       early_stopping_mode: max
-#       early_stopping_delta: 0.0
 #       patience: 400
 #       gradient_clip_val: 1.0
+#       concept_vector_regularisation: False
+#       entropy_maximisation: False
+#       shared_critic: True
+
+
+#     - architecture: 'AdversarialConceptEmbeddingModel'
+#       run_name: "no_shared_critic"
+#       sigmoidal_prob: True
+#       training_intervention_prob: 0.25
+#       embedding_activation: "leakyrelu"
+#       cbm_learning_rate: 0.001
+#       concept_loss_weight: 0.1
+##       grid_variables: [ 'shared_critic' ]
+#       use_adversarial: True
+#       max_adversarial_lambda: 1
+#       adversarial_delay: 0
+#       adversarial_lambda_scheduler_warmup: None
+#       adversarial_scheduler: "none"
+#       adversarial_loss_type: 'gradient'
+#       n_critic_steps: 1
+#       accumulate_grad_batches: 1
+#       cbm_optimizer: adam
+#       adv_optimizer: adam
+#       max_epochs: 400
+#       patience: 400
+#       gradient_clip_val: 1.0
+#       concept_vector_regularisation: False
+#       entropy_maximisation: False
+#       shared_critic: False
+#
+  # CR-CBM:
+     - architecture: 'AdversarialConceptBottleneckModel'
+       run_name: "auto"
+       bool: False
+       extra_dims: 0
+       sigmoidal_prob: True
+       use_adversarial: True
+       max_adversarial_lambda:  1
+       adversarial_delay: 0
+       adversarial_lambda_scheduler_warmup: None
+       adversarial_scheduler: "none"
+       adversarial_loss_type: 'grl'
+       shared_critic: True
+       n_critic_steps: 1
+       accumulate_grad_batches: 1
+       cbm_optimizer: adam
+       adv_optimizer: adam
+       max_epochs: 300
+       cbm_learning_rate: 0.05
+       grid_variables: ['concept_loss_weight']
+       concept_loss_weight: [0.1, 0.5, 1]
+       early_stopping_monitor: val_pareto_score
+       early_stopping_mode: max
+       early_stopping_delta: 0.0
+       patience: 400
+       gradient_clip_val: 1.0
 
 
 
