@@ -30,7 +30,7 @@ export MKL_NUM_THREADS=$NSLOTS
 # --- 3. PATHS ---
 PROJECT_ROOT=~/Scratch/xai-crcbm
 #CHANGE FOR EACH DATASET
-FINAL_RESULTS_DIR=$PROJECT_ROOT/results/cub_CEM
+FINAL_RESULTS_DIR=$PROJECT_ROOT/results/cub_acbm_shared_critic
 DATASET_TAR="CUB200.tar"
 
 

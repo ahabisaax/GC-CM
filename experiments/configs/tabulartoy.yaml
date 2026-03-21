@@ -193,9 +193,9 @@ runs:
        cbm_optimizer: adam
        adv_optimizer: adam
        max_epochs: 300
-       cbm_learning_rate: 0.01
-       grid_variables: ['concept_loss_weight']
-       concept_loss_weight: [0.1, 0.5, 1]
+       cbm_learning_rate: [0.001, 0.005]
+       grid_variables: ['cbm_learning_rate']
+       concept_loss_weight: 0.1
        early_stopping_monitor: val_pareto_score
        early_stopping_mode: max
        early_stopping_delta: 0.0
