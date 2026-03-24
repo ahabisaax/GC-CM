@@ -1,5 +1,5 @@
 trials: 5
-results_dir: results/tabulartoy_25_10k_models_acbm_shared_critic/
+results_dir: results/tabulartoy_25_10k_models_sequential_cbm/
 
 shared_params:
   # Dataset Configuration
@@ -175,32 +175,42 @@ runs:
 #       entropy_maximisation: False
 #       shared_critic: False
 #
+# Sequential CBM:
+  - architecture: "SequentialConceptBottleneckModel"
+    run_name: "Sequential CBM"
+    concept_loss_weight: 1
+    sigmoidal_prob: true
+    sigmoidal_extra_capacity: false
+    c2y_layers: []
+    patience: 350
+    gradient_clip_val: 1.0
+
   # CR-CBM:
-     - architecture: 'AdversarialConceptBottleneckModel'
-       run_name: "auto"
-       bool: False
-       extra_dims: 0
-       sigmoidal_prob: True
-       use_adversarial: True
-       max_adversarial_lambda:  1
-       adversarial_delay: 0
-       adversarial_lambda_scheduler_warmup: None
-       adversarial_scheduler: "none"
-       adversarial_loss_type: 'grl'
-       shared_critic: True
-       n_critic_steps: 1
-       accumulate_grad_batches: 1
-       cbm_optimizer: adam
-       adv_optimizer: adam
-       max_epochs: 300
-       cbm_learning_rate: [0.001, 0.005]
-       grid_variables: ['cbm_learning_rate']
-       concept_loss_weight: 0.1
-       early_stopping_monitor: val_pareto_score
-       early_stopping_mode: max
-       early_stopping_delta: 0.0
-       patience: 400
-       gradient_clip_val: 1.0
+#     - architecture: 'AdversarialConceptBottleneckModel'
+#       run_name: "auto"
+#       bool: False
+#       extra_dims: 0
+#       sigmoidal_prob: True
+#       use_adversarial: True
+#       max_adversarial_lambda:  1
+#       adversarial_delay: 0
+#       adversarial_lambda_scheduler_warmup: None
+#       adversarial_scheduler: "none"
+#       adversarial_loss_type: 'grl'
+#       shared_critic: True
+#       n_critic_steps: 1
+#       accumulate_grad_batches: 1
+#       cbm_optimizer: adam
+#       adv_optimizer: adam
+#       max_epochs: 300
+#       cbm_learning_rate: [0.001, 0.005]
+#       grid_variables: ['cbm_learning_rate']
+#       concept_loss_weight: 0.1
+#       early_stopping_monitor: val_pareto_score
+#       early_stopping_mode: max
+#       early_stopping_delta: 0.0
+#       patience: 400
+#       gradient_clip_val: 1.0
 
 
 
