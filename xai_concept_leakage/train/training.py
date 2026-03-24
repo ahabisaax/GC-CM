@@ -688,7 +688,7 @@ def train_sequential_model(
             accelerator=accelerator,
             devices=devices,
             # We will distribute half epochs in one model and half on the other
-            max_epochs=config["max_epochs"],
+            max_epochs=config.get("max_epochs", 200),
             check_val_every_n_epoch=config.get("check_val_every_n_epoch", 5),
             callbacks=[
                 EarlyStopping(

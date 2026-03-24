@@ -116,8 +116,11 @@ runs:
     cbm_learning_rate: 0.0001
     cbm_optimizer: adam
     c2y_layers: []
+    max_epochs: 200
     patience: 350
     gradient_clip_val: 1.0
+    early_stopping_monitor: 'val_y_accuracy'
+    early_stopping_mode: max
 
 # CR-CBM:
   - architecture: 'AdversarialConceptBottleneckModel'

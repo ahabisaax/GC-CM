@@ -182,6 +182,7 @@ runs:
     sigmoidal_prob: true
     sigmoidal_extra_capacity: false
     c2y_layers: []
+    cbm_optimizer: adam
     patience: 350
     gradient_clip_val: 1.0
 
