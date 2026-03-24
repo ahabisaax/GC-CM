@@ -177,7 +177,7 @@ runs:
 #
 # Sequential CBM:
   - architecture: "SequentialConceptBottleneckModel"
-    run_name: "Sequential CBM"
+    run_name: "auto"
     concept_loss_weight: 1
     sigmoidal_prob: true
     sigmoidal_extra_capacity: false
