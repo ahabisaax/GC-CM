@@ -692,11 +692,12 @@ def train_sequential_model(
             check_val_every_n_epoch=config.get("check_val_every_n_epoch", 5),
             callbacks=[
                 EarlyStopping(
-                    monitor=config["early_stopping_monitor"],
+                    # x2c phase: monitor concept accuracy, not task accuracy
+                    monitor="val_c_accuracy",
                     min_delta=config.get("early_stopping_delta", 0.00),
                     patience=config["patience"],
                     verbose=config.get("verbose", False),
-                    mode=config["early_stopping_mode"],
+                    mode="max",
                 ),
             ],
             # Only use the wandb logger when it is a fresh run
@@ -762,9 +763,15 @@ def train_sequential_model(
             training_time += time.time() - start_time
             num_epochs += x2c_trainer.current_epoch
             if val_dl is not None:
+                _eval_trainer = pl.Trainer(
+                    accelerator=accelerator,
+                    devices=devices,
+                    logger=False,
+                    enable_checkpointing=False,
+                )
                 print(
                     "Validation results for x2c model:",
-                    x2c_trainer.test(model, val_dl),
+                    _eval_trainer.test(model, val_dl),
                 )
 
             print("[Constructing dataset for sequential concept to label model]")
@@ -921,15 +928,22 @@ def train_sequential_model(
                     np.array([seq_training_time, seq_num_epochs]),
                 )
 
+    eval_trainer = pl.Trainer(
+        accelerator=accelerator,
+        devices=devices,
+        logger=False,
+        enable_checkpointing=False,
+    )
     eval_results = _evaluate_cbm(
-        model=model,
-        trainer=trainer,
+        model=seq_model,
+        trainer=eval_trainer,
         config=config,
         run_name=run_name,
         old_results=old_results,
         rerun=rerun,
         test_dl=test_dl,
         val_dl=val_dl,
+        best_model=False,
     )
     eval_results["training_time"] = training_time
     eval_results["num_epochs"] = num_epochs
@@ -1187,9 +1201,15 @@ def train_independent_model(
             training_time += time.time() - start_time
             num_epochs += x2c_trainer.current_epoch
             if val_dl is not None:
+                _eval_trainer = pl.Trainer(
+                    accelerator=accelerator,
+                    devices=devices,
+                    logger=False,
+                    enable_checkpointing=False,
+                )
                 print(
                     "Validation results for x2c model:",
-                    x2c_trainer.test(model, val_dl),
+                    _eval_trainer.test(model, val_dl),
                 )
             save_path_monitoring = os.path.join(result_dir, f"{full_run_name}")
             utils.save_train_val_scores_n_losses_indep(
