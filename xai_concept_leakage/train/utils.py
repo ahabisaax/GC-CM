@@ -85,7 +85,7 @@ class LossTracker(Callback):
     def __init__(self,
                  compute_mi_mode='cpu',
                  black_box=False,
-                 track_leakage=True, check_leakage=25,
+                 track_leakage=True, check_leakage=5,
                  every_n_check_val=1):
         super().__init__()
         self.black_box = black_box
