@@ -928,25 +928,43 @@ def train_sequential_model(
                     np.array([seq_training_time, seq_num_epochs]),
                 )
 
-    eval_trainer = pl.Trainer(
-        accelerator=accelerator,
-        devices=devices,
-        logger=False,
-        enable_checkpointing=False,
-    )
-    eval_results = _evaluate_cbm(
-        model=seq_model,
-        trainer=eval_trainer,
-        config=config,
-        run_name=run_name,
-        old_results=old_results,
-        rerun=rerun,
-        test_dl=test_dl,
-        val_dl=val_dl,
-        best_model=False,
-    )
-    eval_results["training_time"] = training_time
-    eval_results["num_epochs"] = num_epochs
+        eval_trainer = pl.Trainer(
+            accelerator=accelerator,
+            devices=devices,
+            logger=False,
+            enable_checkpointing=False,
+        )
+        eval_results = _evaluate_cbm(
+            model=seq_model,
+            trainer=eval_trainer,
+            config=config,
+            run_name=run_name,
+            old_results=old_results,
+            rerun=rerun,
+            test_dl=test_dl,
+            val_dl=val_dl,
+            best_model=False,
+        )
+        eval_results["training_time"] = training_time
+        eval_results["num_epochs"] = num_epochs
+
+        # PL's WandbLogger closes the run after fit(), so we re-open it here
+        # to log the final evaluation metrics (CTL, ICL, accuracies).
+        if project_name and result_dir:
+            try:
+                import wandb as wandb_lib
+                with wandb_lib.init(
+                    project=project_name,
+                    name=full_run_name,
+                    config=config,
+                    reinit=True,
+                ):
+                    wandb_lib.log(
+                        {k: v for k, v in eval_results.items()
+                         if isinstance(v, (int, float, np.floating))}
+                    )
+            except Exception as e:
+                logging.warning(f"Failed to log eval results to W&B: {e}")
     if test_dl is not None:
         print(
             f'c_acc: {eval_results["test_acc_c"]*100:.2f}%, '

@@ -360,9 +360,9 @@ def construct_sequential_models(
     c2y_model = utils.WrapperModule(
         n_tasks=n_tasks,
         model=torch.nn.Sequential(*layers),
-        learning_rate=config["learning_rate"],
+        learning_rate=config.get("learning_rate_c2y", config["learning_rate"]),
         weight_decay=config["weight_decay"],
-        optimizer=config["cbm_optimizer"],
+        optimizer=config.get("optimizer_c2y", config["cbm_optimizer"]),
         top_k_accuracy=config.get("top_k_accuracy"),
         binary_output=False,
         sigmoidal_output=False,
