@@ -1,5 +1,5 @@
 results_dir: "results/cub_acbm_shared_critic/"
-trials: 1
+trials: 5
 
 shared_params:
   model_selection_trials: 3
