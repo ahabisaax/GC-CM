@@ -1,5 +1,5 @@
-results_dir: "results/cub_acbm_shared_critic/"
-trials: 5
+results_dir: "results/cub_cem_test/"
+trials: 1
 
 shared_params:
   model_selection_trials: 3
@@ -158,19 +158,19 @@ runs:
 #    embedding_activation: "leakyrelu"
 #    sigmoidal_extra_capacity: false
 #
-  - architecture: 'SequentialConceptBottleneckModel'
-    run_name: "auto"
-    concept_loss_weight: 1
-    sigmoidal_prob: true
-    sigmoidal_extra_capacity: false
-    cbm_learning_rate: 0.0001
-    learning_rate_c2y: 0.0001
-    cbm_optimizer: adam
-    max_epochs: 200
-    patience: 350
-    gradient_clip_val: 1.0
-    early_stopping_monitor: 'val_y_accuracy'
-    early_stopping_mode: max
+#  - architecture: 'SequentialConceptBottleneckModel'
+#    run_name: "auto"
+#    concept_loss_weight: 1
+#    sigmoidal_prob: true
+#    sigmoidal_extra_capacity: false
+#    cbm_learning_rate: 0.0001
+#    learning_rate_c2y: 0.0001
+#    cbm_optimizer: adam
+#    max_epochs: 200
+#    patience: 350
+#    gradient_clip_val: 1.0
+#    early_stopping_monitor: 'val_y_accuracy'
+#    early_stopping_mode: max
 #
 #  - architecture: "IndependentConceptBottleneckModel"
 #    run_name: "Independent CBM"
@@ -330,3 +330,21 @@ runs:
 #       gradient_clip_val: 1.0
 #       patience: 200
 #       max_epochs: 300
+
+  - architecture: 'ConceptEmbeddingModel'
+    run_name: "auto"
+    sigmoidal_prob: True
+    training_intervention_prob: 0.25
+    embedding_activation: "leakyrelu"
+    learning_rate: [0.0001, 0.00025, 0.0005, 0.001, 0.005]
+    concept_loss_weight: 0.1
+    grid_variables: ['learning_rate']
+    accumulate_grad_batches: 1
+    cbm_optimizer: adam
+    max_epochs: 300
+    patience: 400
+    gradient_clip_val: 1.0
+    emb_size: 16
+    early_stopping_monitor: 'val_y_accuracy'
+    early_stopping_mode: max
+    early_stopping_delta: 0.0
