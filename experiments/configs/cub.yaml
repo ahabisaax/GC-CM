@@ -337,7 +337,7 @@ runs:
     training_intervention_prob: 0
     embedding_activation: "leakyrelu"
     learning_rate: 0.001
-    concept_loss_weight: 0.5
+    concept_loss_weight: 1
 #    grid_variables: ['concept_loss_weight']
     accumulate_grad_batches: 1
     cbm_optimizer: adam
