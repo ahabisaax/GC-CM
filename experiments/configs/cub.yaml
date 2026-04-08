@@ -1,5 +1,5 @@
 results_dir: "results/cub_cem/"
-trials: 1
+trials: 5
 
 shared_params:
   model_selection_trials: 3
@@ -355,8 +355,7 @@ runs:
     training_intervention_prob: 0
     embedding_activation: "leakyrelu"
     concept_loss_weight: 0.1
-    cbm_learning_rate: [0.00001, 0.0001, 0.0005]
-    grid_variables: ['cbm_learning_rate']
+    cbm_learning_rate: 0.0005
     use_adversarial: True
     max_adversarial_lambda: 1
     adversarial_delay: 0
