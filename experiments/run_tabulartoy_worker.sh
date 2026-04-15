@@ -3,7 +3,7 @@
 #$ -o ~/Scratch/xai-crcbm/logs/ttoy_$JOB_ID.out
 #$ -e ~/Scratch/xai-crcbm/logs/ttoy_$JOB_ID.err
 #$ -pe smp 8
-#$ -l h_rt=02:00:00
+#$ -l h_rt=05:00:00
 #$ -l mem=8G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
@@ -30,7 +30,7 @@ export MKL_NUM_THREADS=$NSLOTS
 # --- 3. PATHS ---
 PROJECT_ROOT=~/Scratch/xai-crcbm
 #CHANGE FOR EACH DATASET
-RESULTS_DIR=$PROJECT_ROOT/results/tabulartoy_25_10k_models_acbm_shared_critic
+RESULTS_DIR=$PROJECT_ROOT/results/tabulartoy_25_10k_models_acem_shared_critic
 CONFIG_PATH=$PROJECT_ROOT/experiments/configs/tabulartoy.yaml
 
 export PYTHONPATH=$PROJECT_ROOT:$PYTHONPATH
