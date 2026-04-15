@@ -3,7 +3,7 @@
 #$ -o ~/Scratch/xai-crcbm/logs/dsprites_$JOB_ID.out
 #$ -e ~/Scratch/xai-crcbm/logs/dsprites_$JOB_ID.err
 #$ -pe smp 8
-#$ -l h_rt=24:00:00
+#$ -l h_rt= 07:30:00
 #$ -l mem=8G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
@@ -30,7 +30,7 @@ export MKL_NUM_THREADS=$NSLOTS
 # --- 3. PATHS ---
 PROJECT_ROOT=~/Scratch/xai-crcbm
 #CHANGE FOR EACH DATASET
-RESULTS_DIR=$PROJECT_ROOT/results/dsprites_acem_shared_critic
+RESULTS_DIR=$PROJECT_ROOT/results/dsprites_cem
 CONFIG_PATH=$PROJECT_ROOT/experiments/configs/dsprites.yaml
 
 export PYTHONPATH=$PROJECT_ROOT:$PYTHONPATH
