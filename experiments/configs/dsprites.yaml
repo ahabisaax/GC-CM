@@ -160,7 +160,7 @@ runs:
        grid_variables: ['concept_loss_weight']
        cbm_optimizer: adam
        patience: 400
-       cbm_learning_rate: 0.01
+       cbm_learning_rate: 0.001
        max_epochs: 100
        early_stopping_monitor: 'val_y_accuracy'
        early_stopping_mode: max
