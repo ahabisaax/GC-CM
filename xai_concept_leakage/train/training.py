@@ -93,12 +93,9 @@ def _evaluate_cbm(
             f"{dl_name}_auc_y",
             f"{dl_name}_f1_c",
             f"{dl_name}_f1_y",
-            f'{dl_name}_ctl_average',
-            f'{dl_name}_icl_average',
             f'{dl_name}_normalised_ctl',
             f'{dl_name}_normalised_icl',
-            f'{dl_name}_icl_task',
-            f'{dl_name}_icl_cmi'
+            f'{dl_name}_icl_input_avg_nats',
         ]
         if "top_k_accuracy" in config:
             top_k_args = config["top_k_accuracy"]
