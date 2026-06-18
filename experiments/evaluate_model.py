@@ -11,6 +11,8 @@ from sklearn.decomposition import PCA
 
 import torch
 from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.neural_network import MLPClassifier
+from sklearn.cross_decomposition import CCA
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
@@ -32,6 +34,7 @@ from xai_concept_leakage.metrics.mutual_information import (
     estimate_MI_concepts_task,
     repeat_estimate_MI_interconcept,
     repeat_estimate_MI_concepts_task,
+    compute_mi_matrix_parallel,
 )
 
 from experiments.experiment_utils import (
@@ -673,7 +676,7 @@ def compute_ois_nis_cas(
             run_name=run_config["run_name"],
             split=run_config["split"],
             imbalance=run_config.get("loss_concept.weight"),
-            result_dir=run_config["result_dir"],
+            result_dir=run_config.get("result_dir", os.path.dirname(model_path)),
             task_class_weights=run_config.get("loss_task.weight"),
             alternative_loading=True,
             train_dl=train_dl,
@@ -772,7 +775,7 @@ def run_interventions(
         n_tasks=run_config["n_tasks"],
         n_concepts=run_config["n_concepts"],
         acquisition_costs=None,
-        result_dir=run_config["result_dir"],
+        result_dir=run_config.get("result_dir", os.path.dirname(model_path)),
         concept_map=run_config["concept_map"],
         intervened_groups=intervened_groups,
         accelerator="auto",
@@ -900,7 +903,7 @@ def extract_y_acc_interventions_from_output(model_name, test_results, policies):
     return out
 
 
-def plot_pca_structure(data, y_true, save_path, title="PCA Structure by Task Label"):
+def plot_pca_structure(data, y_true, save_path=None, title="PCA Structure by Task Label"):
     """
     Plots the 2D PCA of 'data' (e.g., c_sem or c_pred), colored by 'y_true'.
 
@@ -925,40 +928,231 @@ def plot_pca_structure(data, y_true, save_path, title="PCA Structure by Task Lab
     if len(X.shape) > 2:
         X = X.reshape(X.shape[0], -1)
 
-    n_components = min(2, X.shape[1])
+    n_components = min(5, X.shape[1])
     pca = PCA(n_components=n_components)
     X_pca = pca.fit_transform(X)
-    reg_pc1 = LinearRegression().fit(X_pca[:, 0].reshape(-1, 1), y)
-    r2_pc1 = reg_pc1.score(X_pca[:, 0].reshape(-1, 1), y)
 
-    reg_plane = LinearRegression().fit(X_pca[:, :2], y)
-    r2_pc1_pc2 = reg_plane.score(X_pca[:, :2], y)
+    # R² for k=1..n_components (cumulative top-k PCs)
+    r2_per_k = []
+    for k in range(1, n_components + 1):
+        r2 = LinearRegression().fit(X_pca[:, :k], y).score(X_pca[:, :k], y)
+        r2_per_k.append(r2)
 
-    plt.figure(figsize=(10, 7))
+    # Keep named scalars for backward compatibility
+    r2_pc1     = r2_per_k[0]
+    r2_pc1_pc2 = r2_per_k[1] if n_components >= 2 else r2_per_k[0]
 
-    n_classes = len(np.unique(y))
-    palette = sns.color_palette("tab10", n_classes) if n_classes <= 10 else "viridis"
+    if save_path is not None:
+        plt.figure(figsize=(10, 7))
+        n_classes = len(np.unique(y))
+        palette = sns.color_palette("tab10", n_classes) if n_classes <= 10 else "viridis"
+        sns.scatterplot(
+            x=X_pca[:, 0],
+            y=X_pca[:, 1] if n_components > 1 else np.zeros_like(X_pca[:, 0]),
+            hue=y,
+            palette=palette,
+            alpha=0.7,
+            s=60,
+            legend='full'
+        )
+        plt.title(title, fontsize=15, fontweight='bold')
+        plt.xlabel(f"PC 1 ({pca.explained_variance_ratio_[0]:.1%} var)")
+        if n_components > 1:
+            plt.ylabel(f"PC 2 ({pca.explained_variance_ratio_[1]:.1%} var)")
+        plt.legend(title="Task Label (y)", bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.grid(True, linestyle='--', alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.close()
 
-    sns.scatterplot(
-        x=X_pca[:, 0],
-        y=X_pca[:, 1],
-        hue=y,
-        palette=palette,
-        alpha=0.7,
-        s=60,
-        legend='full'
+    return r2_pc1, r2_pc1_pc2, r2_per_k
+
+##################################################################################################
+### Advanced CEM probe suite: MLP probes, spectral leakage, entanglement matrix, CCA
+##################################################################################################
+
+def _make_mlp(emb_size):
+    """2-layer MLP classifier with hidden dim = 2 * emb_size."""
+    h = 2 * emb_size
+    return MLPClassifier(
+        hidden_layer_sizes=(h, h),
+        max_iter=500,
+        random_state=42,
+        early_stopping=True,
+        validation_fraction=0.1,
+        n_iter_no_change=10,
     )
 
-    plt.title(title, fontsize=15, fontweight='bold')
-    plt.xlabel(f"PC 1 ({pca.explained_variance_ratio_[0]:.1%} var)")
-    if n_components > 1:
-        plt.ylabel(f"PC 2 ({pca.explained_variance_ratio_[1]:.1%} var)")
 
-    plt.legend(title="Task Label (y)", bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.grid(True, linestyle='--', alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    return r2_pc1, r2_pc1_pc2
+def compute_mlp_fidelity_leakage(
+    z_train, z_test, c_train, c_test, y_train, y_test, n_concepts, emb_size
+):
+    """
+    For each concept slot e_i fit linear and MLP probes predicting:
+      - Fidelity : ground-truth concept c_i  (expect high for both CEM and ACEM)
+      - Leakage  : task label y              (expect high CEM, near-baseline ACEM)
+    Same MLP architecture for both probes (2 * emb_size hidden units, 2 layers).
+    Returns per-concept lists and means for all four combinations.
+    """
+    z_tr = z_train.reshape(-1, n_concepts, emb_size)
+    z_te = z_test.reshape(-1, n_concepts, emb_size)
+
+    lin_fid, mlp_fid = [], []
+    lin_leak, mlp_leak = [], []
+
+    for i_c in range(n_concepts):
+        z_i_tr, z_i_te = z_tr[:, i_c, :], z_te[:, i_c, :]
+
+        lr_f = LogisticRegression(max_iter=1000, random_state=42, C=1.0)
+        lr_f.fit(z_i_tr, c_train[:, i_c])
+        lin_fid.append(lr_f.score(z_i_te, c_test[:, i_c]))
+
+        mlp_f = _make_mlp(emb_size)
+        mlp_f.fit(z_i_tr, c_train[:, i_c])
+        mlp_fid.append(mlp_f.score(z_i_te, c_test[:, i_c]))
+
+        lr_l = LogisticRegression(max_iter=1000, random_state=42, C=1.0)
+        lr_l.fit(z_i_tr, y_train)
+        lin_leak.append(lr_l.score(z_i_te, y_test))
+
+        mlp_l = _make_mlp(emb_size)
+        mlp_l.fit(z_i_tr, y_train)
+        mlp_leak.append(mlp_l.score(z_i_te, y_test))
+
+    return {
+        "linear_fidelity_per_concept": lin_fid,
+        "linear_fidelity_mean": float(np.mean(lin_fid)),
+        "mlp_fidelity_per_concept": mlp_fid,
+        "mlp_fidelity_mean": float(np.mean(mlp_fid)),
+        "linear_leakage_per_concept": lin_leak,
+        "linear_leakage_mean": float(np.mean(lin_leak)),
+        "mlp_leakage_per_concept": mlp_leak,
+        "mlp_leakage_mean": float(np.mean(mlp_leak)),
+    }
+
+
+def compute_spectral_task_leakage(
+    z_train, z_test, y_train, y_test, n_concepts, emb_size, cap=20
+):
+    """
+    Spectral task-leakage test on the fully merged concept embedding.
+    PCA is fit on the concatenated embedding (n_concepts * emb_size dims).
+    For k = 1..n_concepts*emb_size, trains a logistic regression on top-k PCs to predict y.
+    Success condition for ACEM: accuracy curve stays flat regardless of k.
+    """
+    total_dim = n_concepts * emb_size
+    n_components = min(total_dim, cap * emb_size)
+
+    z_tr = z_train.reshape(-1, total_dim)
+    z_te = z_test.reshape(-1, total_dim)
+
+    pca = PCA(n_components=n_components)
+    z_tr_pca = pca.fit_transform(z_tr)
+    z_te_pca = pca.transform(z_te)
+    cumvar = np.cumsum(pca.explained_variance_ratio_).tolist()
+
+    accs_k = []
+    for k in range(1, n_components + 1):
+        clf = LogisticRegression(max_iter=1000, random_state=42, C=1.0)
+        clf.fit(z_tr_pca[:, :k], y_train)
+        accs_k.append(float(clf.score(z_te_pca[:, :k], y_test)))
+
+    return {
+        "spectral_accs_per_concept": [accs_k],        # kept for backward compat
+        "spectral_varexp_per_concept": [cumvar],
+        "spectral_accs_mean_per_k": accs_k,
+        "spectral_varexp_mean_per_k": cumvar,
+        "spectral_concept_indices": list(range(n_components)),
+    }
+
+
+def compute_entanglement_matrix(
+    z_train, z_test, c_train, c_test, n_concepts, emb_size, cap=20
+):
+    """
+    K×K information matrix: cell (i, j) = accuracy of probe using slot e_i to predict c_j.
+    Uses both linear and MLP probes with the same architecture.
+    Capped at min(n_concepts, cap) concepts for tractability.
+    Success condition: near-diagonal matrix (high diagonal, near-chance off-diagonal).
+    """
+    n_eval = min(n_concepts, cap)
+    rng = np.random.RandomState(1)
+    concept_indices = (
+        sorted(rng.choice(n_concepts, n_eval, replace=False).tolist())
+        if n_concepts > cap else list(range(n_concepts))
+    )
+
+    z_tr = z_train.reshape(-1, n_concepts, emb_size)
+    z_te = z_test.reshape(-1, n_concepts, emb_size)
+
+    mat_lin = np.zeros((n_eval, n_eval))
+    mat_mlp = np.zeros((n_eval, n_eval))
+
+    for ii, i_c in enumerate(concept_indices):
+        z_i_tr, z_i_te = z_tr[:, i_c, :], z_te[:, i_c, :]
+        for jj, j_c in enumerate(concept_indices):
+            c_j_tr, c_j_te = c_train[:, j_c], c_test[:, j_c]
+
+            lr = LogisticRegression(max_iter=1000, random_state=42, C=1.0)
+            lr.fit(z_i_tr, c_j_tr)
+            mat_lin[ii, jj] = lr.score(z_i_te, c_j_te)
+
+            mlp = _make_mlp(emb_size)
+            mlp.fit(z_i_tr, c_j_tr)
+            mat_mlp[ii, jj] = mlp.score(z_i_te, c_j_te)
+
+    diag_mask = np.eye(n_eval, dtype=bool)
+    offdiag_mask = ~diag_mask
+
+    return {
+        "entanglement_linear": mat_lin.tolist(),
+        "entanglement_mlp": mat_mlp.tolist(),
+        "entanglement_linear_diag_mean": float(mat_lin[diag_mask].mean()),
+        "entanglement_linear_offdiag_mean": float(mat_lin[offdiag_mask].mean()),
+        "entanglement_mlp_diag_mean": float(mat_mlp[diag_mask].mean()),
+        "entanglement_mlp_offdiag_mean": float(mat_mlp[offdiag_mask].mean()),
+        "entanglement_concept_indices": concept_indices,
+    }
+
+
+def compute_cca_embedding_logits(z, logits, n_train, prereduce_threshold=500):
+    """
+    Mean canonical correlation between embedding space E and task logits L.
+    If embedding dimensionality > prereduce_threshold, apply PCA first to ensure
+    the covariance matrix is full-rank and CCA is numerically stable.
+    Returns per-component correlations and mean absolute correlation.
+    """
+    def _to_np(x):
+        return x.cpu().numpy() if isinstance(x, torch.Tensor) else np.asarray(x)
+
+    Z = _to_np(z)
+    L = _to_np(logits)
+    if Z.ndim > 2:
+        Z = Z.reshape(Z.shape[0], -1)
+
+    if Z.shape[1] > prereduce_threshold:
+        n_comp_z = min(100, n_train // 20, Z.shape[1])
+        Z = PCA(n_components=n_comp_z).fit_transform(Z)
+    if L.shape[1] > 50:
+        L = PCA(n_components=min(50, L.shape[1])).fit_transform(L)
+
+    n_components = min(Z.shape[1], L.shape[1])
+    cca = CCA(n_components=n_components, max_iter=500)
+    try:
+        cca.fit(Z[:n_train], L[:n_train])
+        Z_c, L_c = cca.transform(Z, L)
+        corrs = [float(np.corrcoef(Z_c[:, i], L_c[:, i])[0, 1]) for i in range(n_components)]
+        mean_corr = float(np.mean(np.abs(corrs)))
+    except Exception as e:
+        print(f"  CCA failed: {e}")
+        corrs = []
+        mean_corr = float("nan")
+
+    return {
+        "cca_correlations": corrs,
+        "cca_mean_abs": mean_corr,
+    }
+
 
 ##################################################################################################
 ### Master results dictionary and single score extraction functions:
@@ -985,7 +1179,9 @@ def evaluate_CBM(
     concepts_task_repeats=1,
     rerun=True,
     save_path=None,
-    config_path = None
+    config_path=None,
+    pca_dir="pca_plots",
+    mi_concept_cap=None,
 ):
     """
     Master function to evaluate a list of CBM or CEM models in a folder, identified by their checkpoint names.
@@ -1032,11 +1228,22 @@ def evaluate_CBM(
         ]
     results = {}
 
-    for checkpoint_name in checkpoint_names:
-        print(checkpoint_name)
+    n_total = len(checkpoint_names)
+    for cp_idx, checkpoint_name in enumerate(checkpoint_names, 1):
+        print(f"\n[{cp_idx}/{n_total}] {checkpoint_name}", flush=True)
         checkpoint_path = results_folder + checkpoint_name
+
+        # Cache check: if rerun=False and per-checkpoint dict exists, skip expensive eval
+        results_model_save_path = results_folder + checkpoint_name.split('.pt')[0] + ".dict"
+        if not rerun and Path(results_model_save_path).is_file():
+            print(f"  [cache] Skipping — already evaluated.", flush=True)
+            cached = joblib.load(results_model_save_path)
+            merge(results, {checkpoint_name: cached})
+            continue
         if 'CRCEM' in checkpoint_path:
             model_type = 'CRCEM'
+        elif 'ACEM' in checkpoint_path:
+            model_type = 'ACEM'
         elif 'CEM' in checkpoint_path:
             model_type = 'CEM'
         elif 'Hard' in checkpoint_path:
@@ -1046,12 +1253,12 @@ def evaluate_CBM(
 
         match = re.search(r'lam_c([\d\.]+)', checkpoint_path)
         lambda_val = float(match.group(1))
-        print(f'lambda_val :{lambda_val}')
-        print(model_type)
+        print(f"  model_type={model_type}, lambda_c={lambda_val}", flush=True)
 
         results_model = {}
         # Accuracies:
         if "accuracies" in list_observables:
+            print("  -> computing accuracies...", flush=True)
             acc_dict = compute_concept_task_accuracies(
                 checkpoint_path,
                 x2c_extractor,
@@ -1061,6 +1268,7 @@ def evaluate_CBM(
 
         # OIS, NIS, CAS scores:
         if any(x in list_observables for x in ["ois", "nis", "cas"]):
+            print("  -> computing OIS/NIS...", flush=True)
             ois_nis_scores_dict = compute_ois_nis_cas(
                 checkpoint_path,
                 test_dl,
@@ -1102,6 +1310,7 @@ def evaluate_CBM(
 
         # Interconcept and concepts-task leakage scores:
         if "leakage_scores" in list_observables:
+            print("  -> computing leakage scores (MI estimation — slow)...", flush=True)
             # We don't compute the true scores once and for all folds, as we want to capture the stochasticity
             # in the MI score estimation for the ground-truth too.
             ICL_ij_tril = [
@@ -1150,7 +1359,8 @@ def evaluate_CBM(
             merge(results_model, {test_dl_label: leakage_scores_dict})
 
         # Leakage scores for CEMs:
-        if (model_type in ["CEM", 'CRCEM']) and ("CEM_leakage_scores" in list_observables):
+        if (model_type in ["CEM", 'CRCEM', 'ACEM']) and ("CEM_leakage_scores" in list_observables):
+            print("  -> computing CEM leakage scores (PCA, probes, MI — slow)...", flush=True)
             c_sem, c_pred, c_true, y_pred, y_true, c_pos, c_neg = predict_c_y(
                 dl=test_dl,
                 model_path=checkpoint_path,
@@ -1161,8 +1371,71 @@ def evaluate_CBM(
                 config_path=config_path
             )
 
+            # Concept subset for MI (fast-path: parallel KSG on scalar c_pred)
+            c_pred_np = c_pred.cpu().numpy() if torch.is_tensor(c_pred) else np.asarray(c_pred)
+            y_np = y_true.cpu().numpy().ravel() if torch.is_tensor(y_true) else np.asarray(y_true).ravel()
+            rng_mi = np.random.RandomState(42)
+            if mi_concept_cap is not None and n_concepts > mi_concept_cap:
+                mi_idx = sorted(rng_mi.choice(n_concepts, mi_concept_cap, replace=False).tolist())
+                print(f"  MI capped at {mi_concept_cap}/{n_concepts} concepts (indices {mi_idx[:5]}...)", flush=True)
+            else:
+                mi_idx = list(range(n_concepts))
+            n_mi = len(mi_idx)
+            c_pred_mi = c_pred_np[:, mi_idx]  # (N, n_mi) scalar probabilities
+
+            # Fast parallel ICL + CTL on scalar concept probabilities
+            print("  Running fast parallel ICL/CTL (c_pred)...", flush=True)
+            icl_list, ctl_list = [], []
+            for _ in range(interconcept_repeats):
+                icl_mat = compute_mi_matrix_parallel(
+                    c_pred_mi, d=None, n_neighbors=3, n_jobs=32, normalise=True, flatten=False
+                )
+                icl_i = icl_mat.sum(axis=1) / (n_mi - 1)
+                icl_list.append(icl_i)
+            for _ in range(concepts_task_repeats):
+                ctl_vec = compute_mi_matrix_parallel(
+                    c_pred_mi, d=y_np, n_neighbors=3, n_jobs=32, normalise=True, flatten=False
+                )
+                ctl_list.append(ctl_vec)
+            merge(results_model, {test_dl_label: {
+                "fast_ICL_i": icl_list,
+                "fast_ICL": [float(v.mean()) for v in icl_list],
+                "fast_CTL_i": ctl_list,
+                "fast_CTL": [float(v.mean()) for v in ctl_list],
+                "mi_concept_indices": mi_idx,
+            }})
+            print(f"  fast_ICL={np.mean([v.mean() for v in icl_list]):.4f}  "
+                  f"fast_CTL={np.mean([v.mean() for v in ctl_list]):.4f}", flush=True)
+
+            # R² and PCA plots on full merged embedding — always computed regardless of mi_concept_cap
+            emb_size = int(c_sem.shape[1] / n_concepts)
+            title = f'PCA Structure of {model_type} with $\\lambda_c={lambda_val}$'
+            clean_title = title.translate(str.maketrans({' ': '_', '$': '', '\\': '', '=': ''}))
+            os.makedirs(pca_dir, exist_ok=True)
+            concept_vectors = c_sem.cpu().numpy() if hasattr(c_sem, 'cpu') else c_sem
+            print("  Computing R² on merged embedding...", flush=True)
+            r2_pc1, r2_pc1_pc2, r2_per_k = plot_pca_structure(
+                data=concept_vectors, y_true=y_true, title=title, save_path=None
+            )
+            merge(results_model, {test_dl_label: {
+                'R2_pca_1': r2_pc1,
+                'R2_plane': r2_pc1_pc2,
+                'r2_per_k': r2_per_k,
+            }})
+            print(f"  R²(k=1)={r2_pc1:.4f}  R²(k=5)={r2_per_k[-1]:.4f}", flush=True)
+            for idx in range(1, 6):
+                png_path = f"{pca_dir}/{clean_title}_run{idx}.png"
+                if not os.path.exists(png_path):
+                    plot_pca_structure(data=concept_vectors, y_true=y_true, title=title, save_path=png_path)
+                    print(f"  Saved PCA plot to {png_path}", flush=True)
+                    break
+
             # Compute interconcept and concepts-task MIs on predicted concept representations pos, neg, mix:
-            for suffix in ["mix", "pos", "neg"]:
+            # Skip the slow sequential per-embedding suffix loop when mi_concept_cap is set.
+            _mi_suffixes = [] if mi_concept_cap is not None else ["mix", "pos", "neg"]
+            if not _mi_suffixes:
+                print("  Skipping per-embedding MI suffix loop (mi_concept_cap set).", flush=True)
+            for suffix in _mi_suffixes:
                 ICL_ij_tril = compute_MI_score_CEM(
                     [c_sem, c_pred, c_true, y_pred, y_true, c_pos, c_neg],
                     score_type="interconcept",
@@ -1219,26 +1492,6 @@ def evaluate_CBM(
                 avg_diff = avg_unadjusted - avg_adjusted
                 print(f"  {suffix}: Unadjusted MI = {avg_unadjusted:.4f}, Adjusted MI = {avg_adjusted:.4f}, Avg Diff = {avg_diff:.4f}")
                 
-                if suffix == 'mix':
-                    emb_size = int(c_sem.shape[1]/n_concepts)
-                    c_sem_reshaped = c_sem.view(-1, n_concepts, emb_size)
-                    concept_vectors = c_sem_reshaped[:, 0, :]
-                    title = f'PCA Structure of {model_type} with with $\lambda_c={lambda_val}$'
-
-                    clean_title = title.translate(str.maketrans({' ': '_', '$': '', '\\': '', '=': ''}))
-                    base_filename = f"{clean_title}"
-
-                    # Check slots 1 through 4
-                    for idx in range(1, 5):
-                        png_path = f"{base_filename}_run{idx}.png"
-                        if not os.path.exists(png_path):
-                            r2_pc1, r2_pc1_pc2 = plot_pca_structure(data=concept_vectors, y_true=y_true, title=title, save_path=png_path)
-                            print(f"Saved to {png_path}")
-                            pca_dict = {
-                                'R2_pca_1': r2_pc1,
-                                'R2_plane': r2_pc1_pc2}
-                            merge(results_model, {test_dl_label: pca_dict})
-                            break
 
                 leakage_scores_dict = {
                     "IC_MI_ij_tril" + "_" + suffix: ICL_ij_tril,
@@ -1253,52 +1506,56 @@ def evaluate_CBM(
                 merge(results_model, {test_dl_label: leakage_scores_dict})
 
             # Compute the MI between pos, neg and mix vectors and the true concept labels:
+            # Skip when mi_concept_cap is set (O(n_concepts^2), intractable for CUB).
             MI_cvec_cgt_dict = {}
-            out = estimate_MI_cvec_cgt(
-                c_pos,
-                c_true,
-                n_concepts,
-                repeats=concepts_task_repeats,
-                n_neighbors=n_neighbors,
-                normalise=normalise_leakage_scores,
-            )
-            MI_cvec_cgt_dict.update(
-                {
-                    "MI_pos_c_gt": out[0],
-                    "avg_self_MI_pos_c_gt": out[1],
-                    "avg_other_MI_pos_c_gt": out[2],
-                }
-            )
-            out = estimate_MI_cvec_cgt(
-                c_neg,
-                c_true,
-                n_concepts,
-                repeats=concepts_task_repeats,
-                n_neighbors=n_neighbors,
-                normalise=normalise_leakage_scores,
-            )
-            MI_cvec_cgt_dict.update(
-                {
-                    "MI_neg_c_gt": out[0],
-                    "avg_self_MI_neg_c_gt": out[1],
-                    "avg_other_MI_neg_c_gt": out[2],
-                }
-            )
-            out = estimate_MI_cvec_cgt(
-                c_sem,
-                c_true,
-                n_concepts,
-                repeats=concepts_task_repeats,
-                n_neighbors=n_neighbors,
-                normalise=normalise_leakage_scores,
-            )
-            MI_cvec_cgt_dict.update(
-                {
-                    "MI_mix_c_gt": out[0],
-                    "avg_self_MI_mix_c_gt": out[1],
-                    "avg_other_MI_mix_c_gt": out[2],
-                }
-            )
+            if mi_concept_cap is not None:
+                print("  Skipping estimate_MI_cvec_cgt (mi_concept_cap set).", flush=True)
+            else:
+                out = estimate_MI_cvec_cgt(
+                    c_pos,
+                    c_true,
+                    n_concepts,
+                    repeats=concepts_task_repeats,
+                    n_neighbors=n_neighbors,
+                    normalise=normalise_leakage_scores,
+                )
+                MI_cvec_cgt_dict.update(
+                    {
+                        "MI_pos_c_gt": out[0],
+                        "avg_self_MI_pos_c_gt": out[1],
+                        "avg_other_MI_pos_c_gt": out[2],
+                    }
+                )
+                out = estimate_MI_cvec_cgt(
+                    c_neg,
+                    c_true,
+                    n_concepts,
+                    repeats=concepts_task_repeats,
+                    n_neighbors=n_neighbors,
+                    normalise=normalise_leakage_scores,
+                )
+                MI_cvec_cgt_dict.update(
+                    {
+                        "MI_neg_c_gt": out[0],
+                        "avg_self_MI_neg_c_gt": out[1],
+                        "avg_other_MI_neg_c_gt": out[2],
+                    }
+                )
+                out = estimate_MI_cvec_cgt(
+                    c_sem,
+                    c_true,
+                    n_concepts,
+                    repeats=concepts_task_repeats,
+                    n_neighbors=n_neighbors,
+                    normalise=normalise_leakage_scores,
+                )
+                MI_cvec_cgt_dict.update(
+                    {
+                        "MI_mix_c_gt": out[0],
+                        "avg_self_MI_mix_c_gt": out[1],
+                        "avg_other_MI_mix_c_gt": out[2],
+                    }
+                )
             merge(results_model, {test_dl_label: MI_cvec_cgt_dict})
 
             # Linear probes: per-concept analysis with train/test split to prevent overfitting
@@ -1316,11 +1573,13 @@ def evaluate_CBM(
             y_labels_train = y_true_train.cpu().numpy().ravel() if torch.is_tensor(y_true_train) else y_true_train.ravel()
             c_labels_train = c_true_train.cpu().numpy() if torch.is_tensor(c_true_train) else c_true_train
             c_pred_train = c_pred_train.cpu().numpy() if torch.is_tensor(c_pred_train) else c_pred_train
+            y_pred_train = y_pred_train.cpu().numpy() if torch.is_tensor(y_pred_train) else y_pred_train
 
             z_mix_test = c_sem.cpu().numpy() if torch.is_tensor(c_sem) else c_sem
             y_labels_test = y_true.cpu().numpy().ravel() if torch.is_tensor(y_true) else y_true.ravel()
             c_labels_test = c_true.cpu().numpy() if torch.is_tensor(c_true) else c_true
             c_pred_test = c_pred.cpu().numpy() if torch.is_tensor(c_pred) else c_pred
+            y_pred_test = y_pred.cpu().numpy() if torch.is_tensor(y_pred) else y_pred
 
             emb_size = int(z_mix_train.shape[1] / n_concepts)
             z_mix_train_reshaped = z_mix_train.reshape(-1, n_concepts, emb_size)
@@ -1349,7 +1608,28 @@ def evaluate_CBM(
             linear_probe_hard.fit(c_train_hard, y_labels_train)
             binarised_concept_accuracy = linear_probe_hard.score(c_test_hard, y_labels_test)
 
-            
+            # Baseline: predict y from ground-truth concept labels c
+            # This is the accuracy ceiling — what you'd get if embeddings perfectly encoded concepts
+            gt_probe = LogisticRegression(max_iter=1000, random_state=42)
+            gt_probe.fit(c_labels_train, y_labels_train)
+            gt_concept_accuracy = gt_probe.score(c_labels_test, y_labels_test)
+
+            linear_probe_soft = LogisticRegression(max_iter=1000, random_state=42)
+            linear_probe_soft.fit(c_pred_train, y_labels_train)
+
+            concept_errors_mask = (c_pred_test.round() != c_labels_test).any(axis=1)
+            c_test_broken = c_pred_test[concept_errors_mask]
+            y_test_broken = y_labels_test[concept_errors_mask]
+            model_labels_all = np.argmax(y_pred_test, axis=1)
+            model_preds_broken = model_labels_all[concept_errors_mask]
+
+            probe_acc = linear_probe_soft.score(c_test_broken, y_test_broken)
+            model_acc = accuracy_score(y_test_broken, model_preds_broken)
+
+            print(f"Test Set Samples with Concept Errors: {len(y_test_broken)}")
+            print(f"Probe Accuracy (Honest Baseline): {probe_acc:.3f}")
+            print(f"Model Accuracy (Actual): {model_acc:.3f}")
+
             # Per-concept probe for concept prediction (self and others)
             linear_probe_c_self = []
             linear_probe_c_others_per_concept = []
@@ -1391,8 +1671,59 @@ def evaluate_CBM(
                 "linear_probe_c_others_per_concept": linear_probe_c_others_per_concept,
                 "linear_probe_c_others_avg": linear_probe_c_others_avg,
                 'linear_probe_y_all_concept': all_concepts_accuracy,
-                'linear_probe_binarised_concept': binarised_concept_accuracy}
+                'linear_probe_binarised_concept': binarised_concept_accuracy,
+                'linear_probe_gt_concept_y': gt_concept_accuracy,
+                'linear_probe_error_set': probe_acc,
+                'model_acc_error_set': model_acc}
             merge(results_model, {test_dl_label: linear_probe_dict})
+
+            # ---- MLP fidelity + leakage probes ----------------------------------------
+            print("  Running MLP fidelity/leakage probes...")
+            mlp_probe_dict = compute_mlp_fidelity_leakage(
+                z_mix_train, z_mix_test,
+                c_labels_train, c_labels_test,
+                y_labels_train, y_labels_test,
+                n_concepts, emb_size,
+            )
+            print(f"    MLP fidelity mean: {mlp_probe_dict['mlp_fidelity_mean']:.3f}  "
+                  f"MLP leakage mean: {mlp_probe_dict['mlp_leakage_mean']:.3f}")
+            merge(results_model, {test_dl_label: mlp_probe_dict})
+
+            # ---- Spectral task-leakage -------------------------------------------------
+            print("  Running spectral task-leakage test...")
+            spectral_dict = compute_spectral_task_leakage(
+                z_mix_train, z_mix_test,
+                y_labels_train, y_labels_test,
+                n_concepts, emb_size,
+                cap=20,
+            )
+            print(f"    Spectral: acc at k=1: {spectral_dict['spectral_accs_mean_per_k'][0]:.3f}  "
+                  f"acc at k={len(spectral_dict['spectral_accs_mean_per_k'])}: {spectral_dict['spectral_accs_mean_per_k'][-1]:.3f}", flush=True)
+            merge(results_model, {test_dl_label: spectral_dict})
+
+            # ---- Inter-concept entanglement matrix ------------------------------------
+            print("  Running entanglement matrix...")
+            entangle_dict = compute_entanglement_matrix(
+                z_mix_train, z_mix_test,
+                c_labels_train, c_labels_test,
+                n_concepts, emb_size,
+                cap=20,
+            )
+            print(f"    Entanglement (linear) diag: {entangle_dict['entanglement_linear_diag_mean']:.3f}  "
+                  f"off-diag: {entangle_dict['entanglement_linear_offdiag_mean']:.3f}")
+            print(f"    Entanglement (MLP)   diag: {entangle_dict['entanglement_mlp_diag_mean']:.3f}  "
+                  f"off-diag: {entangle_dict['entanglement_mlp_offdiag_mean']:.3f}")
+            merge(results_model, {test_dl_label: entangle_dict})
+
+            # ---- Canonical Correlation Analysis ---------------------------------------
+            print("  Running CCA...")
+            n_train_pts = len(y_labels_train)
+            cca_dict = compute_cca_embedding_logits(
+                z_mix_test, y_pred_test,
+                n_train=n_train_pts,
+            )
+            print(f"    CCA mean abs correlation: {cca_dict['cca_mean_abs']:.3f}")
+            merge(results_model, {test_dl_label: cca_dict})
 
             # Assess alignment leakage:
             aligned_unaligned_CTL_dict = (
@@ -1409,11 +1740,12 @@ def evaluate_CBM(
             merge(results_model, {test_dl_label: aligned_unaligned_CTL_dict})
 
         # Save single model results (or update them if they already exist):
-        results_model_save_path = results_folder + checkpoint_name.split('.pt')[0] + ".dict"
         if Path(results_model_save_path).is_file():
             old_results_model = joblib.load(results_model_save_path)
             results_model = merge({}, old_results_model, results_model)
         joblib.dump(results_model, results_model_save_path)
+        print(f"  [done] Saved results for {checkpoint_name}", flush=True)
         merge(results, {checkpoint_name: results_model})
+    print(f"\nAll checkpoints evaluated. Saving to {save_path}...", flush=True)
     save_joblib(results, save_path)
     return results
