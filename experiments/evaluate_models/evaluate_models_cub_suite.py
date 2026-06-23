@@ -88,7 +88,7 @@ os.makedirs(PLOT_DIR, exist_ok=True)
 # ---------------------------------------------------------------------------
 dataset_config = {
     "dataset": "cub",
-    "num_workers": 0,
+    "num_workers": 4,
     "batch_size": 256,
     "root_dir": master_folder + "data/CUB200/",
     "sampling_percent": 1,
