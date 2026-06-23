@@ -66,7 +66,7 @@ dataset_config = {
     "dataset": "cub",
     "root_dir": master_folder + "data/CUB200/",
     "batch_size": 256,
-    "num_workers": 0,
+    "num_workers": 4,
     "sampling_percent": 1,
     "sampling_groups": True,
     "test_subsampling": 1,
