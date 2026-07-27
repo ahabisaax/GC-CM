@@ -3,7 +3,7 @@
 #$ -o ~/Scratch/xai-crcbm/logs/CelebA_CEM_lam0_1_$JOB_ID.out
 #$ -e ~/Scratch/xai-crcbm/logs/CelebA_CEM_lam0_1_$JOB_ID.err
 #$ -pe smp 8
-#$ -l h_rt=30:30:00
+#$ -l h_rt=12:00:00
 #$ -l mem=24G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
@@ -47,8 +47,7 @@ LOCAL_RESULTS="$TMPDIR/results_temp"
 $CONDA_PREFIX/bin/python -u experiments/run_experiments.py \
     --config "$LOCAL_CONFIG" \
     --project_name "CelebA_CEM" \
-    --output_dir "$LOCAL_RESULTS" \
-    --filter_in "^CEM.*lam_c0.1"
+    --output_dir "$LOCAL_RESULTS"
 
 mkdir -p "$FINAL_RESULTS_DIR"
 rsync -a "$LOCAL_RESULTS/" "$FINAL_RESULTS_DIR/"

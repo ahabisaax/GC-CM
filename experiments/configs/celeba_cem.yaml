@@ -1,5 +1,5 @@
 results_dir: "results/celeba_cem/"
-trials: 5
+trials: 1
 
 shared_params:
   dataset_config:
@@ -9,8 +9,8 @@ shared_params:
     root_dir: data/
     use_binary_vector_class: true
     label_binary_width: 1
-    num_concepts: 6
-    num_hidden_concepts: 2
+    num_concepts: 40
+    num_hidden_concepts: 0
     label_dataset_subsample: 12
     image_size: 64
 
@@ -64,8 +64,8 @@ runs:
     embedding_activation: "leakyrelu"
     cbm_optimizer: adam
     learning_rate: 0.001
-    grid_variables: [concept_loss_weight]
-    concept_loss_weight: [0.1, 0.5, 1.0]
+    #grid_variables: [concept_loss_weight]
+    concept_loss_weight: 0.1
 
   - architecture: "CriticRegularisedConceptEmbeddingModel"
     run_name: "auto"
@@ -86,5 +86,5 @@ runs:
     shared_prob_gen: false
     concept_vector_regularisation: false
     entropy_maximisation: false
-    grid_variables: [concept_loss_weight]
-    concept_loss_weight: [0.1, 0.5, 1.0]
+    #grid_variables: [concept_loss_weight]
+    concept_loss_weight: 0.1
