@@ -413,25 +413,27 @@ class LossTracker(Callback):
 
                     # As binarization occurs, this will look like a 'U' shape
                     if pl_module.logger and hasattr(pl_module.logger, "experiment"):
-                        pl_module.logger.experiment.log(
-                            {
-                                "binarization": wandb.Histogram(all_c_learnt.flatten(),
-                                                                num_bins=50)
-                            },
-                            step=pl_module.current_epoch
-                        )
+                            scores = all_c_learnt.flatten().tolist()
+                            table = wandb.Table(
+                                data=[[s] for s in scores],
+                                columns=["scores"]
+                            )
+
+                            pl_module.log(
+                                {
+                                    "binarization_hist": wandb.plot.histogram(
+                                        table,
+                                        "scores",
+                                        title="Binarization distribution"
+                                    )
+                                },
+                                step=trainer.current_epoch
+                            )
 
                     # (How close is each concept to its target?)
                     avg_confidence = np.mean(np.abs(all_c_learnt - 0.5) * 2)
                     pl_module.log("stats/binarization_index", avg_confidence)
 
-                    # Visualizes the 'sharpness' of the bottleneck
-                    # pl_module.log({
-                    #     "binarization/bottleneck_sample": wandb.Image(
-                    #         all_c_learnt[:50, :20],
-                    #         caption=f"Bottleneck Activations Epoch {trainer.current_epoch}"
-                    #     )
-                    # })
 
                     if self.compute_mi_mode == 'both':
                         all_c_learnt_gpu = torch.cat(self.val_c_learnt_temp_gpu).detach().to(device_gpu)
@@ -505,7 +507,7 @@ def execute_and_save(
     )
     if (not rerun) and os.path.exists(output_filepath):
         return joblib.load(output_filepath)
-    context = multiprocessing.get_context("spawn")
+    context = multiprocessing.get_context("fork")
     p = context.Process(
         target=_save_result,
         kwargs=dict(

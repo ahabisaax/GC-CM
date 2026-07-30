@@ -10,7 +10,7 @@ import numpy as np
 import xai_concept_leakage.train.utils as utils
 from xai_concept_leakage.metrics.accs import compute_accuracy
 from xai_concept_leakage.metrics.mutual_information import compute_MI_score_model_training, matrix_from_tril
-from xai_concept_leakage.models.acem import GradientReversalFunction
+from xai_concept_leakage.models.gc_cem import GradientReversalFunction
 
 
 ################################################################################
@@ -21,7 +21,7 @@ from xai_concept_leakage.models.acem import GradientReversalFunction
 #we have a lambda weight scheduler which is either linear so there is a three stages:
 # 1: lambda is zero until adversarial delay then we linearly increase for a warmup period and then remain at the max
 
-class AdversarialConceptBottleneckModel(pl.LightningModule):
+class GCConceptBottleneckModel(pl.LightningModule):
     def __init__(
         self,
         n_concepts,
@@ -1256,5 +1256,6 @@ class LagrangianLambdaScheduler:
         return self.current_lambda
 
 
-# Backwards compatibility alias
-CriticRegularisedConceptBottleneckModel = AdversarialConceptBottleneckModel
+# Backwards compatibility aliases
+AdversarialConceptBottleneckModel = GCConceptBottleneckModel
+CriticRegularisedConceptBottleneckModel = GCConceptBottleneckModel

@@ -417,7 +417,7 @@ def dsprites_dataloaders(
     y = torch.LongTensor(y_train[val_mask])
     val_dl = torch.utils.data.DataLoader(
         list(zip(x, y, c)), batch_size=batch_size, num_workers=num_workers,
-        pin_memory=True, persistent_workers=True
+        pin_memory=(num_workers > 0), persistent_workers=(num_workers > 0)
     )
 
     x = torch.FloatTensor(x_test)

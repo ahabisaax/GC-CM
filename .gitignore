@@ -4,6 +4,10 @@ results/*
 !results/.gitkeep
 /_Tests*.ipynb
 
+# Not for public repo
+.gitlab-ci.yml
+experiments/configs/dsprites_acbm_shared.yaml
+
 
 # Distribution / packaging
 build/
@@ -36,7 +40,7 @@ env.bak/
 venv.bak/
 
 # IDEs and editors
-# .vscode/
+.vscode/
 .idea/
 *.sublime-project
 *.sublime-workspace
@@ -85,9 +89,50 @@ data/
 *.pt
 *.pth
 *.npy
-results/
-logs/
-data/
-*.pt
-*.pth
-*.npy
+
+# Model checkpoints
+checkpoints/
+*.ckpt
+
+# Local / scratch directories
+local/
+.virtual_documents/
+
+# Claude Code internal files
+CLAUDE.md
+.claude/
+
+# Generated figure outputs (re-created by evaluation scripts)
+pca_cub/
+pca_dsprites/
+pca_tabulartoy/
+saved_charts/
+results_5_rows_final.png
+results_8_rows_final.png
+tabulartoy_CRCEM_vector.png
+
+# W&B run artefacts
+wandb/
+
+# Scratch / debug scripts in evaluate_models (not paper-facing)
+experiments/evaluate_models/audit_results.py
+experiments/evaluate_models/audit_split_results.py
+experiments/evaluate_models/check_step1_snr.py
+experiments/evaluate_models/cub_cvl_onefold.py
+experiments/evaluate_models/cub_cvl_permutation.py
+experiments/evaluate_models/cub_kernel_cvl.py
+experiments/evaluate_models/cvl_robustness_experiment.py
+experiments/evaluate_models/cvl_robustness_paper_model.py
+experiments/evaluate_models/diagnose_cub_cvl.py
+experiments/evaluate_models/fix_interv_cache.py
+experiments/evaluate_models/full_audit.py
+experiments/evaluate_models/validate_cvl_icvl_paper.py
+experiments/evaluate_models/validate_cvl_vs_ctl.py
+experiments/evaluate_models/validate_embedding_dim.py
+experiments/evaluate_models/validate_embedding_dim_paper.py
+experiments/evaluate_models/validate_lambda_c.py
+experiments/evaluate_models/validate_trained_cem_lambda_c.py
+
+# Generated figure outputs in evaluate_models
+experiments/evaluate_models/*.pdf
+experiments/evaluate_models/*.png

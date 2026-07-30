@@ -174,7 +174,7 @@ def TT_dataloaders(
     y = y.argmax(dim=-1).cpu().detach()
     val_dl = torch.utils.data.DataLoader(
         list(zip(x, y, c)), batch_size=batch_size, num_workers=num_workers,
-        pin_memory=True, persistent_workers=True
+        pin_memory=(num_workers > 0), persistent_workers=(num_workers > 0)
     )
 
     x = torch.FloatTensor(x_test.to_numpy())

@@ -21,8 +21,9 @@ import xai_concept_leakage.train.training as training
 
 # Import your models (to get the class definitions)
 from xai_concept_leakage.models.cbm import ConceptBottleneckModel
-from xai_concept_leakage.models.acbm import AdversarialConceptBottleneckModel
-from xai_concept_leakage.models.acbm import AdversarialConceptBottleneckModel as CriticRegularisedConceptBottleneckModel
+from xai_concept_leakage.models.gc_cbm import GCConceptBottleneckModel
+from xai_concept_leakage.models.gc_cbm import GCConceptBottleneckModel as AdversarialConceptBottleneckModel  # backwards compat
+from xai_concept_leakage.models.gc_cbm import GCConceptBottleneckModel as CriticRegularisedConceptBottleneckModel  # backwards compat
 
 
 # ... import any other models you use ...

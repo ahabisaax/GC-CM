@@ -90,6 +90,7 @@ import xai_concept_leakage.data.mnist_add as mnist_data_module
 import xai_concept_leakage.data.tabulartoy_loader as tabulartoy_data_module
 import xai_concept_leakage.data.dsprites_loader as dsprites_data_module
 import xai_concept_leakage.data.shapes3d_loader as shapes3d_data_module
+import xai_concept_leakage.data.synthetic_toy_loader as synthetic_toy_data_module
 #import data.CUB200.cub_loader as cub_data_module
 import data.CUB200.cub_loader as cub_data_module
 import xai_concept_leakage.interventions.utils as intervention_utils
@@ -219,7 +220,8 @@ def _generate_dataset_and_update_config(experiment_config):
         data_module = shapes3d_data_module
     elif dataset_config['dataset'] == 'cub':
        data_module  = cub_data_module
-
+    elif dataset_config['dataset'] == 'synthetic_toy':
+        data_module = synthetic_toy_data_module
     else:
         raise ValueError(f"Unsupported dataset {dataset_config['dataset']}!")
 
@@ -266,6 +268,11 @@ def _generate_dataset_and_update_config(experiment_config):
 
         experiment_config["c_extractor_arch"] = synth_c_extractor_arch
     elif experiment_config["c_extractor_arch"] == "tabulartoy_extractor":
+        input_dim, n_concepts, _ = utils.extract_dims(train_dl)
+        experiment_config["c_extractor_arch"] = (
+            experiment_utils.get_tabulartoy_extractor_arch(input_dim, experiment_config)
+        )
+    elif experiment_config["c_extractor_arch"] == "synthetic_toy_extractor":
         input_dim, n_concepts, _ = utils.extract_dims(train_dl)
         experiment_config["c_extractor_arch"] = (
             experiment_utils.get_tabulartoy_extractor_arch(input_dim, experiment_config)
@@ -335,13 +342,13 @@ def generate_auto_run_name(config):
         components.append("HardCBM")
     elif architecture == 'ConceptBottleneckModel':
         components.append("SoftCBM")
-    elif architecture == 'AdversarialConceptBottleneckModel':
+    elif architecture in ('GCConceptBottleneckModel', 'AdversarialConceptBottleneckModel'):
         components.append("ACBM")
     elif architecture == 'CriticRegularisedConceptBottleneckModel':
         components.append("CRCBM")
     elif architecture == 'ConceptEmbeddingModel':
         components.append('CEM')
-    elif architecture == 'AdversarialConceptEmbeddingModel':
+    elif architecture in ('GCConceptEmbeddingModel', 'AdversarialConceptEmbeddingModel'):
         components.append('ACEM')
     elif architecture == 'CriticRegularisedConceptEmbeddingModel':
         components.append('CRCEM')

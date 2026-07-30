@@ -190,7 +190,7 @@ runs:
 #    embedding_activation: "leakyrelu"
 
 
-#  - architecture: "AdversarialConceptBottleneckModel"
+#  - architecture: "GCConceptBottleneckModel"
 #    run_name: "auto"
 #    bool: False
 #    extra_dims: 0

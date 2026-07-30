@@ -84,6 +84,7 @@ def predict_c_y(
         "CEM",
         "IntAwareConceptEmbeddingModel",
         "IntCEM",
+        "GCConceptEmbeddingModel",
         "CriticRegularisedConceptEmbeddingModel",
         "AdversarialConceptEmbeddingModel"
     ]

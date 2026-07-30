@@ -33,7 +33,7 @@ class GradientReversalFunction(torch.autograd.Function):
 ################################################################################
 
 
-class AdversarialConceptEmbeddingModel(ConceptBottleneckModel):
+class GCConceptEmbeddingModel(ConceptBottleneckModel):
     def __init__(
         self,
         n_concepts,
@@ -1199,5 +1199,6 @@ class AdversarialConceptEmbeddingModel(ConceptBottleneckModel):
             }
 
 
-# Backwards compatibility alias
-CriticRegularisedConceptEmbeddingModel = AdversarialConceptEmbeddingModel
+# Backwards compatibility aliases
+AdversarialConceptEmbeddingModel = GCConceptEmbeddingModel
+CriticRegularisedConceptEmbeddingModel = GCConceptEmbeddingModel

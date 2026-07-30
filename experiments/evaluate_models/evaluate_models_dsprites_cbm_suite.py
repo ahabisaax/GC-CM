@@ -5,8 +5,14 @@ Models evaluated
 ----------------
   HardCBM  — lam_c1 only
   SoftCBM  — lam_c ∈ {0.1, 0.5, 1}
-  CRCBM    — lam_c ∈ {0.1, 0.5, 1}
+  GC-CBM   — lam_c ∈ {0.1, 0.5, 1}  (AdversarialConceptBottleneckModel, shared_critic=True)
   SeqCBM   — lam_c1 only
+
+NOTE: GC-CBM uses models from results/dsprites_ACBM_shared_critic/ (folder contains
+CRCBM_*_shared_critic entries but their saved config has architecture=
+AdversarialConceptBottleneckModel, shared_critic=True). Do NOT use
+results/dsprites_dep_0_models/CRCBM_* — those are CriticRegularisedConceptBottleneckModel
+(no shared critic) and are superseded.
 
 Metrics per fold: task_acc, c_acc, interv (random curve), ois_nis_cas.
 
@@ -39,19 +45,23 @@ RERUN_TASK   = False
 RERUN_INTERV = False
 RERUN_OIS    = False
 
-DS_MAIN_FOLDER = master_folder + "results/dsprites_dep_0_models/"
-DS_SEQ_FOLDER  = master_folder + "results/dsprites_sequential_acbm/"
-SAVE_PATH      = master_folder + "results/results_dsprites_cbm_suite.dict"
+DS_MAIN_FOLDER   = master_folder + "results/dsprites_dep_0_models/"
+DS_ACBM_FOLDER   = master_folder + "results/dsprites_ACBM_shared_critic/"
+DS_SEQ_FOLDER    = master_folder + "results/dsprites_sequential_acbm/"
+SAVE_PATH        = master_folder + "results/results_dsprites_cbm_suite.dict"
 
+# GC-CBM entries: AdversarialConceptBottleneckModel with shared_critic=True.
+# Folder name contains "CRCBM" for historical reasons but architecture is NOT
+# CriticRegularisedConceptBottleneckModel — verify with *_experiment_config.joblib.
 MODEL_SPECS = [
-    ("hard_cbm", DS_MAIN_FOLDER, "HardCBM_adam_lr1e-04_bs64_lam_c1",                  "lam_c1"),
-    ("soft_cbm", DS_MAIN_FOLDER, "SoftCBM_adam_lr1e-04_bs64_lam_c0.1",                "lam_c0.1"),
-    ("soft_cbm", DS_MAIN_FOLDER, "SoftCBM_adam_lr1e-04_bs64_lam_c0.5",                "lam_c0.5"),
-    ("soft_cbm", DS_MAIN_FOLDER, "SoftCBM_adam_lr1e-04_bs64_lam_c1",                  "lam_c1"),
-    ("crcbm",    DS_MAIN_FOLDER, "CRCBM_adam_lr5e-05_bs64_lam1_none_lam_c0.1",        "lam_c0.1"),
-    ("crcbm",    DS_MAIN_FOLDER, "CRCBM_adam_lr5e-05_bs64_lam1_none_lam_c0.5",        "lam_c0.5"),
-    ("crcbm",    DS_MAIN_FOLDER, "CRCBM_adam_lr5e-05_bs64_lam1_none_lam_c1",          "lam_c1"),
-    ("seq_cbm",  DS_SEQ_FOLDER,  "SeqCBM_adam_lr1e-04_bs64_lam_c1",                   "lam_c1"),
+    ("hard_cbm", DS_MAIN_FOLDER, "HardCBM_adam_lr1e-04_bs64_lam_c1",                                   "lam_c1"),
+    ("soft_cbm", DS_MAIN_FOLDER, "SoftCBM_adam_lr1e-04_bs64_lam_c0.1",                                 "lam_c0.1"),
+    ("soft_cbm", DS_MAIN_FOLDER, "SoftCBM_adam_lr1e-04_bs64_lam_c0.5",                                 "lam_c0.5"),
+    ("soft_cbm", DS_MAIN_FOLDER, "SoftCBM_adam_lr1e-04_bs64_lam_c1",                                   "lam_c1"),
+    ("gc_cbm",   DS_ACBM_FOLDER, "CRCBM_adam_lr5e-05_bs64_lam1_none_lam_c0.1_shared_critic",           "lam_c0.1"),
+    ("gc_cbm",   DS_ACBM_FOLDER, "CRCBM_adam_lr5e-05_bs64_lam1_none_lam_c0.5_shared_critic",           "lam_c0.5"),
+    ("gc_cbm",   DS_ACBM_FOLDER, "CRCBM_adam_lr5e-05_bs64_lam1_none_lam_c1_shared_critic",             "lam_c1"),
+    ("seq_cbm",  DS_SEQ_FOLDER,  "SeqCBM_adam_lr1e-04_bs64_lam_c1",                                    "lam_c1"),
 ]
 
 # ---------------------------------------------------------------------------

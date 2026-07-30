@@ -5,8 +5,7 @@ Models evaluated
 ----------------
   HardCBM  — lam_c1 only
   SoftCBM  — lam_c ∈ {0.1, 0.5, 1}
-  CRCBM    — lam_c ∈ {0.1, 0.5, 1}
-  ACBM     — lam_c ∈ {0.1, 0.5, 1}
+  GC-CBM   — lam_c ∈ {0.1, 0.5, 1}  (AdversarialConceptBottleneckModel, shared_critic=True)
   SeqCBM   — lam_c1 only
 
 Metrics per fold: task_acc, c_acc, interv (random curve), ois_nis_cas.
@@ -46,17 +45,14 @@ CUB_ACBM_FOLDER = master_folder + "results/cub_acbm_shared_critic/"
 SAVE_PATH       = master_folder + "results/results_cub_cbm_suite.dict"
 
 MODEL_SPECS = [
-    ("hard_cbm", CUB_MAIN_FOLDER, "HardCBM_adam_lr1e-04_bs256_lam_c1",                       "lam_c1"),
-    ("soft_cbm", CUB_MAIN_FOLDER, "SoftCBM_adam_lr1e-04_bs256_lam_c0.1",                     "lam_c0.1"),
-    ("soft_cbm", CUB_MAIN_FOLDER, "SoftCBM_adam_lr1e-04_bs256_lam_c0.5",                     "lam_c0.5"),
-    ("soft_cbm", CUB_MAIN_FOLDER, "SoftCBM_adam_lr1e-04_bs256_lam_c1",                       "lam_c1"),
-    ("crcbm",    CUB_MAIN_FOLDER, "CRCBM_adam_lr1e-04_bs256_lam1.0_none_lam_c0.1",           "lam_c0.1"),
-    ("crcbm",    CUB_MAIN_FOLDER, "CRCBM_adam_lr1e-04_bs256_lam1.0_none_lam_c0.5",           "lam_c0.5"),
-    ("crcbm",    CUB_MAIN_FOLDER, "CRCBM_adam_lr1e-04_bs256_lam1.0_none_lam_c1",             "lam_c1"),
-    ("acbm",     CUB_ACBM_FOLDER, "ACBM_adam_lr1e-04_bs256_lam1_none_lam_c0.1_shared_critic","lam_c0.1"),
-    ("acbm",     CUB_ACBM_FOLDER, "ACBM_adam_lr1e-04_bs256_lam1_none_lam_c0.5_shared_critic","lam_c0.5"),
-    ("acbm",     CUB_ACBM_FOLDER, "ACBM_adam_lr1e-04_bs256_lam1_none_lam_c1_shared_critic",  "lam_c1"),
-    ("seq_cbm",  CUB_ACBM_FOLDER, "SeqCBM_adam_lr1e-04_bs256_lam_c1",                        "lam_c1"),
+    ("hard_cbm", CUB_MAIN_FOLDER, "HardCBM_adam_lr1e-04_bs256_lam_c1",                         "lam_c1"),
+    ("soft_cbm", CUB_MAIN_FOLDER, "SoftCBM_adam_lr1e-04_bs256_lam_c0.1",                       "lam_c0.1"),
+    ("soft_cbm", CUB_MAIN_FOLDER, "SoftCBM_adam_lr1e-04_bs256_lam_c0.5",                       "lam_c0.5"),
+    ("soft_cbm", CUB_MAIN_FOLDER, "SoftCBM_adam_lr1e-04_bs256_lam_c1",                         "lam_c1"),
+    ("gc_cbm",   CUB_ACBM_FOLDER, "ACBM_adam_lr1e-04_bs256_lam1_none_lam_c0.1_shared_critic",  "lam_c0.1"),
+    ("gc_cbm",   CUB_ACBM_FOLDER, "ACBM_adam_lr1e-04_bs256_lam1_none_lam_c0.5_shared_critic",  "lam_c0.5"),
+    ("gc_cbm",   CUB_ACBM_FOLDER, "ACBM_adam_lr1e-04_bs256_lam1_none_lam_c1_shared_critic",    "lam_c1"),
+    ("seq_cbm",  CUB_ACBM_FOLDER, "SeqCBM_adam_lr1e-04_bs256_lam_c1",                          "lam_c1"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -124,14 +120,20 @@ for label, folder, model_name, lam_c in MODEL_SPECS:
             "ois":   "ois_nis_cas" not in r or RERUN_OIS,
         }
 
-        if todo["task"]:
+        sr = None
+        if todo["task"] or todo["interv"]:
             sr = _split_results(model_path, model_name, fold_0idx)
-            if sr:
-                r["task_acc"] = float(sr.get("test_acc_y", float("nan")))
-                r["c_acc"]    = float(sr.get("test_acc_c", float("nan")))
+
+        if todo["task"] and sr:
+            r["task_acc"] = float(sr.get("test_acc_y", float("nan")))
+            r["c_acc"]    = float(sr.get("test_acc_c", float("nan")))
 
         if todo["interv"]:
             curve = _interv_npy(model_path, model_name, fold_0idx)
+            if curve is None and sr:
+                iv_key = "test_acc_y_random_group_level_True_use_prior_False_ints"
+                raw = sr.get(iv_key)
+                curve = list(raw) if raw is not None else None
             if curve is not None:
                 r["interv"] = {"random": [curve]}
 

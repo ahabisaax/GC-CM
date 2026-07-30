@@ -1,0 +1,90 @@
+results_dir: "results/synthetic_toy_40c/"
+trials: 1
+
+shared_params:
+  dataset_config:
+    dataset: synthetic_toy
+    n_samples: 10000
+    n_features: 20         # input dimensionality r
+    n_concepts: 40         # observed/known concepts k_known
+    n_concepts_total: 40   # total concepts k (40 known + 0 hidden)
+    omega: 0.0             # no hidden concepts so no leakage via hidden
+    alpha: 0.0             # inter-concept correlation
+    sigma_x: 0.5
+    sigma_y: 0.1
+    val_frac: 0.1
+    test_frac: 0.2
+    batch_size: 512
+    num_workers: 0
+    seed: 42
+
+  intervention_config:
+    competence_levels: [1]
+    intervention_freq: 1
+    intervention_batch_size: 512
+    intervention_policies:
+      - policy: "random"
+        group_level: True
+        use_prior: False
+
+  max_epochs: 100
+  top_k_accuracy: null
+  save_model: true
+  emb_size: 16
+  extra_dims: 0
+  learning_rate: 0.001
+  weight_decay: 1.0e-04
+  weight_loss: false
+  use_task_class_weights: false
+  c_extractor_arch: "synthetic_toy_extractor"
+  hidden_size: 128
+  dropout_prob: 0.0
+  all_dropout: false
+  optimizer: adam
+  bool: false
+  momentum: 0.9
+  sigmoidal_prob: true
+  training_intervention_prob: 0.25
+  cbm_optimizer: adam
+  n_hidden: 128
+  linear_c2y: true
+  adv_optimizer: adam
+  check_val_every_n_epoch: 5
+  compute_mi_on_gpu: false
+  compute_mi_mode: 'cpu'
+  project_name: ""
+  accumulate_grad_batches: 1
+  early_stopping_monitor: 'val_y_accuracy'
+  early_stopping_mode: max
+  early_stopping_delta: 0.0
+  patience: 20
+  gradient_clip_val: 1.0
+
+runs:
+
+  - architecture: "ConceptEmbeddingModel"
+    run_name: "auto"
+    sigmoidal_prob: true
+    embedding_activation: "leakyrelu"
+    cbm_optimizer: adam
+    learning_rate: 0.001
+    concept_loss_weight: 0.1
+
+  - architecture: "GCConceptEmbeddingModel"
+    run_name: "auto"
+    sigmoidal_prob: true
+    embedding_activation: "leakyrelu"
+    cbm_optimizer: adam
+    cbm_learning_rate: 0.001
+    adv_learning_rate: 0.0005
+    use_adversarial: true
+    max_adversarial_lambda: 1
+    adversarial_delay: 5
+    adversarial_lambda_scheduler_warmup: null
+    adversarial_scheduler: "none"
+    n_critic_steps: 3
+    shared_critic: true
+    shared_prob_gen: false
+    concept_vector_regularisation: false
+    entropy_maximisation: false
+    concept_loss_weight: 0.1

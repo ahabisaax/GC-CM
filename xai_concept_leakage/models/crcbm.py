@@ -1,1 +1,1 @@
-from xai_concept_leakage.models.acbm import AdversarialConceptBottleneckModel as CriticRegularisedConceptBottleneckModel
+from xai_concept_leakage.models.gc_cbm import GCConceptBottleneckModel as CriticRegularisedConceptBottleneckModel

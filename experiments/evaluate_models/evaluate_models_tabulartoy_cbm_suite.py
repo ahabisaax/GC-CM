@@ -13,6 +13,8 @@ Metrics collected per fold
 --------------------------
   task_acc     — test task accuracy
   c_acc        — test concept accuracy
+  ctl_mean     — normalised CTL from training-time split results (if available)
+  icl_mean     — normalised ICL from training-time split results (if available)
   interv       — random intervention curve loaded from per-fold .npy
   ois_nis_cas  — OIS / NIS / CAS (computed fresh from .pt checkpoint)
 
@@ -44,6 +46,7 @@ FOLDS     = ["fold_1"] if TRIAL_RUN else ALL_FOLDS
 RERUN_TASK    = False
 RERUN_INTERV  = False
 RERUN_OIS     = False
+RERUN_CTL     = False
 
 TT_MAIN_FOLDER = master_folder + "results/tabulartoy_25_10k_models/"
 TT_ACBM_FOLDER = master_folder + "results/tabulartoy_25_10k_models_acbm_shared_critic/"

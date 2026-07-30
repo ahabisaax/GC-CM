@@ -1,1 +1,1 @@
-from xai_concept_leakage.models.acem import AdversarialConceptEmbeddingModel as CriticRegularisedConceptEmbeddingModel, GradientReversalFunction
+from xai_concept_leakage.models.gc_cem import GCConceptEmbeddingModel as CriticRegularisedConceptEmbeddingModel, GradientReversalFunction

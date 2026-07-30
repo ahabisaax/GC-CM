@@ -23,8 +23,8 @@ if __name__ == "__main__":
     ##################################################################################################
     ### Config:
     ##################################################################################################
-    # Automatically discover all model folders in tabulartoy_25_10k_models_crcem
-    results_folder = master_folder + "results/tabulartoy_25_10k_models_crcem/"
+    # Automatically discover all model folders in tabulartoy_25_10k_models_acem_shared_critic
+    results_folder = master_folder + "results/tabulartoy_25_10k_models_acem_shared_critic/"
     
     # Get all model subdirectories
     model_dirs = [d for d in os.listdir(results_folder) 

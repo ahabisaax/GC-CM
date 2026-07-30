@@ -9,9 +9,9 @@ from torchvision.models import resnet18, resnet34, resnet50, densenet121
 
 import xai_concept_leakage.models.cem as models_cem
 import xai_concept_leakage.models.cbm as models_cbm
-import xai_concept_leakage.models.acbm as models_acbm
+import xai_concept_leakage.models.gc_cbm as models_gc_cbm
 import xai_concept_leakage.models.intcbm as models_intcbm
-import xai_concept_leakage.models.acem as models_acem
+import xai_concept_leakage.models.gc_cem as models_gc_cem
 import xai_concept_leakage.train.utils as utils
 
 
@@ -148,8 +148,11 @@ def construct_model(
             "int_model_use_bn": config.get("int_model_use_bn", False),
             "num_rollouts": config.get("num_rollouts", 1),
         }
-    elif "AdversarialConceptBottleneckModel" in config['architecture'] or "CriticRegularisedConceptBottleneckModel" in config['architecture']:
-        model_cls = models_acbm.AdversarialConceptBottleneckModel
+    elif any(k in config['architecture'] for k in (
+        "GCConceptBottleneckModel", "AdversarialConceptBottleneckModel",
+        "CriticRegularisedConceptBottleneckModel",
+    )):
+        model_cls = models_gc_cbm.GCConceptBottleneckModel
         extra_params = {
             "bool": config["bool"],
             "extra_dims": config["extra_dims"],
@@ -179,8 +182,11 @@ def construct_model(
             "shared_critic": config.get("shared_critic", False),
             "compute_mi_on_gpu": config.get("compute_mi_on_gpu", False)
         }
-    elif "AdversarialConceptEmbeddingModel" in config['architecture'] or "CriticRegularisedConceptEmbeddingModel" in config['architecture']:
-        model_cls = models_acem.AdversarialConceptEmbeddingModel
+    elif any(k in config['architecture'] for k in (
+        "GCConceptEmbeddingModel", "AdversarialConceptEmbeddingModel",
+        "CriticRegularisedConceptEmbeddingModel",
+    )):
+        model_cls = models_gc_cem.GCConceptEmbeddingModel
         extra_params = {
             "n_hidden": config["n_hidden"],  # added
             "emb_size": config["emb_size"],
@@ -250,8 +256,8 @@ def construct_model(
 
     # Create model
     if model_cls in {
-        models_acbm.AdversarialConceptBottleneckModel,
-        models_acem.AdversarialConceptEmbeddingModel,
+        models_gc_cbm.GCConceptBottleneckModel,
+        models_gc_cem.GCConceptEmbeddingModel,
     }:
         return model_cls(
             n_concepts=n_concepts,
@@ -538,7 +544,7 @@ def external_load_model_trainer(dl, model_path, x2c_extractor, output_config=Fal
         config = joblib.load(config_path)
     data_folder = config["dataset_config"]["root_dir"]
 
-    # config["split"] = int(model_path.split("fold")[-1][1]) - 1
+    config["split"] = int(model_path.split("fold")[-1][1]) - 1
     if config["dataset_config"]["dataset"] == "tabulartoy":
         input_dim, _, _ = utils.extract_dims(dl)
         config["c_extractor_arch"] = x2c_extractor(input_dim, config)
