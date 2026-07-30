@@ -22,11 +22,6 @@ python3 -m pip install .
 python3 -c "import xai_concept_leakage"   # verify
 ```
 
-A Docker image is available:
-```bash
-docker pull eparisini/xai-concept-leakage
-```
-
 ---
 
 ## Models
