@@ -33,8 +33,12 @@ def draw_panel(ax, suite, gc_key, steps, xlabel, ylim):
     def _plot(curves, color, ls="-", lw=1.8, label=None):
         if curves is None or len(curves) == 0:
             return None
-        line, = ax.plot(steps, curves.mean(axis=0), color=color,
+        mean = curves.mean(axis=0)
+        std  = curves.std(axis=0)
+        line, = ax.plot(steps, mean, color=color,
                         linestyle=ls, linewidth=lw, zorder=2)
+        ax.fill_between(steps, mean - std, mean + std,
+                        color=color, alpha=0.15, linewidth=0, zorder=1)
         if label:
             handles.append(line)
             labels.append(label)

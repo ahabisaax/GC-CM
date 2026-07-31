@@ -6,7 +6,7 @@ from sklearn.decomposition import PCA
 from sklearn.linear_model import LogisticRegression, Ridge
 from sklearn.metrics import r2_score
 from sklearn.neural_network import MLPClassifier, MLPRegressor
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, label_binarize
 
 
 def compute_CVL(
@@ -57,6 +57,12 @@ def compute_CVL(
     y_train     = np.asarray(y_train).ravel()
     y_test      = np.asarray(y_test).ravel()
 
+    # One-hot encode y: for binary this gives shape (N,1) which is equivalent
+    # to scalar; for multiclass it gives (N,C) enabling multivariate regression.
+    classes = np.unique(y_train)
+    Y_train = label_binarize(y_train, classes=classes).astype(float)
+    Y_test  = label_binarize(y_test,  classes=classes).astype(float)
+
     K = c_hat_train.shape[1]
 
     cvl_per_concept = []
@@ -68,10 +74,10 @@ def compute_CVL(
         R_train = c_hat_train[:, k, :] - ridge1.predict(c_train[:, k].reshape(-1, 1))
         R_test  = c_hat_test[:, k, :]  - ridge1.predict(c_test[:, k].reshape(-1, 1))
 
-        # Step 2: Ridge(y → R_k); variance-weighted R² across embedding dims
+        # Step 2: Ridge(Y_onehot → R_k); variance-weighted R² across embedding dims
         ridge2 = Ridge(alpha=alpha)
-        ridge2.fit(y_train.reshape(-1, 1), R_train)
-        R_pred = ridge2.predict(y_test.reshape(-1, 1))
+        ridge2.fit(Y_train, R_train)
+        R_pred = ridge2.predict(Y_test)
         r2    = float(r2_score(R_test, R_pred, multioutput="variance_weighted"))
         delta = max(0.0, r2)
         print(f"      concept {k:3d}: r2={r2:.4f}  CVL={delta:.4f}")
@@ -133,6 +139,10 @@ def compute_CVL_global(
     y_train     = np.asarray(y_train).ravel()
     y_test      = np.asarray(y_test).ravel()
 
+    classes = np.unique(y_train)
+    Y_train = label_binarize(y_train, classes=classes).astype(float)
+    Y_test  = label_binarize(y_test,  classes=classes).astype(float)
+
     N_tr, K, m = c_hat_train.shape
     N_te = c_hat_test.shape[0]
 
@@ -145,10 +155,10 @@ def compute_CVL_global(
     R_train = X_train - ridge1.predict(c_train)
     R_test  = X_test  - ridge1.predict(c_test)
 
-    # Step 2: Ridge(y → R); variance-weighted R² across K*m embedding dims
+    # Step 2: Ridge(Y_onehot → R); variance-weighted R² across K*m embedding dims
     ridge2 = Ridge(alpha=alpha)
-    ridge2.fit(y_train.reshape(-1, 1), R_train)
-    R_pred = ridge2.predict(y_test.reshape(-1, 1))
+    ridge2.fit(Y_train, R_train)
+    R_pred = ridge2.predict(Y_test)
     r2    = float(r2_score(R_test, R_pred, multioutput="variance_weighted"))
     delta = max(0.0, r2)
     print(f"    CVL_global: r2={r2:.4f}  CVL={delta:.4f}")

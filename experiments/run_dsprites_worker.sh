@@ -8,6 +8,8 @@
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
 #$ -l gpu=1
+#$ -P Gold
+#$ -A hpc.28
 
 # --- 1. LOAD MODULES ---
 module purge

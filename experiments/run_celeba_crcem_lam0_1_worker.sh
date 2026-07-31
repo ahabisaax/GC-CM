@@ -8,6 +8,8 @@
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
 #$ -l gpu=1
+#$ -P Gold
+#$ -A hpc.28
 
 module purge
 module unload compilers mpi gcc-libs

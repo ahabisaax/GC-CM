@@ -106,8 +106,11 @@ for ax, (title, steps, curves, xlabel, ylim) in zip(axes, datasets):
     for lam, color, llab in zip(LAMS, C_CEM, LAM_LABEL):
         cem_c, _ = curves[lam]
         if cem_c is not None and len(cem_c):
-            line, = ax.plot(steps, cem_c.mean(axis=0), color=color,
-                            linewidth=1.8, zorder=2)
+            mean = cem_c.mean(axis=0)
+            std  = cem_c.std(axis=0)
+            line, = ax.plot(steps, mean, color=color, linewidth=1.8, zorder=2)
+            ax.fill_between(steps, mean - std, mean + std,
+                            color=color, alpha=0.15, linewidth=0, zorder=1)
             if ax is axes[0]:
                 legend_handles.append(line)
                 legend_labels.append(f"CEM {llab}")
@@ -115,8 +118,11 @@ for ax, (title, steps, curves, xlabel, ylim) in zip(axes, datasets):
     for lam, color, llab in zip(LAMS, C_GCCEM, LAM_LABEL):
         _, gc_c = curves[lam]
         if gc_c is not None and len(gc_c):
-            line, = ax.plot(steps, gc_c.mean(axis=0), color=color,
-                            linewidth=1.8, zorder=2)
+            mean = gc_c.mean(axis=0)
+            std  = gc_c.std(axis=0)
+            line, = ax.plot(steps, mean, color=color, linewidth=1.8, zorder=2)
+            ax.fill_between(steps, mean - std, mean + std,
+                            color=color, alpha=0.15, linewidth=0, zorder=1)
             if ax is axes[0]:
                 legend_handles.append(line)
                 legend_labels.append(f"GC-CEM {llab}")

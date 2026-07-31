@@ -118,7 +118,7 @@ python experiments/evaluate_models/evaluate_models_shapes3d.py
 
 ```bash
 python experiments/evaluate_models/compute_tabulartoy_cvl_icvl.py
-python experiments/evaluate_models/compute_dsprites_cvl_onehot.py   # one-hot correction for discrete concepts
+python experiments/evaluate_models/compute_dsprites_cvl.py
 python experiments/evaluate_models/compute_cub_cvl_icvl.py
 ```
 

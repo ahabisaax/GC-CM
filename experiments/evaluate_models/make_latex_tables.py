@@ -83,7 +83,7 @@ ds_cem    = joblib.load(BASE + "results_dsprites_suite.dict")
 ds_cbm    = joblib.load(BASE + "results_dsprites_cbm_suite.dict")
 cub_cem   = joblib.load(BASE + "results_cub_suite.dict")
 cub_cbm   = joblib.load(BASE + "results_cub_cbm_suite.dict")
-ds_onehot = joblib.load(BASE + "results_dsprites_cvl_onehot.dict")
+ds_cvl    = joblib.load(BASE + "results_dsprites_cvl.dict")
 
 LAM_MAP = {"0.1": "lam_c0.1", "0.5": "lam_c0.5", "1.0": "lam_c1"}
 
@@ -204,7 +204,7 @@ for ds in ["TT", "dS", "CUB"]:
         "dS":  {"CEM": (ds_cem, "cem"),    "GC-CEM": (ds_cem,  "crcem")},
         "CUB": {"CEM": (cub_cem, "cem"),   "GC-CEM": (cub_cem, "crcem")},
     }
-    oh_map = {"CEM": "cem", "GC-CEM": "gc_cem"}
+    cvl_key_map = {"CEM": "cem", "GC-CEM": "gc_cem"}
     for ml in ["CEM", "GC-CEM"]:
         suite_d, suite_key = suite_map[ds][ml]
         for lam in ["0.1", "0.5", "1.0"]:
@@ -221,9 +221,8 @@ for ds in ["TT", "dS", "CUB"]:
                 cvl_v  = [float(folds_s.get(fk,{}).get("cvl",{}).get("CVL",np.nan)) for fk in folds_s]
                 icvl_v = [float(folds_s.get(fk,{}).get("icvl",{}).get("ICVL",np.nan)) for fk in folds_s]
             else:  # dS
-                oh_key = oh_map[ml]
-                oh_folds = ds_onehot.get(oh_key, {}).get(lam_key, {})
-                cvl_v = [float(fd.get("cvl_clipped_mean", np.nan)) for fd in oh_folds.values()]
+                cvl_folds = ds_cvl.get(cvl_key_map[ml], {}).get(lam_key, {})
+                cvl_v = [float(fd.get("cvl_clipped_mean", np.nan)) for fd in cvl_folds.values()]
                 folds_s = suite_d.get(suite_key, {}).get(lam_key, {})
                 icvl_v = [float(folds_s.get(fk,{}).get("icvl",{}).get("ICVL",np.nan)) for fk in folds_s]
             cvl_data[(ds, ml, lam)] = (cvl_v, icvl_v)

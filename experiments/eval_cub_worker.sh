@@ -7,6 +7,8 @@
 #$ -l mem=16G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
+#$ -P Gold
+#$ -A hpc.28
 
 # No GPU needed — eval is CPU-only (Ridge + logistic probes run in parallel)
 

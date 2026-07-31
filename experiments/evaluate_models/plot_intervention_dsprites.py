@@ -53,8 +53,11 @@ def plot_curve(ax, curves_arr, color, linestyle="-", lw=2.0, label=None, zorder=
     if curves_arr is None or len(curves_arr) == 0:
         return
     mean = curves_arr.mean(axis=0)
+    std  = curves_arr.std(axis=0)
     ax.plot(STEPS, mean, color=color, linestyle=linestyle,
             linewidth=lw, label=label, zorder=zorder)
+    ax.fill_between(STEPS, mean - std, mean + std,
+                    color=color, alpha=0.15, linewidth=0, zorder=zorder - 1)
 
 
 # ---------------------------------------------------------------------------

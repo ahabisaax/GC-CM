@@ -66,8 +66,7 @@ ds_cem  = joblib.load(BASE + "results_dsprites_suite.dict")
 ds_cbm  = joblib.load(BASE + "results_dsprites_cbm_suite.dict")
 cub_cem = joblib.load(BASE + "results_cub_suite.dict")
 cub_cbm = joblib.load(BASE + "results_cub_cbm_suite.dict")
-tt_onehot = joblib.load(BASE + "results_tabulartoy_cvl_onehot.dict")
-ds_onehot = joblib.load(BASE + "results_dsprites_cvl_onehot.dict")
+ds_cvl = joblib.load(BASE + "results_dsprites_cvl.dict")
 
 SEP  = "=" * 120
 HSEP = "-" * 120
@@ -282,7 +281,7 @@ for ds_label in ["TT", "dS", "CUB"]:
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TABLE 5: CVL / ICVL
-# Sources: TT → acem_suite dict (cvl/icvl); dS → ds_cvl_onehot dict (cvl_clipped_mean) + ds_suite (icvl)
+# Sources: TT → acem_suite dict (cvl/icvl); dS → results_dsprites_cvl.dict (cvl_clipped_mean) + ds_suite (icvl)
 #          CUB → cub_suite dict (all 0.00 after clipping)
 # ══════════════════════════════════════════════════════════════════════════════
 print()
@@ -312,10 +311,7 @@ SUITE_KEYS = {
     "dS":  {"CEM": (ds_cem, "cem"),    "GC-CEM": (ds_cem, "crcem")},
     "CUB": {"CEM": (cub_cem, "cem"),   "GC-CEM": (cub_cem, "crcem")},
 }
-ONEHOT_KEYS = {
-    "TT":  {"CEM": "cem", "GC-CEM": "gc_cem"},
-    "dS":  {"CEM": "cem", "GC-CEM": "gc_cem"},
-}
+DS_CVL_KEYS = {"CEM": "cem", "GC-CEM": "gc_cem"}
 
 for ds_label in ["TT", "dS", "CUB"]:
     for model_label in ["CEM", "GC-CEM"]:
@@ -332,7 +328,6 @@ for ds_label in ["TT", "dS", "CUB"]:
                                for fk in folds_s]
                     icvl_vs = [float(folds_s.get(fk, {}).get("icvl", {}).get("ICVL", 0.0))
                                for fk in folds_s]
-                    # clip to 0 (negative R² → 0)
                     cvl_vs  = [max(0.0, v) for v in cvl_vs]
                     icvl_vs = [max(0.0, v) for v in icvl_vs]
                     cvl_s  = s(cvl_vs)
@@ -352,12 +347,12 @@ for ds_label in ["TT", "dS", "CUB"]:
                     cvl_s  = s(cvl_vs)
                     icvl_s = s(icvl_vs)
             else:
-                # dS: CVL from onehot dict (cvl_clipped_mean), ICVL from suite dict
-                oh_key = ONEHOT_KEYS[ds_label][model_label]
-                oh_folds = ds_onehot.get(oh_key, {}).get(lam_key, {})
-                if oh_folds:
+                # dS: CVL from results_dsprites_cvl.dict, ICVL from suite dict
+                cvl_key = DS_CVL_KEYS[model_label]
+                cvl_folds = ds_cvl.get(cvl_key, {}).get(lam_key, {})
+                if cvl_folds:
                     cvl_vs = [float(fd.get("cvl_clipped_mean", np.nan))
-                              for fd in oh_folds.values()]
+                              for fd in cvl_folds.values()]
                     cvl_s = s(cvl_vs)
                 else:
                     cvl_s = "MISSING"

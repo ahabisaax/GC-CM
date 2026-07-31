@@ -7,6 +7,8 @@
 #$ -l mem=16G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
+#$ -P Gold
+#$ -A hpc.28
 # Pass -v DATASET=tabulartoy  or  -v DATASET=dsprites  or  -v DATASET=cub
 # e.g.  qsub -v DATASET=cub experiments/run_cbm_eval_worker.sh
 
