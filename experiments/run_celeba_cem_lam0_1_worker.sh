@@ -4,7 +4,7 @@
 #$ -e ~/Scratch/xai-crcbm/logs/CelebA_CEM_lam0_1_$JOB_ID.err
 #$ -pe smp 8
 #$ -l h_rt=12:00:00
-#$ -l mem=24G
+#$ -l mem=4G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
 #$ -l gpu=1
