@@ -152,6 +152,7 @@ tt_cvl = joblib.load(tt_cvl_path) if os.path.exists(tt_cvl_path) else {}
 
 LAMS = ["0.1", "0.5", "1.0"]
 LAM_MAP = {"0.1": "lam_c0.1", "0.5": "lam_c0.5", "1.0": "lam_c1"}
+LAM_STR = {"0.1": "0.1",      "0.5": "0.5",       "1.0": "1"}    # suffix used in folder/file names
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -165,9 +166,9 @@ print_row(None, [], [], header=True)
 for lam in LAMS:
     lk = LAM_MAP[lam]
     gc_splits = load_splits("tabulartoy_25_10k_models_acbm_shared_critic",
-                            f"ACBM_adam_lr0.05_bs64_lam1_none_lam_c{lam}_shared_critic")
+                            f"ACBM_adam_lr0.05_bs64_lam1_none_lam_c{LAM_STR[lam]}_shared_critic")
     jt_splits = load_splits("tabulartoy_25_10k_models",
-                            f"SoftCBM_adam_lr0.05_bs64_lam_c{lam}")
+                            f"SoftCBM_adam_lr0.05_bs64_lam_c{LAM_STR[lam]}")
     if not gc_splits or not jt_splits:
         print(f"\n  λ={lam}: missing splits"); continue
     print(f"\n  λ_c = {lam}")
@@ -194,7 +195,7 @@ if not seq_splits:
 
 for lam in LAMS:
     gc_splits = load_splits("tabulartoy_25_10k_models_acbm_shared_critic",
-                            f"ACBM_adam_lr0.05_bs64_lam1_none_lam_c{lam}_shared_critic")
+                            f"ACBM_adam_lr0.05_bs64_lam1_none_lam_c{LAM_STR[lam]}_shared_critic")
     if not gc_splits or not seq_splits:
         continue
     print(f"\n  GC-CBM λ_c={lam} vs Seq CBM")
@@ -218,7 +219,7 @@ hard_splits = load_splits("tabulartoy_25_10k_models",
 
 for lam in LAMS:
     gc_splits = load_splits("tabulartoy_25_10k_models_acbm_shared_critic",
-                            f"ACBM_adam_lr0.05_bs64_lam1_none_lam_c{lam}_shared_critic")
+                            f"ACBM_adam_lr0.05_bs64_lam1_none_lam_c{LAM_STR[lam]}_shared_critic")
     if not gc_splits or not hard_splits:
         continue
     print(f"\n  GC-CBM λ_c={lam} vs Hard CBM")
@@ -240,9 +241,9 @@ print_row(None, [], [], header=True)
 for lam in LAMS:
     lk = LAM_MAP[lam]
     gc_splits = load_splits("tabulartoy_25_10k_models_acem_shared_critic",
-                            f"ACEM_adam_lr1e-03_bs64_lam1_none_lam_c{lam}_shared_critic")
+                            f"ACEM_adam_lr1e-03_bs64_lam1_none_lam_c{LAM_STR[lam]}_shared_critic")
     ce_splits = load_splits("tabulartoy_25_10k_models_acem_shared_critic",
-                            f"CEM_adam_lr0.05_bs64_lam_c{lam}")
+                            f"CEM_adam_lr0.05_bs64_lam_c{LAM_STR[lam]}")
 
     gc_suite = suite_metric(tt_cem, "acem", lk, lambda d: d)
     ce_suite = suite_metric(tt_cem, "cem",  lk, lambda d: d)
@@ -296,12 +297,12 @@ print_row(None, [], [], header=True)
 for lam in LAMS:
     lk = LAM_MAP[lam]
     gc_splits = load_splits("dsprites_ACBM_shared_critic",
-                            f"CRCBM_adam_lr5e-05_bs64_lam1_none_lam_c{lam}_shared_critic")
+                            f"CRCBM_adam_lr5e-05_bs64_lam1_none_lam_c{LAM_STR[lam]}_shared_critic")
     if not gc_splits:
         gc_splits = load_splits("dsprites_ACBM_shared_critic",
-                                f"CRCBM_adam_lr5e-05_bs64_lam1_none_lam_c{lam}_shared_critic".replace("lr5e-05","lr5e-5"))
+                                f"CRCBM_adam_lr5e-05_bs64_lam1_none_lam_c{LAM_STR[lam]}_shared_critic".replace("lr5e-05","lr5e-5"))
     jt_splits = load_splits("dsprites_dep_0_models",
-                            f"SoftCBM_adam_lr1e-04_bs64_lam_c{lam}")
+                            f"SoftCBM_adam_lr1e-04_bs64_lam_c{LAM_STR[lam]}")
     if not gc_splits or not jt_splits:
         print(f"\n  λ={lam}: missing"); continue
     print(f"\n  λ_c = {lam}")
@@ -324,7 +325,7 @@ seq_ds_splits = load_splits("dsprites_sequential_acbm", "SeqCBM_adam_lr1e-04_bs6
 
 for lam in LAMS:
     gc_splits = load_splits("dsprites_ACBM_shared_critic",
-                            f"CRCBM_adam_lr5e-05_bs64_lam1_none_lam_c{lam}_shared_critic")
+                            f"CRCBM_adam_lr5e-05_bs64_lam1_none_lam_c{LAM_STR[lam]}_shared_critic")
     if not gc_splits or not seq_ds_splits:
         continue
     print(f"\n  GC-CBM λ_c={lam} vs Seq CBM")
@@ -347,7 +348,7 @@ hard_ds_splits = load_splits("dsprites_dep_0_models", "HardCBM_adam_lr1e-04_bs64
 
 for lam in LAMS:
     gc_splits = load_splits("dsprites_ACBM_shared_critic",
-                            f"CRCBM_adam_lr5e-05_bs64_lam1_none_lam_c{lam}_shared_critic")
+                            f"CRCBM_adam_lr5e-05_bs64_lam1_none_lam_c{LAM_STR[lam]}_shared_critic")
     if not gc_splits or not hard_ds_splits:
         continue
     print(f"\n  GC-CBM λ_c={lam} vs Hard CBM")
@@ -369,8 +370,8 @@ print_row(None, [], [], header=True)
 for lam in LAMS:
     lk = LAM_MAP[lam]
     gc_splits = load_splits("dsprites_acem_shared_critic",
-                            f"CRCEM_adam_lr5e-05_bs64_lam1_none_lam_c{lam}_shared_critic")
-    ce_splits = load_splits("dsprites_cem", f"CEM_adam_lr1e-03_bs64_lam_c{lam}")
+                            f"CRCEM_adam_lr5e-05_bs64_lam1_none_lam_c{LAM_STR[lam]}_shared_critic")
+    ce_splits = load_splits("dsprites_cem", f"CEM_adam_lr1e-03_bs64_lam_c{LAM_STR[lam]}")
 
     gc_suite = [ds_cem.get("crcem", {}).get(lk, {}).get(f, {})
                 for f in ["fold_1","fold_2","fold_3","fold_4","fold_5"]]
@@ -416,9 +417,9 @@ print_row(None, [], [], header=True)
 
 for lam in LAMS:
     gc_splits = load_splits("cub_acbm_shared_critic",
-                            f"ACBM_adam_lr1e-04_bs256_lam1_none_lam_c{lam}_shared_critic")
+                            f"ACBM_adam_lr1e-04_bs256_lam1_none_lam_c{LAM_STR[lam]}_shared_critic")
     jt_splits = load_splits("cub_soft_0.01",
-                            f"SoftCBM_adam_lr1e-04_bs256_lam_c{lam}")
+                            f"SoftCBM_adam_lr1e-04_bs256_lam_c{LAM_STR[lam]}")
     if not gc_splits or not jt_splits:
         print(f"\n  λ={lam}: missing splits"); continue
     print(f"\n  λ_c = {lam}")
@@ -441,7 +442,7 @@ seq_cub_splits = load_splits("cub_acbm_shared_critic", "SeqCBM_adam_lr1e-04_bs25
 
 for lam in LAMS:
     gc_splits = load_splits("cub_acbm_shared_critic",
-                            f"ACBM_adam_lr1e-04_bs256_lam1_none_lam_c{lam}_shared_critic")
+                            f"ACBM_adam_lr1e-04_bs256_lam1_none_lam_c{LAM_STR[lam]}_shared_critic")
     if not gc_splits or not seq_cub_splits:
         continue
     print(f"\n  GC-CBM λ_c={lam} vs Seq CBM")
@@ -464,7 +465,7 @@ hard_cub_splits = load_splits("cub_soft_0.01", "HardCBM_adam_lr1e-04_bs256_lam_c
 
 for lam in LAMS:
     gc_splits = load_splits("cub_acbm_shared_critic",
-                            f"ACBM_adam_lr1e-04_bs256_lam1_none_lam_c{lam}_shared_critic")
+                            f"ACBM_adam_lr1e-04_bs256_lam1_none_lam_c{LAM_STR[lam]}_shared_critic")
     if not gc_splits or not hard_cub_splits:
         continue
     print(f"\n  GC-CBM λ_c={lam} vs Hard CBM")
@@ -489,8 +490,8 @@ cub_cem_suite  = joblib.load(cub_suite_path) if os.path.exists(cub_suite_path) e
 for lam in LAMS:
     lk = LAM_MAP[lam]
     gc_splits = load_splits("cub_cem",
-                            f"CRCEM_adam_lr5e-04_bs256_lam1_none_lam_c{lam}_shared_critic")
-    ce_splits = load_splits("cub_cem", f"CEM_adam_lr1e-03_bs256_lam_c{lam}")
+                            f"CRCEM_adam_lr5e-04_bs256_lam1_none_lam_c{LAM_STR[lam]}_shared_critic")
+    ce_splits = load_splits("cub_cem", f"CEM_adam_lr1e-03_bs256_lam_c{LAM_STR[lam]}")
 
     gc_suite = [cub_cem_suite.get("crcem", {}).get(lk, {}).get(f, {})
                 for f in ["fold_1","fold_2","fold_3","fold_4","fold_5"]]
