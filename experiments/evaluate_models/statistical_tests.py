@@ -60,18 +60,19 @@ def fmt(vals):
 
 def load_splits(folder, model_name, n=5):
     folds = []
+    alt = model_name.replace("lr1e-04", "lr1e-4")
+    if alt == model_name:
+        alt = model_name.replace("lr1e-4", "lr1e-04")
     for i in range(n):
-        p = os.path.join(BASE, folder, model_name,
-                         f"{model_name}_split_{i}_results.joblib")
-        if os.path.exists(p):
-            folds.append(joblib.load(p))
-            continue
-        alt = model_name.replace("lr1e-04", "lr1e-4")
-        if alt == model_name:
-            alt = model_name.replace("lr1e-4", "lr1e-04")
-        p2 = os.path.join(BASE, folder, alt, f"{alt}_split_{i}_results.joblib")
-        if os.path.exists(p2):
-            folds.append(joblib.load(p2))
+        candidates = [
+            os.path.join(BASE, folder, model_name, f"{model_name}_split_{i}_results.joblib"),
+            os.path.join(BASE, folder, model_name, f"{alt}_split_{i}_results.joblib"),
+            os.path.join(BASE, folder, alt,        f"{alt}_split_{i}_results.joblib"),
+        ]
+        for p in candidates:
+            if os.path.exists(p):
+                folds.append(joblib.load(p))
+                break
     return folds
 
 
@@ -403,6 +404,118 @@ for lam in LAMS:
 
     print_row("CVL",  use_gc_cvl,    use_ce_cvl)
     print_row("ICVL", gc_icvl_suite, ce_icvl_suite)
+
+# ═════════════════════════════════════════════════════════════════════════════
+# SECTION 9: GC-CBM vs Joint CBM — CUB
+# ═════════════════════════════════════════════════════════════════════════════
+print()
+print(SEP)
+print("GC-CBM vs JOINT CBM — CUB-200 (per λ)")
+print(SEP)
+print_row(None, [], [], header=True)
+
+for lam in LAMS:
+    gc_splits = load_splits("cub_acbm_shared_critic",
+                            f"ACBM_adam_lr1e-04_bs256_lam1_none_lam_c{lam}_shared_critic")
+    jt_splits = load_splits("cub_soft_0.01",
+                            f"SoftCBM_adam_lr1e-04_bs256_lam_c{lam}")
+    if not gc_splits or not jt_splits:
+        print(f"\n  λ={lam}: missing splits"); continue
+    print(f"\n  λ_c = {lam}")
+    print_row("task%",  acc_y(gc_splits), acc_y(jt_splits))
+    print_row("c_acc%", acc_c(gc_splits), acc_c(jt_splits))
+    print_row("CTL",    ctl_from_splits(gc_splits), ctl_from_splits(jt_splits))
+    print_row("ICL",    icl_from_splits(gc_splits), icl_from_splits(jt_splits))
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# SECTION 10: GC-CBM vs Sequential CBM — CUB
+# ═════════════════════════════════════════════════════════════════════════════
+print()
+print(SEP)
+print("GC-CBM vs SEQUENTIAL CBM — CUB-200")
+print(SEP)
+print_row(None, [], [], header=True)
+
+seq_cub_splits = load_splits("cub_acbm_shared_critic", "SeqCBM_adam_lr1e-04_bs256_lam_c1")
+
+for lam in LAMS:
+    gc_splits = load_splits("cub_acbm_shared_critic",
+                            f"ACBM_adam_lr1e-04_bs256_lam1_none_lam_c{lam}_shared_critic")
+    if not gc_splits or not seq_cub_splits:
+        continue
+    print(f"\n  GC-CBM λ_c={lam} vs Seq CBM")
+    print_row("task%",  acc_y(gc_splits), acc_y(seq_cub_splits))
+    print_row("c_acc%", acc_c(gc_splits), acc_c(seq_cub_splits))
+    print_row("CTL",    ctl_from_splits(gc_splits), ctl_from_splits(seq_cub_splits))
+    print_row("ICL",    icl_from_splits(gc_splits), icl_from_splits(seq_cub_splits))
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# SECTION 11: GC-CBM vs Hard CBM — CUB
+# ═════════════════════════════════════════════════════════════════════════════
+print()
+print(SEP)
+print("GC-CBM vs HARD CBM — CUB-200")
+print(SEP)
+print_row(None, [], [], header=True)
+
+hard_cub_splits = load_splits("cub_soft_0.01", "HardCBM_adam_lr1e-04_bs256_lam_c1")
+
+for lam in LAMS:
+    gc_splits = load_splits("cub_acbm_shared_critic",
+                            f"ACBM_adam_lr1e-04_bs256_lam1_none_lam_c{lam}_shared_critic")
+    if not gc_splits or not hard_cub_splits:
+        continue
+    print(f"\n  GC-CBM λ_c={lam} vs Hard CBM")
+    print_row("task%",  acc_y(gc_splits), acc_y(hard_cub_splits))
+    print_row("c_acc%", acc_c(gc_splits), acc_c(hard_cub_splits))
+    print_row("CTL",    ctl_from_splits(gc_splits), ctl_from_splits(hard_cub_splits))
+    print_row("ICL",    icl_from_splits(gc_splits), icl_from_splits(hard_cub_splits))
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# SECTION 12: GC-CEM vs CEM — CUB
+# ═════════════════════════════════════════════════════════════════════════════
+print()
+print(SEP)
+print("GC-CEM vs CEM — CUB-200")
+print(SEP)
+print_row(None, [], [], header=True)
+
+cub_suite_path = BASE + "results_cub_suite.dict"
+cub_cem_suite  = joblib.load(cub_suite_path) if os.path.exists(cub_suite_path) else {}
+
+for lam in LAMS:
+    lk = LAM_MAP[lam]
+    gc_splits = load_splits("cub_cem",
+                            f"CRCEM_adam_lr5e-04_bs256_lam1_none_lam_c{lam}_shared_critic")
+    ce_splits = load_splits("cub_cem", f"CEM_adam_lr1e-03_bs256_lam_c{lam}")
+
+    gc_suite = [cub_cem_suite.get("crcem", {}).get(lk, {}).get(f, {})
+                for f in ["fold_1","fold_2","fold_3","fold_4","fold_5"]]
+    ce_suite = [cub_cem_suite.get("cem",   {}).get(lk, {}).get(f, {})
+                for f in ["fold_1","fold_2","fold_3","fold_4","fold_5"]]
+
+    print(f"\n  λ_c = {lam}")
+    if gc_splits and ce_splits:
+        print_row("task%",  acc_y(gc_splits), acc_y(ce_splits))
+        print_row("c_acc%", acc_c(gc_splits), acc_c(ce_splits))
+        print_row("CTL",    ctl_from_splits(gc_splits), ctl_from_splits(ce_splits))
+        print_row("ICL",    icl_from_splits(gc_splits), icl_from_splits(ce_splits))
+    elif any(gc_suite) and any(ce_suite):
+        gc_task = [_task(d) for d in gc_suite if d]
+        ce_task = [_task(d) for d in ce_suite if d]
+        print_row("task%", gc_task, ce_task)
+
+    # CVL/ICVL are 0.00 for all CUB CEMs (negative R² clipped to 0)
+    gc_cvl_suite  = [_cvl(d)  for d in gc_suite if d]
+    ce_cvl_suite  = [_cvl(d)  for d in ce_suite if d]
+    gc_icvl_suite = [_icvl(d) for d in gc_suite if d]
+    ce_icvl_suite = [_icvl(d) for d in ce_suite if d]
+    print_row("CVL",  gc_cvl_suite,  ce_cvl_suite)
+    print_row("ICVL", gc_icvl_suite, ce_icvl_suite)
+
 
 print()
 print(SEP)
