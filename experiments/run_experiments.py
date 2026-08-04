@@ -85,14 +85,12 @@ from xai_concept_leakage.data.synthetic_loaders import (
     get_synthetic_data_loader,
     get_synthetic_num_features,
 )
-import xai_concept_leakage.data.celeba_loader as celeba_data_module
-import xai_concept_leakage.data.mnist_add as mnist_data_module
-import xai_concept_leakage.data.tabulartoy_loader as tabulartoy_data_module
-import xai_concept_leakage.data.dsprites_loader as dsprites_data_module
-import xai_concept_leakage.data.shapes3d_loader as shapes3d_data_module
-import xai_concept_leakage.data.synthetic_toy_loader as synthetic_toy_data_module
-#import data.CUB200.cub_loader as cub_data_module
-import data.CUB200.cub_loader as cub_data_module
+# Dataset loader modules are imported lazily, inside
+# _generate_dataset_and_update_config, one per dataset branch — importing
+# them all eagerly here means every run (regardless of dataset) needs every
+# dataset's loader file present, including data.CUB200.cub_loader, which
+# lives outside the xai_concept_leakage package and isn't synced by every
+# HPC worker script (only the CUB-specific ones copy it in).
 import xai_concept_leakage.interventions.utils as intervention_utils
 import xai_concept_leakage.train.evaluate as evaluation
 import xai_concept_leakage.train.training as training
@@ -207,21 +205,21 @@ def _generate_dataset_and_update_config(experiment_config):
     logging.debug(f"The dataset's root directory is {dataset_config.get('root_dir')}")
     intervention_config = experiment_config.get("intervention_config", {})
     if dataset_config["dataset"] == "celeba":
-        data_module = celeba_data_module
+        import xai_concept_leakage.data.celeba_loader as data_module
     elif dataset_config["dataset"] in ["xor", "vector", "dot", "trig"]:
         data_module = get_synthetic_data_loader(dataset_config["dataset"])
     elif dataset_config["dataset"] == "mnist_add":
-        data_module = mnist_data_module
+        import xai_concept_leakage.data.mnist_add as data_module
     elif dataset_config["dataset"] == "tabulartoy":
-        data_module = tabulartoy_data_module
+        import xai_concept_leakage.data.tabulartoy_loader as data_module
     elif dataset_config["dataset"] == "dsprites":
-        data_module = dsprites_data_module
+        import xai_concept_leakage.data.dsprites_loader as data_module
     elif dataset_config["dataset"] == "shapes3d":
-        data_module = shapes3d_data_module
+        import xai_concept_leakage.data.shapes3d_loader as data_module
     elif dataset_config['dataset'] == 'cub':
-       data_module  = cub_data_module
+        import data.CUB200.cub_loader as data_module
     elif dataset_config['dataset'] == 'synthetic_toy':
-        data_module = synthetic_toy_data_module
+        import xai_concept_leakage.data.synthetic_toy_loader as data_module
     else:
         raise ValueError(f"Unsupported dataset {dataset_config['dataset']}!")
 
