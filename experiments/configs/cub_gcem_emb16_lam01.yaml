@@ -1,0 +1,80 @@
+results_dir: "results/cub_gcem_emb16/"
+trials: 1
+
+shared_params:
+  model_selection_trials: 1
+  dataset_config:
+    dataset: "cub"
+    num_workers: 8
+    batch_size: 256
+    root_dir: data/CUB200/
+    sampling_percent: 1
+    sampling_groups: true
+    test_subsampling: 1
+    weight_loss: true
+
+  intervention_config:
+    competence_levels: [1]
+    intervention_freq: 1
+    intervention_batch_size: 64
+    intervention_policies:
+      - policy: "random"
+        group_level: True
+        use_prior: False
+
+  skip_repr_evaluation: true
+  max_epochs: 300
+  top_k_accuracy: null
+  save_model: true
+  patience: 400
+  emb_size: 16
+  extra_dims: 0
+  weight_decay: 4.0e-06
+  weight_loss: true
+  c_extractor_arch: "resnet18"
+  optimizer: sgd
+  bool: false
+  momentum: 0.9
+  sigmoidal_prob: false
+  training_intervention_prob: 0
+  cbm_optimizer: sgd
+  n_hidden: 512
+  linear_c2y: True
+  adv_optimizer: adam
+  check_val_every_n_epoch: 5
+  compute_mi_on_gpu: False
+  compute_mi_mode: "cpu"
+  accumulate_grad_batches: 1
+  use_task_class_weights: True
+  c2y_max_epochs: 150
+
+runs:
+  - architecture: "CriticRegularisedConceptEmbeddingModel"
+    run_name: "GCEM-emb16-lam01"
+    sigmoidal_prob: True
+    training_intervention_prob: 0
+    embedding_activation: "leakyrelu"
+    concept_loss_weight: 0.1
+    emb_size: 16
+    cbm_learning_rate: 0.0005
+    cbm_optimizer: adam
+    use_adversarial: True
+    max_adversarial_lambda: 1
+    adversarial_delay: 0
+    adversarial_lambda_scheduler_warmup: null
+    adversarial_scheduler: "none"
+    adversarial_loss_type: "grl"
+    n_critic_steps: 1
+    accumulate_grad_batches: 1
+    adv_optimizer: adam
+    adv_learning_rate: 0.0001
+    max_epochs: 300
+    patience: 400
+    gradient_clip_val: 1.0
+    early_stopping_monitor: "val_y_accuracy"
+    early_stopping_mode: max
+    early_stopping_delta: 0.0
+    concept_vector_regularisation: False
+    entropy_maximisation: False
+    shared_critic: True
+    shared_prob_gen: False

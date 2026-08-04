@@ -25,6 +25,7 @@ from xai_concept_leakage.models.construction import external_load_model_trainer
 from xai_concept_leakage.metrics.mutual_information import (
     repeat_estimate_MI_concepts_task,
     repeat_estimate_MI_interconcept,
+    compute_mi_matrix_parallel,
 )
 from xai_concept_leakage.metrics.leakage import (
     compute_CVL, compute_CVL_global,
@@ -160,23 +161,30 @@ def compute_ctl(c_mix_flat, y_true, n_concepts, repeats=3, n_neighbors=3):
     )
 
 
-def compute_icl(c_mix_flat, n_concepts, repeats=3, n_neighbors=3):
+def compute_icl(c_mix_flat, n_concepts, repeats=3, n_neighbors=3, n_jobs=-1):
     """
     Inter-Concept Leakage (ICL): normalised pairwise MI between concept embeddings.
 
+    Uses compute_mi_matrix_parallel for parallelised computation across pairs.
     Returns: (mean scalar, se scalar) — mean over all off-diagonal pairs.
+
+    n_jobs: number of parallel workers (-1 = all cores).
     """
-    runs = repeat_estimate_MI_interconcept(
-        c_mix_flat,
-        n_concepts=n_concepts,
-        repeats=repeats,
-        n_neighbors=n_neighbors,
-        normalise=True,
-        flatten=True,
-        return_avg=False,
-    )
-    # runs is a list of 1-D arrays (flattened lower-tri); average each run first
-    run_means = [r.mean() for r in runs]
+    import os
+    if n_jobs == -1:
+        n_jobs = os.cpu_count() or 1
+
+    run_means = []
+    for _ in range(repeats):
+        tril = compute_mi_matrix_parallel(
+            c_mix_flat,
+            n_concepts=n_concepts,
+            n_neighbors=n_neighbors,
+            normalise=True,
+            flatten=True,
+            n_jobs=n_jobs,
+        )
+        run_means.append(float(np.mean(tril)))
     return float(np.mean(run_means)), float(np.std(run_means) / max(1, np.sqrt(len(run_means) - 1)))
 
 

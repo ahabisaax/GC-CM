@@ -2,6 +2,7 @@
 Regression-based leakage metrics for CEM concept embeddings.
 """
 import numpy as np
+from sklearn.cross_decomposition import PLSRegression
 from sklearn.decomposition import PCA
 from sklearn.linear_model import LogisticRegression, Ridge
 from sklearn.metrics import r2_score
@@ -166,6 +167,193 @@ def compute_CVL_global(
     return {
         "CVL_global": delta,
         "r2":         r2,
+    }
+
+
+def compute_CVL_pls(
+    c_hat_train,
+    c_hat_test,
+    c_train,
+    c_test,
+    y_train,
+    y_test,
+    alpha=1.0,
+    n_components=10,
+):
+    """
+    Concept Vector Leakage (CVL) with PLS regression in step 2.
+
+    Step 1 is identical to compute_CVL: Ridge(c_k -> ĉ_k) residuals R_k.
+    Step 2 replaces Ridge(Y_onehot -> R_k) with PLSRegression(Y_onehot -> R_k).
+
+    Ridge fits all directions of R_k, penalised by magnitude, with no notion
+    of which directions actually covary with the task label — when true
+    leakage is a small fraction of R_k's variance (as on CUB, where K=112
+    concepts and Y has 200 one-hot columns), the fit spreads across
+    mostly-noise directions and out-of-sample R² washes out or goes
+    negative. PLS instead finds the directions of R_k that maximally
+    covary with Y and regresses only in that subspace — it looks for the
+    leakage direction directly instead of fitting everything.
+
+    Also reports, per concept, the fraction of ĉ_k's variance already
+    explained by step 1 (Ridge on the concept's own label) — this is
+    diagnostic only (how expressive/lossy step 1 is) and does not affect
+    the CVL score.
+
+    Parameters
+    ----------
+    c_hat_train, c_hat_test : array [N, K, m]
+    c_train, c_test         : array [N, K]  binary ground-truth concept labels
+    y_train, y_test         : array [N]     integer task labels
+    alpha                   : float  Ridge regularisation for step 1
+    n_components            : int  PLS latent dimensions for step 2; capped
+                               internally at min(n_components, n_classes,
+                               m, N_train - 1) per concept
+
+    Returns
+    -------
+    dict with keys:
+        'CVL_pls'                          : float — mean clipped R²
+        'CVL_pls_per_concept'              : list[float]
+        'r2_per_concept'                   : list[float]  raw R² before clipping
+        'step1_explained_var_per_concept'  : list[float]  fraction of ĉ_k
+                                              variance removed by step 1
+        'n_components_used'                : list[int]  actual PLS components
+                                              used per concept
+    """
+    c_hat_train = np.asarray(c_hat_train)
+    c_hat_test  = np.asarray(c_hat_test)
+    c_train     = np.asarray(c_train)
+    c_test      = np.asarray(c_test)
+    y_train     = np.asarray(y_train).ravel()
+    y_test      = np.asarray(y_test).ravel()
+
+    classes = np.unique(y_train)
+    Y_train = label_binarize(y_train, classes=classes).astype(float)
+    Y_test  = label_binarize(y_test,  classes=classes).astype(float)
+
+    N_train, K, m = c_hat_train.shape
+
+    cvl_per_concept       = []
+    r2_per_concept        = []
+    explained_var_per_concept = []
+    n_comp_used            = []
+
+    for k in range(K):
+        # Step 1: Ridge(c_k → ĉ_k) → residuals orthogonal to c_k
+        ridge1 = Ridge(alpha=alpha)
+        ridge1.fit(c_train[:, k].reshape(-1, 1), c_hat_train[:, k, :])
+        R_train = c_hat_train[:, k, :] - ridge1.predict(c_train[:, k].reshape(-1, 1))
+        R_test  = c_hat_test[:, k, :]  - ridge1.predict(c_test[:, k].reshape(-1, 1))
+
+        emb_var       = float(c_hat_train[:, k, :].var())
+        explained_var = 1.0 - float(R_train.var()) / (emb_var + 1e-12)
+        explained_var_per_concept.append(explained_var)
+
+        # Step 2: PLS(Y_onehot → R_k) — supervised subspace, not magnitude penalty
+        n_comp = int(min(n_components, Y_train.shape[1], m, N_train - 1))
+        n_comp = max(1, n_comp)
+        pls = PLSRegression(n_components=n_comp)
+        pls.fit(Y_train, R_train)
+        R_pred = pls.predict(Y_test)
+        r2    = float(r2_score(R_test, R_pred, multioutput="variance_weighted"))
+        delta = max(0.0, r2)
+        print(f"      concept {k:3d}: step1_expl_var={explained_var:.4f}  "
+              f"r2={r2:.4f}  CVL={delta:.4f}  (n_comp={n_comp})")
+        r2_per_concept.append(r2)
+        cvl_per_concept.append(delta)
+        n_comp_used.append(n_comp)
+
+    return {
+        "CVL_pls":                         float(np.mean(cvl_per_concept)),
+        "CVL_pls_per_concept":             cvl_per_concept,
+        "r2_per_concept":                  r2_per_concept,
+        "step1_explained_var_per_concept": explained_var_per_concept,
+        "n_components_used":               n_comp_used,
+    }
+
+
+def compute_CVL_global_pls(
+    c_hat_train,
+    c_hat_test,
+    c_train,
+    c_test,
+    y_train,
+    y_test,
+    alpha=1.0,
+    n_components=20,
+):
+    """
+    Global CVL with PLS regression in step 2 (concatenated K*m embedding).
+
+    See compute_CVL_pls for the Ridge-vs-PLS rationale. Here step 2 regresses
+    Y_onehot against the full concatenated residual [N, K*m] in one PLS fit
+    rather than per-concept, which lets PLS pick leakage directions that span
+    multiple concepts at once.
+
+    Also reports step1_explained_var (overall, over the full K*m residual)
+    and step1_explained_var_per_concept (per K-sized block) — diagnostic
+    only, showing how much of the embedding step 1 already accounts for
+    via each concept's own label before the leakage probe runs.
+
+    Returns
+    -------
+    dict with keys:
+        'CVL_global_pls'                  : float — clipped R²
+        'r2'                               : float — raw R²
+        'step1_explained_var'              : float — overall, full K*m residual
+        'step1_explained_var_per_concept'  : list[float]  per K-sized block
+        'n_components_used'                : int
+    """
+    c_hat_train = np.asarray(c_hat_train)
+    c_hat_test  = np.asarray(c_hat_test)
+    c_train     = np.asarray(c_train)
+    c_test      = np.asarray(c_test)
+    y_train     = np.asarray(y_train).ravel()
+    y_test      = np.asarray(y_test).ravel()
+
+    classes = np.unique(y_train)
+    Y_train = label_binarize(y_train, classes=classes).astype(float)
+    Y_test  = label_binarize(y_test,  classes=classes).astype(float)
+
+    N_tr, K, m = c_hat_train.shape
+    N_te = c_hat_test.shape[0]
+
+    X_train = c_hat_train.reshape(N_tr, K * m)
+    X_test  = c_hat_test.reshape(N_te, K * m)
+
+    # Step 1: Ridge removes all linearly concept-explained variance from embedding
+    ridge1 = Ridge(alpha=alpha)
+    ridge1.fit(c_train, X_train)
+    R_train = X_train - ridge1.predict(c_train)
+    R_test  = X_test  - ridge1.predict(c_test)
+
+    explained_var = 1.0 - float(R_train.var()) / (float(X_train.var()) + 1e-12)
+    explained_var_per_concept = []
+    for k in range(K):
+        sl = slice(k * m, (k + 1) * m)
+        blk_var = float(X_train[:, sl].var())
+        explained_var_per_concept.append(
+            1.0 - float(R_train[:, sl].var()) / (blk_var + 1e-12)
+        )
+
+    # Step 2: PLS(Y_onehot → R); supervised subspace over the full K*m residual
+    n_comp = int(min(n_components, Y_train.shape[1], K * m, N_tr - 1))
+    n_comp = max(1, n_comp)
+    pls = PLSRegression(n_components=n_comp)
+    pls.fit(Y_train, R_train)
+    R_pred = pls.predict(Y_test)
+    r2    = float(r2_score(R_test, R_pred, multioutput="variance_weighted"))
+    delta = max(0.0, r2)
+    print(f"    CVL_global_pls: step1_expl_var={explained_var:.4f}  "
+          f"r2={r2:.4f}  CVL={delta:.4f}  (n_comp={n_comp})")
+
+    return {
+        "CVL_global_pls":                  delta,
+        "r2":                              r2,
+        "step1_explained_var":             explained_var,
+        "step1_explained_var_per_concept": explained_var_per_concept,
+        "n_components_used":               n_comp,
     }
 
 
