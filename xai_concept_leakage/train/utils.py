@@ -419,7 +419,7 @@ class LossTracker(Callback):
                                 columns=["scores"]
                             )
 
-                            pl_module.log(
+                            pl_module.logger.experiment.log(
                                 {
                                     "binarization_hist": wandb.plot.histogram(
                                         table,
