@@ -54,6 +54,12 @@ cp "$PROJECT_ROOT/data/$DATASET_TAR" "$LOCAL_WORKSPACE/data/"
 cd "$LOCAL_WORKSPACE/data"
 tar -xf "$DATASET_TAR"
 
+# cub_loader.py is source code, not dataset content, and isn't covered by
+# CUB200.tar or the code rsync above (which excludes /data) — copy it in
+# explicitly.
+mkdir -p "$LOCAL_WORKSPACE/data/CUB200"
+cp "$PROJECT_ROOT/data/CUB200/"*.py "$LOCAL_WORKSPACE/data/CUB200/"
+
 # Copy trained checkpoints (eval reads from results/cub_cem/)
 echo "Copying trained CEM checkpoints to local SSD..."
 mkdir -p "$LOCAL_WORKSPACE/results/cub_cem"

@@ -57,6 +57,12 @@ cp "$PROJECT_ROOT/data/$DATASET_TAR" "$LOCAL_WORKSPACE/data/"
 cd "$LOCAL_WORKSPACE/data"
 tar -xf $DATASET_TAR
 
+# cub_loader.py is source code, not dataset content, and isn't covered by
+# CUB200.tar or the code rsync above (which excludes /data) — copy it in
+# explicitly.
+mkdir -p "$LOCAL_WORKSPACE/data/CUB200"
+cp "$PROJECT_ROOT/data/CUB200/"*.py "$LOCAL_WORKSPACE/data/CUB200/"
+
 cd "$LOCAL_WORKSPACE"
 export PYTHONPATH="$LOCAL_WORKSPACE:$PYTHONPATH"
 echo "Running from: $(pwd)"
