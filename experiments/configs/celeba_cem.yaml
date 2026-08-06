@@ -4,13 +4,15 @@ trials: 1
 shared_params:
   dataset_config:
     dataset: celeba
-    batch_size: 256
+    batch_size: 512
     num_workers: 8
     root_dir: data/
+    num_classes: 1000
     use_binary_vector_class: true
+    use_imbalance: true
     label_binary_width: 1
-    num_concepts: 40
-    num_hidden_concepts: 0
+    num_concepts: 6
+    num_hidden_concepts: 2
     label_dataset_subsample: 12
     image_size: 64
 
@@ -24,22 +26,22 @@ shared_params:
         use_prior: False
 
   skip_repr_evaluation: true
-  max_epochs: 300
+  max_epochs: 150
   top_k_accuracy: null
   save_model: true
-  emb_size: 16
+  emb_size: 32
   extra_dims: 0
-  learning_rate: 0.01
+  learning_rate: 0.005
   weight_decay: 4.0e-06
   weight_loss: false
   use_task_class_weights: false
-  c_extractor_arch: "resnet18"
+  c_extractor_arch: "resnet34"
   optimizer: sgd
+  cbm_optimizer: sgd
   bool: false
   momentum: 0.9
   sigmoidal_prob: false
   training_intervention_prob: 0
-  cbm_optimizer: adam
   n_hidden: 512
   linear_c2y: true
   adv_optimizer: adam
@@ -49,10 +51,10 @@ shared_params:
   compute_mi_mode: 'cpu'
   accumulate_grad_batches: 1
   c2y_max_epochs: 150
-  early_stopping_monitor: 'val_y_accuracy'
-  early_stopping_mode: max
+  early_stopping_monitor: 'val_loss'
+  early_stopping_mode: min
   early_stopping_delta: 0.0
-  patience: 400
+  patience: 5
   gradient_clip_val: 1.0
 
 runs:
