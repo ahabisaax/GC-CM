@@ -1,5 +1,5 @@
 results_dir: "results/celeba_cem/"
-trials: 1
+trials: 5
 
 shared_params:
   dataset_config:
@@ -54,7 +54,7 @@ shared_params:
   early_stopping_monitor: 'val_loss'
   early_stopping_mode: min
   early_stopping_delta: 0.0
-  patience: 5
+  patience: 30
   gradient_clip_val: 1.0
 
 runs:

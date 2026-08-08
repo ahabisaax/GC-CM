@@ -3,7 +3,7 @@
 #$ -o ~/Scratch/xai-crcbm/logs/CelebA_CRCEM_lam0_5_$JOB_ID.out
 #$ -e ~/Scratch/xai-crcbm/logs/CelebA_CRCEM_lam0_5_$JOB_ID.err
 #$ -pe smp 8
-#$ -l h_rt=30:30:00
+#$ -l h_rt=10:00:00
 #$ -l mem=24G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
