@@ -4,7 +4,7 @@
 #$ -e ~/Scratch/xai-crcbm/logs/CelebA_CEM_$JOB_ID.err
 #$ -pe smp 8
 #$ -l h_rt=10:00:00
-#$ -l mem=24G
+#$ -l mem=4G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
 #$ -l gpu=1
@@ -62,12 +62,11 @@ echo "Running from: $(pwd)"
 LOCAL_CONFIG="experiments/configs/celeba_cem.yaml"
 LOCAL_RESULTS="$TMPDIR/results_temp"
 
-echo "Starting Training (CEM only)..."
+echo "Starting Training..."
 $CONDA_PREFIX/bin/python -u experiments/run_experiments.py \
     --config "$LOCAL_CONFIG" \
     --project_name "CelebA_CEM" \
-    --output_dir "$LOCAL_RESULTS" \
-    --filter_in "^CEM"
+    --output_dir "$LOCAL_RESULTS"
 
 # --- 6. SAVE RESULTS ---
 echo "Syncing results back to Scratch..."
