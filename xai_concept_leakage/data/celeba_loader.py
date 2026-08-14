@@ -453,6 +453,6 @@ def generate_data(
         val_dl,
         test_dl,
         imbalance,
-        (num_concepts, len(label_remap), concept_group_map),
+        (num_concepts, num_classes, concept_group_map),
     )
 
