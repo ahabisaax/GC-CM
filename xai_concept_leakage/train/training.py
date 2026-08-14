@@ -23,11 +23,72 @@ import xai_concept_leakage.metrics.oracle as oracle
 import xai_concept_leakage.train.utils as utils
 
 from xai_concept_leakage.metrics.cas import concept_alignment_score
+from xai_concept_leakage.metrics.leakage import compute_RTL_RCL
 from xai_concept_leakage.models.construction import (
     construct_model,
     construct_sequential_models,
     load_trained_model,
 )
+
+# Architectures whose _forward supports output_embeddings=True
+_CEM_ARCHITECTURES = {
+    "ConceptEmbeddingModel",
+    "MixtureEmbModel",
+    "GCConceptEmbeddingModel",
+    "AdversarialConceptEmbeddingModel",
+    "CriticRegularisedConceptEmbeddingModel",
+    "IntAwareConceptEmbeddingModel",
+    "IntCEM",
+}
+
+
+def _collect_cem_embeddings(model, dl):
+    """Collect c_mix (N, K, emb_size), c_true (N, K), y (N,) for a CEM model."""
+    device = next(model.parameters()).device
+    model.eval()
+    c_mix_all, c_true_all, y_all = [], [], []
+    with torch.no_grad():
+        for elems in dl:
+            if len(elems) == 2:
+                (x, (y_batch, c_batch)) = elems
+            else:
+                (x, y_batch, c_batch) = elems
+            x = x.to(device)
+            out = model._forward(
+                x, train=False, output_embeddings=True, output_latent=False
+            )
+            # out: (c_sem, c_pred_flat, y_pred, pos_emb, neg_emb)
+            c_sem, _, _, pos_emb, neg_emb = out
+            c_mix = (
+                pos_emb * c_sem.unsqueeze(-1) + neg_emb * (1 - c_sem.unsqueeze(-1))
+            )
+            c_mix_all.append(c_mix.cpu().numpy())
+            c_true_all.append(c_batch.numpy() if not c_batch.is_cuda else c_batch.cpu().numpy())
+            y_all.append(y_batch.numpy() if not y_batch.is_cuda else y_batch.cpu().numpy())
+    return (
+        np.concatenate(c_mix_all, axis=0),
+        np.concatenate(c_true_all, axis=0),
+        np.concatenate(y_all, axis=0),
+    )
+
+
+def _add_rtl_rcl(model, config, train_dl, test_dl, eval_results):
+    """Compute RTL/RCL for CEM models and update eval_results in-place."""
+    if config.get("architecture", "") not in _CEM_ARCHITECTURES:
+        return
+    if test_dl is None or train_dl is None:
+        return
+    try:
+        c_mix_tr, c_true_tr, y_tr = _collect_cem_embeddings(model, train_dl)
+        c_mix_te, c_true_te, y_te = _collect_cem_embeddings(model, test_dl)
+        rtl_rcl = compute_RTL_RCL(c_mix_tr, c_mix_te, c_true_tr, c_true_te, y_tr, y_te)
+        eval_results.update(rtl_rcl)
+        print(
+            f"RTL_norm={rtl_rcl['RTL_norm']:.4f}  RTL_sum={rtl_rcl['RTL_sum']:.4f}  "
+            f"RCL_norm={rtl_rcl['RCL_norm']:.4f}  RCL_sum={rtl_rcl['RCL_sum']:.4f}"
+        )
+    except Exception as e:
+        logging.warning(f"RTL/RCL computation failed: {e}")
 
 
 def _evaluate_cbm(
@@ -406,6 +467,9 @@ def train_end_to_end_model(
             )
             eval_results["training_time"] = training_time
             eval_results["num_epochs"] = num_epochs
+            _add_rtl_rcl(model, config, train_dl, test_dl, eval_results)
+            if eval_results.get("RTL_norm") is not None:
+                wandb.log({k: eval_results[k] for k in ("RTL_sum", "RTL_norm", "RCL_sum", "RCL_norm")})
             if test_dl is not None:
                 print(
                     f'c_acc: {eval_results["test_acc_c"] * 100:.2f}%, '
@@ -529,6 +593,7 @@ def train_end_to_end_model(
         )
         eval_results["training_time"] = training_time
         eval_results["num_epochs"] = num_epochs
+        _add_rtl_rcl(model, config, train_dl, test_dl, eval_results)
         if test_dl is not None:
             print(
                 f'c_acc: {eval_results["test_acc_c"]*100:.2f}%, '

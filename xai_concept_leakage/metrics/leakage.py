@@ -10,6 +10,82 @@ from sklearn.neural_network import MLPClassifier, MLPRegressor
 from sklearn.preprocessing import StandardScaler, label_binarize
 
 
+def compute_RTL_RCL(c_mix_tr, c_mix_te, c_true_tr, c_true_te, y_tr, y_te, alpha=1.0):
+    """
+    Residual Task Leakage (RTL) and Residual Concept Leakage (RCL) for CEM embeddings.
+
+    Per concept k:
+      1. Per-dim normalise embedding to unit variance (train stats).
+      2. Ridge(c_k → emb_k_norm) → residual r_k.
+      3. RTL_k_sum  = Σᵢ max(0, R²ᵢ(Y→r_k) × varᵢ(r_k))
+         RTL_k_norm = RTL_k_sum / Σᵢ varᵢ(r_k)  ∈ [0,1]
+      4. RCL_k_sum  = mean_{j≠k} Σᵢ max(0, R²ᵢ(c_j→r_k) × varᵢ(r_k))
+         RCL_k_norm = RCL_k_sum / Σᵢ varᵢ(r_k)  ∈ [0,1]
+
+    Returns mean over concepts.
+
+    c_mix_tr/te  : (N, K, m)  — concept embeddings
+    c_true_tr/te : (N, K)     — binary ground-truth concept labels
+    y_tr/te      : (N,)       — integer task labels
+    """
+    c_mix_tr  = np.asarray(c_mix_tr,  dtype=np.float64)
+    c_mix_te  = np.asarray(c_mix_te,  dtype=np.float64)
+    c_true_tr = np.asarray(c_true_tr, dtype=np.float64)
+    c_true_te = np.asarray(c_true_te, dtype=np.float64)
+    y_tr = np.asarray(y_tr).ravel()
+    y_te = np.asarray(y_te).ravel()
+
+    classes = np.unique(y_tr)
+    Y_tr = label_binarize(y_tr, classes=classes).astype(np.float64)
+    Y_te = label_binarize(y_te, classes=classes).astype(np.float64)
+
+    K = c_mix_tr.shape[1]
+    rtl_sum_k, rcl_sum_k, rtl_norm_k, rcl_norm_k = [], [], [], []
+
+    for k in range(K):
+        tr_k = c_mix_tr[:, k, :]
+        te_k = c_mix_te[:, k, :]
+
+        mu, sigma = tr_k.mean(0, keepdims=True), tr_k.std(0, keepdims=True) + 1e-8
+        tr_n = (tr_k - mu) / sigma
+        te_n = (te_k - mu) / sigma
+
+        reg1 = Ridge(alpha=alpha).fit(c_true_tr[:, k:k+1], tr_n)
+        r_tr = tr_n - reg1.predict(c_true_tr[:, k:k+1])
+        r_te = te_n - reg1.predict(c_true_te[:, k:k+1])
+
+        dim_var     = r_te.var(axis=0)
+        total_resid = float(dim_var.sum()) + 1e-12
+        ss_tot      = ((r_te - r_te.mean(0)) ** 2).sum(0)
+
+        # RTL: Ridge(Y → r)
+        reg2   = Ridge(alpha=alpha).fit(Y_tr, r_tr)
+        ss_res = ((r_te - reg2.predict(Y_te)) ** 2).sum(0)
+        r2_y   = np.where(ss_tot > 1e-12, 1 - ss_res / ss_tot, 0.0)
+        rtl_k  = float(np.maximum(0.0, r2_y * dim_var).sum())
+
+        # RCL: Ridge(c_j → r) for j≠k
+        rcl_j = []
+        for j in range(K):
+            if j == k:
+                continue
+            reg3 = Ridge(alpha=alpha).fit(c_true_tr[:, j:j+1], r_tr)
+            ss_j = ((r_te - reg3.predict(c_true_te[:, j:j+1])) ** 2).sum(0)
+            r2_j = np.where(ss_tot > 1e-12, 1 - ss_j / ss_tot, 0.0)
+            rcl_j.append(float(np.maximum(0.0, r2_j * dim_var).sum()))
+
+        rcl_k = float(np.mean(rcl_j)) if rcl_j else 0.0
+        rtl_sum_k.append(rtl_k);          rcl_sum_k.append(rcl_k)
+        rtl_norm_k.append(rtl_k / total_resid); rcl_norm_k.append(rcl_k / total_resid)
+
+    return {
+        "RTL_sum":  float(np.mean(rtl_sum_k)),
+        "RCL_sum":  float(np.mean(rcl_sum_k)),
+        "RTL_norm": float(np.mean(rtl_norm_k)),
+        "RCL_norm": float(np.mean(rcl_norm_k)),
+    }
+
+
 def compute_CVL(
     c_hat_train,
     c_hat_test,
