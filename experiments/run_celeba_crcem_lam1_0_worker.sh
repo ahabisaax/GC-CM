@@ -26,7 +26,7 @@ export OMP_NUM_THREADS=$NSLOTS
 export MKL_NUM_THREADS=$NSLOTS
 
 PROJECT_ROOT=~/Scratch/xai-crcbm
-FINAL_RESULTS_DIR=$PROJECT_ROOT/results/celeba_cem
+FINAL_RESULTS_DIR=$PROJECT_ROOT/results/celeba_cem_39c_lam1_0
 DATASET_TAR="celeba.tar"
 
 LOCAL_WORKSPACE="$TMPDIR/$JOB_ID"
@@ -43,7 +43,7 @@ cd "$LOCAL_WORKSPACE/data" && tar -xf $DATASET_TAR
 cd "$LOCAL_WORKSPACE"
 export PYTHONPATH="$LOCAL_WORKSPACE:$PYTHONPATH"
 
-LOCAL_CONFIG="experiments/configs/celeba_cem_lam1_0.yaml"
+LOCAL_CONFIG="experiments/configs/celeba_cem_39c_lam1_0.yaml"
 LOCAL_RESULTS="$TMPDIR/results_temp"
 
 $CONDA_PREFIX/bin/python -u experiments/run_experiments.py \

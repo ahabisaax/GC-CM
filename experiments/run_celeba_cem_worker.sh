@@ -31,7 +31,7 @@ export MKL_NUM_THREADS=$NSLOTS
 
 # --- 3. PATHS ---
 PROJECT_ROOT=~/Scratch/xai-crcbm
-FINAL_RESULTS_DIR=$PROJECT_ROOT/results/celeba_cem
+FINAL_RESULTS_DIR=$PROJECT_ROOT/results/celeba_cem_39c
 DATASET_TAR="celeba.tar"
 
 
@@ -59,7 +59,7 @@ cd "$LOCAL_WORKSPACE"
 export PYTHONPATH="$LOCAL_WORKSPACE:$PYTHONPATH"
 echo "Running from: $(pwd)"
 
-LOCAL_CONFIG="experiments/configs/celeba_cem.yaml"
+LOCAL_CONFIG="experiments/configs/celeba_cem_39c.yaml"
 LOCAL_RESULTS="$TMPDIR/results_temp"
 
 echo "Starting Training..."

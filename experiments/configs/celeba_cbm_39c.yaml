@@ -1,0 +1,96 @@
+results_dir: "results/celeba_cbm_39c/"
+trials: 5
+
+shared_params:
+  dataset_config:
+    dataset: celeba
+    batch_size: 512
+    num_workers: 8
+    root_dir: data/
+    label_attr_idx: 20      # Male (index 20 in CelebA attr order)
+    num_concepts: 39        # all attributes except Male
+    num_classes: 2          # binary: Male / not-Male
+    image_size: 64
+
+  intervention_config:
+    competence_levels: [1]
+    intervention_freq: 1
+    intervention_batch_size: 256
+    intervention_policies:
+      - policy: "random"
+        group_level: True
+        use_prior: False
+
+  skip_repr_evaluation: true
+  max_epochs: 150
+  top_k_accuracy: null
+  save_model: true
+  extra_dims: 0
+  weight_decay: 4.0e-06
+  weight_loss: false
+  use_task_class_weights: false
+  c_extractor_arch: "resnet34"
+  optimizer: sgd
+  cbm_optimizer: sgd
+  learning_rate: 0.005
+  bool: false
+  momentum: 0.9
+  sigmoidal_prob: false
+  training_intervention_prob: 0
+  n_hidden: 512
+  linear_c2y: true
+  adv_optimizer: adam
+  project_name: "celeba_cbm_39c"
+  check_val_every_n_epoch: 5
+  compute_mi_on_gpu: false
+  compute_mi_mode: 'cpu'
+  accumulate_grad_batches: 1
+  c2y_max_epochs: 150
+  early_stopping_monitor: 'val_loss'
+  early_stopping_mode: min
+  early_stopping_delta: 0.0
+  patience: 30
+  gradient_clip_val: 1.0
+
+runs:
+
+  - architecture: "ConceptBottleneckModel"
+    run_name: "auto"
+    sigmoidal_prob: true
+    embedding_activation: "leakyrelu"
+    grid_variables: [concept_loss_weight]
+    concept_loss_weight: [0.1, 0.5, 1]
+
+  - architecture: "ConceptBottleneckModel"
+    run_name: "HardCBM"
+    bool: true
+    sigmoidal_prob: true
+    embedding_activation: "leakyrelu"
+    concept_loss_weight: 1
+
+  - architecture: "SequentialConceptBottleneckModel"
+    run_name: "auto"
+    sigmoidal_prob: true
+    embedding_activation: "leakyrelu"
+    concept_loss_weight: 1
+
+  - architecture: "AdversarialConceptBottleneckModel"
+    run_name: "auto"
+    bool: false
+    sigmoidal_prob: true
+    use_adversarial: true
+    max_adversarial_lambda: 1
+    adversarial_delay: 0
+    adversarial_lambda_scheduler_warmup: null
+    adversarial_scheduler: "none"
+    adversarial_loss_type: "grl"
+    shared_critic: true
+    n_critic_steps: 1
+    cbm_optimizer: adam
+    cbm_learning_rate: 0.0001
+    adv_learning_rate: 0.0001
+    concept_vector_regularisation: false
+    entropy_maximisation: false
+    shared_prob_gen: false
+    grid_variables: [concept_loss_weight]
+    concept_loss_weight: [0.1, 0.5, 1]

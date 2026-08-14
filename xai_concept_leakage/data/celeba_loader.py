@@ -104,6 +104,20 @@ CONCEPT_SEMANTICS = [
 ##########################################################
 ## SIMPLIFIED LOADER FUNCTION FOR STANDARDIZATION
 ##########################################################
+class CelebAAttrLabelTransform:
+    """
+    Picklable transform: use a single attribute as the binary task label,
+    remaining attributes as concept annotations.
+    """
+
+    def __init__(self, label_idx, concept_idxs):
+        self.label_idx = label_idx
+        self.concept_idxs = concept_idxs
+
+    def __call__(self, attr):
+        return [attr[self.label_idx].long(), attr[self.concept_idxs].float()]
+
+
 class CelebATargetTransform:
     """
     A picklable transform for CelebA targets.
@@ -135,7 +149,32 @@ def generate_data(
     concept_group_map = None
     seed_everything(seed)
     use_binary_vector_class = config.get("use_binary_vector_class", False)
-    if use_binary_vector_class:
+    label_attr_idx = config.get("label_attr_idx", None)
+    if label_attr_idx is not None:
+        # Single-attribute label: one attribute is the binary task label (0/1),
+        # the remaining 39 are concept annotations.
+        n_attrs = 40
+        concept_idxs = [i for i in range(n_attrs) if i != label_attr_idx]
+        num_concepts = len(concept_idxs)
+        num_classes = 2
+        transform = CelebAAttrLabelTransform(label_attr_idx, concept_idxs)
+        celeba_train_data = torchvision.datasets.CelebA(
+            root=root_dir,
+            split="all",
+            download=download,
+            transform=transforms.Compose(
+                [
+                    transforms.Resize(config["image_size"]),
+                    transforms.CenterCrop(config["image_size"]),
+                    transforms.ToTensor(),
+                    transforms.ConvertImageDtype(torch.float32),
+                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                ]
+            ),
+            target_transform=transform,
+            target_type=["attr"],
+        )
+    elif use_binary_vector_class:
         # Now reload by transform the labels accordingly
         width = config.get("label_binary_width", 5)
 
@@ -185,6 +224,13 @@ def generate_data(
             hidden_concepts = []
         logging.debug(f"Selecting concepts: {concept_idxs}")
         logging.debug(f"\tAnd hidden concepts: {hidden_concepts}")
+        # When label_from_hidden_only=True, the class label is binarized from
+        # hidden_concepts only; otherwise it uses concept_idxs + hidden_concepts.
+        # This matters when num_concepts is large (e.g. 32): using all 40
+        # attributes would give a 40-bit label with 2^40 classes.
+        label_from_hidden_only = config.get("label_from_hidden_only", False)
+        label_selected = hidden_concepts if (label_from_hidden_only and hidden_concepts) else (concept_idxs + hidden_concepts)
+
         celeba_train_data = torchvision.datasets.CelebA(
             root=root_dir,
             split="all",
@@ -202,7 +248,7 @@ def generate_data(
                 torch.tensor(
                     _binarize(
                         x[1].cpu().detach().numpy(),
-                        selected=(concept_idxs + hidden_concepts),
+                        selected=label_selected,
                         width=width,
                     ),
                     dtype=torch.long,
@@ -217,7 +263,7 @@ def generate_data(
                 map(
                     lambda x: _binarize(
                         x.cpu().detach().numpy(),
-                        selected=(concept_idxs + hidden_concepts),
+                        selected=label_selected,
                         width=width,
                     ),
                     celeba_train_data.attr,
@@ -246,7 +292,7 @@ def generate_data(
                     label_remap[
                         _binarize(
                             x[1].cpu().detach().numpy(),
-                            selected=(concept_idxs + hidden_concepts),
+                            selected=label_selected,
                             width=width,
                         )
                     ],
