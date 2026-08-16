@@ -4,7 +4,7 @@
 #$ -e ~/Scratch/xai-crcbm/logs/rtl_rcl_$JOB_ID.err
 #$ -pe smp 8
 #$ -l h_rt=12:00:00
-#$ -l mem=16G
+#$ -l mem=4G
 #$ -l tmpfs=10G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
 #$ -P Gold

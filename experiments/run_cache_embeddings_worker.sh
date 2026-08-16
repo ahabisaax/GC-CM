@@ -4,7 +4,7 @@
 #$ -e ~/Scratch/xai-crcbm/logs/cache_embeddings_$JOB_ID.err
 #$ -pe smp 8
 #$ -l h_rt=4:00:00
-#$ -l mem=8G
+#$ -l mem=4G
 #$ -l tmpfs=30G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
 #$ -l gpu=1
