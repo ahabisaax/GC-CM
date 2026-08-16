@@ -240,4 +240,76 @@ fig3.savefig(out3); fig3.savefig(out3.replace(".pdf", ".png"))
 print(f"Saved combined → {out3}")
 plt.close(fig3)
 
+# ===========================================================================
+# FIGURE 4: RTL_norm
+# ===========================================================================
+fig4, ax4 = plt.subplots(figsize=(4.5, 3.2))
+plot_lines(ax4, rtl_norm_means, rtl_norm_stds)
+decorate(ax4, xlabel=r"Task-leakage strength $\alpha$", ylabel="RTL (norm)", xlim=xlim)
+ax4.legend(loc="upper left", framealpha=0.92, edgecolor="0.78",
+           ncol=1, handlelength=2.2, labelspacing=0.35)
+fig4.tight_layout()
+out4 = PLOT_DIR + "paper_rtl_dim_sweep_norm.pdf"
+fig4.savefig(out4); fig4.savefig(out4.replace(".pdf", ".png"))
+print(f"\nSaved → {out4}")
+plt.close(fig4)
+
+# ===========================================================================
+# FIGURE 5: RCL_norm
+# ===========================================================================
+fig5, ax5 = plt.subplots(figsize=(4.5, 3.2))
+plot_lines(ax5, rcl_norm_means, rcl_norm_stds)
+decorate(ax5, xlabel=r"Inter-concept leakage strength $\beta$", ylabel="RCL (norm)", xlim=xlim)
+ax5.legend(loc="upper left", framealpha=0.92, edgecolor="0.78",
+           ncol=1, handlelength=2.2, labelspacing=0.35)
+fig5.tight_layout()
+out5 = PLOT_DIR + "paper_rcl_dim_sweep_norm.pdf"
+fig5.savefig(out5); fig5.savefig(out5.replace(".pdf", ".png"))
+print(f"Saved → {out5}")
+plt.close(fig5)
+
+# ===========================================================================
+# FIGURE 6: Combined panel norm (RTL_norm | RCL_norm)
+# ===========================================================================
+fig6, axes6 = plt.subplots(1, 2, figsize=(6.8, 2.8))
+
+panel_cfg_norm = [
+    (axes6[0], rtl_norm_means, rtl_norm_stds,
+     r"Task-leakage strength $\alpha$", "RTL (norm)", "(a)"),
+    (axes6[1], rcl_norm_means, rcl_norm_stds,
+     r"Inter-concept leakage strength $\beta$", "RCL (norm)", "(b)"),
+]
+
+for ax, means, stds, xlabel, ylabel, letter in panel_cfg_norm:
+    for di, m in enumerate(DIMS):
+        s = STYLES[m]
+        ax.plot(ALPHAS, means[di],
+                color=s["color"], ls=s["ls"], lw=s["lw"],
+                marker="o", ms=3.5, zorder=3, label=f"$m={m}$")
+        ax.fill_between(ALPHAS, means[di] - stds[di], means[di] + stds[di],
+                        color=s["color"], alpha=0.08, zorder=2)
+    ax.axhline(0, color="0.6", lw=0.7, ls=":", zorder=1)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_xlim(*xlim)
+    ax.set_ylim(bottom=-0.01)
+    ax.text(-0.18, 1.13, letter, transform=ax.transAxes,
+            fontsize=11, fontweight="bold", va="top")
+
+handles, labels = axes6[0].get_legend_handles_labels()
+fig6.legend(handles, labels,
+            loc="lower center", ncol=len(DIMS),
+            bbox_to_anchor=(0.5, -0.16),
+            framealpha=0.9, edgecolor="0.75",
+            fontsize=7.5, handlelength=1.8,
+            title="Embedding dimension $m$",
+            title_fontsize=7.5)
+
+fig6.tight_layout(w_pad=1.8)
+fig6.subplots_adjust(top=0.88, bottom=0.28)
+out6 = PLOT_DIR + "paper_rtl_rcl_dim_sweep_norm_combined.pdf"
+fig6.savefig(out6); fig6.savefig(out6.replace(".pdf", ".png"))
+print(f"Saved combined norm → {out6}")
+plt.close(fig6)
+
 print("Done.")

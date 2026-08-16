@@ -63,7 +63,7 @@ LOCAL_CONFIG="experiments/configs/celeba_cem_39c_lam1_0.yaml"
 LOCAL_RESULTS="$TMPDIR/results_temp"
 
 echo "Starting Training..."
-export WANDB_MODE=offline
+export WANDB_MODE=online
 $CONDA_PREFIX/bin/python -u experiments/run_experiments.py \
     --config "$LOCAL_CONFIG" \
     --project_name "CelebA_CEM_lam1_0" \

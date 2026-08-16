@@ -139,7 +139,41 @@ rcl_norm_means = np.array(rcl_norm_means); rcl_norm_stds = np.array(rcl_norm_std
 
 
 # ---------------------------------------------------------------------------
-# Plot — two panels (RTL | RCL), twin y-axes (sum | norm)
+# Shared plot helpers
+# ---------------------------------------------------------------------------
+PLOT_DIR = "results/plots/cbm/"
+os.makedirs(PLOT_DIR, exist_ok=True)
+
+
+def _decorate_lam(ax, ylabel, color, s_means):
+    ax.set_xscale("log")
+    ax.set_xlabel(r"Concept supervision weight $\lambda_c$")
+    ax.set_ylabel(ylabel, color=color)
+    ax.tick_params(axis="y", colors=color)
+    ax.set_xlim(LAMBDA_C[0] * 0.7, LAMBDA_C[-1] * 1.4)
+    ax.set_ylim(bottom=-0.01)
+    ax.set_xticks(LAMBDA_C)
+    ax.get_xaxis().set_major_formatter(ticker.ScalarFormatter())
+    ax.tick_params(axis="x", which="minor", bottom=False)
+    for lam in LAM_EXPERIMENTAL:
+        if lam in LAMBDA_C:
+            ax.axvline(lam, color="0.65", lw=0.8, ls="--", zorder=1)
+            ax.text(lam, s_means.max() * 1.04,
+                    f"λ={lam}", fontsize=6.5, ha="center", va="bottom", color="0.45")
+
+
+def _single_panel(ax, means, stds, color, ylabel, letter):
+    ax.plot(LAMBDA_C, means, color=color, lw=1.9, marker="o", ms=5, zorder=3)
+    ax.fill_between(LAMBDA_C, means - stds, means + stds,
+                    color=color, alpha=0.15, zorder=2)
+    ax.axhline(0, color="0.6", lw=0.7, ls=":", zorder=1)
+    _decorate_lam(ax, ylabel, color, means)
+    ax.text(-0.18, 1.10, letter, transform=ax.transAxes,
+            fontsize=11, fontweight="bold", va="top")
+
+
+# ---------------------------------------------------------------------------
+# Figure 1: Combined twin-axes (RTL | RCL), sum left / norm right
 # ---------------------------------------------------------------------------
 fig, axes = plt.subplots(1, 2, figsize=(6.8, 2.8))
 
@@ -152,49 +186,53 @@ panel_data = [
 
 for ax, s_means, s_stds, n_means, n_stds, color, ylabel_s, ylabel_n, letter in panel_data:
     ax2 = ax.twinx()
-
     l1, = ax.plot(LAMBDA_C, s_means, color=color, lw=1.9, marker="o", ms=5,
                   zorder=3, label="sum")
     ax.fill_between(LAMBDA_C, s_means - s_stds, s_means + s_stds,
                     color=color, alpha=0.15, zorder=2)
-
     l2, = ax2.plot(LAMBDA_C, n_means, color=C_NORM, lw=1.7, marker="s", ms=5,
                    ls="--", zorder=3, label="norm")
     ax2.fill_between(LAMBDA_C, n_means - n_stds, n_means + n_stds,
                      color=C_NORM, alpha=0.12, zorder=2)
-
-    ax.set_xscale("log")
-    ax.set_xlabel(r"Concept supervision weight $\lambda_c$")
-    ax.set_ylabel(ylabel_s, color=color)
+    _decorate_lam(ax, ylabel_s, color, s_means)
     ax2.set_ylabel(ylabel_n, color=C_NORM)
-    ax.tick_params(axis="y", colors=color)
     ax2.tick_params(axis="y", colors=C_NORM)
-    ax.set_xlim(LAMBDA_C[0] * 0.7, LAMBDA_C[-1] * 1.4)
-    ax.set_ylim(bottom=-0.01)
     ax2.set_ylim(bottom=-0.01)
-
-    ax.set_xticks(LAMBDA_C)
-    ax.get_xaxis().set_major_formatter(ticker.ScalarFormatter())
-    ax.tick_params(axis="x", which="minor", bottom=False)
-
-    for lam in LAM_EXPERIMENTAL:
-        if lam in LAMBDA_C:
-            ax.axvline(lam, color="0.65", lw=0.8, ls="--", zorder=1)
-            ax.text(lam, s_means.max() * 1.04,
-                    f"λ={lam}", fontsize=6.5, ha="center", va="bottom", color="0.45")
-
     ax.legend(handles=[l1, l2], loc="upper right", fontsize=8)
     ax.text(-0.18, 1.10, letter, transform=ax.transAxes,
             fontsize=11, fontweight="bold", va="top")
 
 fig.tight_layout(w_pad=1.8)
 fig.subplots_adjust(top=0.88)
-
-PLOT_DIR = "results/plots/cbm/"
-os.makedirs(PLOT_DIR, exist_ok=True)
 out = PLOT_DIR + "paper_lambda_c_rtl_rcl.pdf"
-fig.savefig(out)
-fig.savefig(out.replace(".pdf", ".png"))
+fig.savefig(out); fig.savefig(out.replace(".pdf", ".png"))
 print(f"\nSaved → {out}")
 plt.close(fig)
+
+# ---------------------------------------------------------------------------
+# Figure 2: Sum only (RTL_sum | RCL_sum)
+# ---------------------------------------------------------------------------
+fig2, axes2 = plt.subplots(1, 2, figsize=(6.8, 2.8))
+_single_panel(axes2[0], rtl_sum_means, rtl_sum_stds, C_RTL, "RTL (sum)", "(a)")
+_single_panel(axes2[1], rcl_sum_means, rcl_sum_stds, C_RCL, "RCL (sum)", "(b)")
+fig2.tight_layout(w_pad=1.8)
+fig2.subplots_adjust(top=0.88)
+out2 = PLOT_DIR + "paper_lambda_c_rtl_rcl_sum.pdf"
+fig2.savefig(out2); fig2.savefig(out2.replace(".pdf", ".png"))
+print(f"Saved → {out2}")
+plt.close(fig2)
+
+# ---------------------------------------------------------------------------
+# Figure 3: Norm only (RTL_norm | RCL_norm)
+# ---------------------------------------------------------------------------
+fig3, axes3 = plt.subplots(1, 2, figsize=(6.8, 2.8))
+_single_panel(axes3[0], rtl_norm_means, rtl_norm_stds, C_RTL, "RTL (norm)", "(a)")
+_single_panel(axes3[1], rcl_norm_means, rcl_norm_stds, C_RCL, "RCL (norm)", "(b)")
+fig3.tight_layout(w_pad=1.8)
+fig3.subplots_adjust(top=0.88)
+out3 = PLOT_DIR + "paper_lambda_c_rtl_rcl_norm.pdf"
+fig3.savefig(out3); fig3.savefig(out3.replace(".pdf", ".png"))
+print(f"Saved → {out3}")
+plt.close(fig3)
+
 print("Done.")

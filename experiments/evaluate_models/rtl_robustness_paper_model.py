@@ -185,25 +185,45 @@ def save_plot(metric, strengths, alpha_fn, beta_fn, vmax, col_title_fn, cb_label
     plt.close()
 
 
-vmax_rtl = max(np.nanmax(build_grid("RTL_sum", a, 0)) for a in STRENGTHS if a > 0) * 1.05
-vmax_rcl = max(np.nanmax(build_grid("RCL_sum", 0, b)) for b in STRENGTHS if b > 0) * 1.05
+vmax_rtl_sum  = max(np.nanmax(build_grid("RTL_sum",  a, 0)) for a in STRENGTHS if a > 0) * 1.05
+vmax_rcl_sum  = max(np.nanmax(build_grid("RCL_sum",  0, b)) for b in STRENGTHS if b > 0) * 1.05
+vmax_rtl_norm = max(np.nanmax(build_grid("RTL_norm", a, 0)) for a in STRENGTHS if a > 0) * 1.05
+vmax_rcl_norm = max(np.nanmax(build_grid("RCL_norm", 0, b)) for b in STRENGTHS if b > 0) * 1.05
 
 save_plot(
     "RTL_sum", STRENGTHS,
     alpha_fn=lambda s: s, beta_fn=lambda s: 0,
-    vmax=vmax_rtl,
-    col_title_fn=lambda s: rf"RTL_sum  ($\alpha={s},\,\beta=0$)",
-    cb_label="RTL_sum",
-    fname="rtl_robustness_paper_heatmap_rtl",
+    vmax=vmax_rtl_sum,
+    col_title_fn=lambda s: rf"RTL (sum)  ($\alpha={s},\,\beta=0$)",
+    cb_label="RTL (sum)",
+    fname="rtl_robustness_paper_heatmap_rtl_sum",
 )
 
 save_plot(
     "RCL_sum", STRENGTHS,
     alpha_fn=lambda s: 0, beta_fn=lambda s: s,
-    vmax=vmax_rcl,
-    col_title_fn=lambda s: rf"RCL_sum  ($\alpha=0,\,\beta={s}$)",
-    cb_label="RCL_sum",
-    fname="rtl_robustness_paper_heatmap_rcl",
+    vmax=vmax_rcl_sum,
+    col_title_fn=lambda s: rf"RCL (sum)  ($\alpha=0,\,\beta={s}$)",
+    cb_label="RCL (sum)",
+    fname="rtl_robustness_paper_heatmap_rcl_sum",
+)
+
+save_plot(
+    "RTL_norm", STRENGTHS,
+    alpha_fn=lambda s: s, beta_fn=lambda s: 0,
+    vmax=vmax_rtl_norm,
+    col_title_fn=lambda s: rf"RTL (norm)  ($\alpha={s},\,\beta=0$)",
+    cb_label="RTL (norm)",
+    fname="rtl_robustness_paper_heatmap_rtl_norm",
+)
+
+save_plot(
+    "RCL_norm", STRENGTHS,
+    alpha_fn=lambda s: 0, beta_fn=lambda s: s,
+    vmax=vmax_rcl_norm,
+    col_title_fn=lambda s: rf"RCL (norm)  ($\alpha=0,\,\beta={s}$)",
+    cb_label="RCL (norm)",
+    fname="rtl_robustness_paper_heatmap_rcl_norm",
 )
 
 print("Done.")

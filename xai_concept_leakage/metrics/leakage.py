@@ -64,17 +64,22 @@ def compute_RTL_RCL(c_mix_tr, c_mix_te, c_true_tr, c_true_te, y_tr, y_te, alpha=
         r2_y   = np.where(ss_tot > 1e-12, 1 - ss_res / ss_tot, 0.0)
         rtl_k  = float(np.maximum(0.0, r2_y * dim_var).sum())
 
-        # RCL: Ridge(c_j → r) for j≠k
-        rcl_j = []
-        for j in range(K):
-            if j == k:
-                continue
-            reg3 = Ridge(alpha=alpha).fit(c_true_tr[:, j:j+1], r_tr)
-            ss_j = ((r_te - reg3.predict(c_true_te[:, j:j+1])) ** 2).sum(0)
-            r2_j = np.where(ss_tot > 1e-12, 1 - ss_j / ss_tot, 0.0)
-            rcl_j.append(float(np.maximum(0.0, r2_j * dim_var).sum()))
+        # RCL: Ridge(c_j → r) for j≠k — vectorised closed form.
+        # Each probe has a single predictor, so the ridge solution reduces to
+        #   beta_j = (x_j - x̄_j)·(r - r̄) / (‖x_j - x̄_j‖² + alpha)
+        # which we evaluate for all j at once. Identical numerics to fitting
+        # sklearn Ridge(fit_intercept=True) in a loop, ~100x faster at K=112.
+        Xc = c_true_tr - c_true_tr.mean(0)                  # (N_tr, K)
+        Rc = r_tr - r_tr.mean(0)                            # (N_tr, m)
+        B = (Xc.T @ Rc) / ((Xc ** 2).sum(0) + alpha)[:, None]        # (K, m)
+        icept = r_tr.mean(0)[None, :] - c_true_tr.mean(0)[:, None] * B  # (K, m)
 
-        rcl_k = float(np.mean(rcl_j)) if rcl_j else 0.0
+        pred = icept[:, None, :] + c_true_te.T[:, :, None] * B[:, None, :]
+        ss_all = ((r_te[None, :, :] - pred) ** 2).sum(1)    # (K, m)
+
+        r2_all = np.where(ss_tot[None, :] > 1e-12, 1 - ss_all / ss_tot[None, :], 0.0)
+        rcl_all = np.maximum(0.0, r2_all * dim_var[None, :]).sum(1)   # (K,)
+        rcl_k = float(np.mean(np.delete(rcl_all, k))) if K > 1 else 0.0
         rtl_sum_k.append(rtl_k);          rcl_sum_k.append(rcl_k)
         rtl_norm_k.append(rtl_k / total_resid); rcl_norm_k.append(rcl_k / total_resid)
 

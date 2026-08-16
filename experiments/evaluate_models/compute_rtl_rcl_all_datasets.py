@@ -29,6 +29,17 @@ Run from project root:
 import argparse, os, sys, time, warnings
 warnings.filterwarnings("ignore")
 
+# The probes here are many tiny matmuls. OpenBLAS (DYNAMIC_ARCH, MAX_THREADS=128)
+# spawns its full thread pool for each one, so a 640-kFLOP product costs ~1.2s of
+# pure scheduling overhead. Capping to one thread is ~640x faster on these shapes.
+# Must be set before numpy is imported. Override with RTL_RCL_THREADS if needed
+# (note the HPC worker exports OMP/MKL_NUM_THREADS=$NSLOTS, which we deliberately
+# override here — more BLAS threads makes this workload slower, not faster).
+_nthr = os.environ.get("RTL_RCL_THREADS", "1")
+for _v in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS",
+           "MKL_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
+    os.environ[_v] = _nthr
+
 master = os.getcwd().replace("/experiments/evaluate_models", "") + "/"
 sys.path.insert(0, master)
 
