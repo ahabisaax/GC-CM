@@ -86,6 +86,103 @@ def compute_RTL_RCL(c_mix_tr, c_mix_te, c_true_tr, c_true_te, y_tr, y_te, alpha=
     }
 
 
+def compute_RTL_RCL_mlp(
+    c_mix_tr, c_mix_te, c_true_tr, c_true_te, y_tr, y_te,
+    hidden=(64,), max_iter=500, alpha_ridge=1.0,
+):
+    """
+    MLP variant of RTL / RCL.
+
+    Step 1 (identical to compute_RTL_RCL): Ridge(c_k → emb_k_norm) → residual r_k.
+    Step 2: MLPRegressor(hidden) instead of Ridge for the leakage probe.
+      RTL: MLPRegressor(Y_onehot → r_k) — detects non-linear task leakage
+      RCL: MLPRegressor(c_j → r_k)      — detects non-linear inter-concept leakage
+
+    Per-dim R² and max(0, R²×var) aggregation are identical to the Ridge version,
+    so RTL_sum / RTL_norm / RCL_sum / RCL_norm are directly comparable.
+
+    hidden      : tuple — hidden layer sizes for the MLP probe (default (64,))
+    max_iter    : int   — max MLP iterations
+    alpha_ridge : float — Ridge regularisation for step 1
+    """
+    from sklearn.neural_network import MLPRegressor
+    from sklearn.preprocessing import StandardScaler
+
+    c_mix_tr  = np.asarray(c_mix_tr,  dtype=np.float64)
+    c_mix_te  = np.asarray(c_mix_te,  dtype=np.float64)
+    c_true_tr = np.asarray(c_true_tr, dtype=np.float64)
+    c_true_te = np.asarray(c_true_te, dtype=np.float64)
+    y_tr = np.asarray(y_tr).ravel()
+    y_te = np.asarray(y_te).ravel()
+
+    classes = np.unique(y_tr)
+    Y_tr = label_binarize(y_tr, classes=classes).astype(np.float64)
+    Y_te = label_binarize(y_te, classes=classes).astype(np.float64)
+
+    K = c_mix_tr.shape[1]
+    rtl_sum_k, rcl_sum_k, rtl_norm_k, rcl_norm_k = [], [], [], []
+
+    def _mlp_r2(X_tr, X_te, R_tr, R_te, dim_var, ss_tot):
+        """Fit MLPRegressor(X → R), return per-dim clipped R²×var sum and norm."""
+        scaler = StandardScaler()
+        Xtr_s = scaler.fit_transform(X_tr)
+        Xte_s = scaler.transform(X_te)
+        mlp = MLPRegressor(
+            hidden_layer_sizes=hidden,
+            max_iter=max_iter,
+            early_stopping=True,
+            validation_fraction=0.15,
+            n_iter_no_change=20,
+            random_state=0,
+            alpha=1e-3,
+        )
+        mlp.fit(Xtr_s, R_tr)
+        ss_res = ((R_te - mlp.predict(Xte_s)) ** 2).sum(0)
+        r2 = np.where(ss_tot > 1e-12, 1 - ss_res / ss_tot, 0.0)
+        return float(np.maximum(0.0, r2 * dim_var).sum())
+
+    for k in range(K):
+        tr_k = c_mix_tr[:, k, :]
+        te_k = c_mix_te[:, k, :]
+
+        mu, sigma = tr_k.mean(0, keepdims=True), tr_k.std(0, keepdims=True) + 1e-8
+        tr_n = (tr_k - mu) / sigma
+        te_n = (te_k - mu) / sigma
+
+        # Step 1: Ridge (linear) removes concept-k signal
+        reg1 = Ridge(alpha=alpha_ridge).fit(c_true_tr[:, k:k+1], tr_n)
+        r_tr = tr_n - reg1.predict(c_true_tr[:, k:k+1])
+        r_te = te_n - reg1.predict(c_true_te[:, k:k+1])
+
+        dim_var     = r_te.var(axis=0)
+        total_resid = float(dim_var.sum()) + 1e-12
+        ss_tot      = ((r_te - r_te.mean(0)) ** 2).sum(0)
+
+        # RTL: MLP(Y_onehot → r_k)
+        rtl_k = _mlp_r2(Y_tr, Y_te, r_tr, r_te, dim_var, ss_tot)
+
+        # RCL: MLP(c_j → r_k) for j≠k, average over j
+        rcl_j = []
+        for j in range(K):
+            if j == k:
+                continue
+            rcl_j.append(_mlp_r2(
+                c_true_tr[:, j:j+1], c_true_te[:, j:j+1],
+                r_tr, r_te, dim_var, ss_tot,
+            ))
+        rcl_k = float(np.mean(rcl_j)) if rcl_j else 0.0
+
+        rtl_sum_k.append(rtl_k);               rcl_sum_k.append(rcl_k)
+        rtl_norm_k.append(rtl_k / total_resid); rcl_norm_k.append(rcl_k / total_resid)
+
+    return {
+        "RTL_sum":  float(np.mean(rtl_sum_k)),
+        "RCL_sum":  float(np.mean(rcl_sum_k)),
+        "RTL_norm": float(np.mean(rtl_norm_k)),
+        "RCL_norm": float(np.mean(rcl_norm_k)),
+    }
+
+
 def compute_CVL(
     c_hat_train,
     c_hat_test,
