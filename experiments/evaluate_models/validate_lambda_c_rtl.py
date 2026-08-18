@@ -101,12 +101,14 @@ rtl_sum_means,  rtl_sum_stds  = [], []
 rtl_norm_means, rtl_norm_stds = [], []
 rcl_sum_means,  rcl_sum_stds  = [], []
 rcl_norm_means, rcl_norm_stds = [], []
+rtl_gm_means,   rtl_gm_stds   = [], []
+rcl_gm_means,   rcl_gm_stds   = [], []
 
 for lam in LAMBDA_C:
     alpha_eff = ALPHA_BASE / lam
 
-    rtl_s_vals, rtl_n_vals = [], []
-    rcl_s_vals, rcl_n_vals = [], []
+    rtl_s_vals, rtl_n_vals, rtl_gm_vals = [], [], []
+    rcl_s_vals, rcl_n_vals, rcl_gm_vals = [], [], []
 
     for seed in range(N_SEEDS):
         # RTL: task leakage only
@@ -114,28 +116,38 @@ for lam in LAMBDA_C:
         r = compute_RTL_RCL(*args)
         rtl_s_vals.append(r["RTL_sum"])
         rtl_n_vals.append(r["RTL_norm"])
+        rg = compute_RTL_RCL(*args, global_norm=True)
+        rtl_gm_vals.append(rg["RTL_sum"] / M)
 
         # RCL: inter-concept leakage only
         args_ic = make_embeddings(0.0, alpha_eff, seed)
         r_ic = compute_RTL_RCL(*args_ic)
         rcl_s_vals.append(r_ic["RCL_sum"])
         rcl_n_vals.append(r_ic["RCL_norm"])
+        rg_ic = compute_RTL_RCL(*args_ic, global_norm=True)
+        rcl_gm_vals.append(rg_ic["RCL_sum"] / M)
 
     rtl_sum_means.append(np.mean(rtl_s_vals));  rtl_sum_stds.append(np.std(rtl_s_vals))
     rtl_norm_means.append(np.mean(rtl_n_vals)); rtl_norm_stds.append(np.std(rtl_n_vals))
     rcl_sum_means.append(np.mean(rcl_s_vals));  rcl_sum_stds.append(np.std(rcl_s_vals))
     rcl_norm_means.append(np.mean(rcl_n_vals)); rcl_norm_stds.append(np.std(rcl_n_vals))
+    rtl_gm_means.append(np.mean(rtl_gm_vals));  rtl_gm_stds.append(np.std(rtl_gm_vals))
+    rcl_gm_means.append(np.mean(rcl_gm_vals));  rcl_gm_stds.append(np.std(rcl_gm_vals))
 
     print(f"  λ_c={lam:.2f}  α_eff={alpha_eff:.2f}"
           f"  RTL_sum={rtl_sum_means[-1]:.4f}±{rtl_sum_stds[-1]:.4f}"
           f"  RTL_norm={rtl_norm_means[-1]:.4f}"
+          f"  RTL/m(gl)={rtl_gm_means[-1]:.4f}"
           f"  RCL_sum={rcl_sum_means[-1]:.4f}±{rcl_sum_stds[-1]:.4f}"
-          f"  RCL_norm={rcl_norm_means[-1]:.4f}")
+          f"  RCL_norm={rcl_norm_means[-1]:.4f}"
+          f"  RCL/m(gl)={rcl_gm_means[-1]:.4f}")
 
 rtl_sum_means  = np.array(rtl_sum_means);  rtl_sum_stds  = np.array(rtl_sum_stds)
 rtl_norm_means = np.array(rtl_norm_means); rtl_norm_stds = np.array(rtl_norm_stds)
 rcl_sum_means  = np.array(rcl_sum_means);  rcl_sum_stds  = np.array(rcl_sum_stds)
 rcl_norm_means = np.array(rcl_norm_means); rcl_norm_stds = np.array(rcl_norm_stds)
+rtl_gm_means   = np.array(rtl_gm_means);  rtl_gm_stds   = np.array(rtl_gm_stds)
+rcl_gm_means   = np.array(rcl_gm_means);  rcl_gm_stds   = np.array(rcl_gm_stds)
 
 
 # ---------------------------------------------------------------------------
@@ -150,23 +162,17 @@ def _decorate_lam(ax, ylabel, color, s_means):
     ax.set_xlabel(r"Concept supervision weight $\lambda_c$")
     ax.set_ylabel(ylabel, color=color)
     ax.tick_params(axis="y", colors=color)
-    ax.set_xlim(LAMBDA_C[0] * 0.7, LAMBDA_C[-1] * 1.4)
-    ax.set_ylim(bottom=-0.01)
+    ax.set_xlim(LAMBDA_C[0] * 0.6, LAMBDA_C[-1] * 1.8)
+    ax.set_ylim(bottom=0)
     ax.set_xticks(LAMBDA_C)
-    ax.get_xaxis().set_major_formatter(ticker.ScalarFormatter())
+    ax.get_xaxis().set_major_formatter(ticker.FuncFormatter(lambda x, _: f"{x:g}"))
     ax.tick_params(axis="x", which="minor", bottom=False)
-    for lam in LAM_EXPERIMENTAL:
-        if lam in LAMBDA_C:
-            ax.axvline(lam, color="0.65", lw=0.8, ls="--", zorder=1)
-            ax.text(lam, s_means.max() * 1.04,
-                    f"λ={lam}", fontsize=6.5, ha="center", va="bottom", color="0.45")
 
 
 def _single_panel(ax, means, stds, color, ylabel, letter):
     ax.plot(LAMBDA_C, means, color=color, lw=1.9, marker="o", ms=5, zorder=3)
     ax.fill_between(LAMBDA_C, means - stds, means + stds,
                     color=color, alpha=0.15, zorder=2)
-    ax.axhline(0, color="0.6", lw=0.7, ls=":", zorder=1)
     _decorate_lam(ax, ylabel, color, means)
     ax.text(-0.18, 1.10, letter, transform=ax.transAxes,
             fontsize=11, fontweight="bold", va="top")
@@ -197,7 +203,7 @@ for ax, s_means, s_stds, n_means, n_stds, color, ylabel_s, ylabel_n, letter in p
     _decorate_lam(ax, ylabel_s, color, s_means)
     ax2.set_ylabel(ylabel_n, color=C_NORM)
     ax2.tick_params(axis="y", colors=C_NORM)
-    ax2.set_ylim(bottom=-0.01)
+    ax2.set_ylim(bottom=0)
     ax.legend(handles=[l1, l2], loc="upper right", fontsize=8)
     ax.text(-0.18, 1.10, letter, transform=ax.transAxes,
             fontsize=11, fontweight="bold", va="top")
@@ -234,5 +240,18 @@ out3 = PLOT_DIR + "paper_lambda_c_rtl_rcl_norm.pdf"
 fig3.savefig(out3); fig3.savefig(out3.replace(".pdf", ".png"))
 print(f"Saved → {out3}")
 plt.close(fig3)
+
+# ---------------------------------------------------------------------------
+# Figure 4: RTL/m and RCL/m (global norm)
+# ---------------------------------------------------------------------------
+fig4, axes4 = plt.subplots(1, 2, figsize=(6.8, 2.8))
+_single_panel(axes4[0], rtl_gm_means, rtl_gm_stds, C_RTL, "RTL", "(a)")
+_single_panel(axes4[1], rcl_gm_means, rcl_gm_stds, C_RCL, "RCL", "(b)")
+fig4.tight_layout(w_pad=1.8)
+fig4.subplots_adjust(top=0.88)
+out4 = PLOT_DIR + "paper_lambda_c_rtl_rcl_global_m.pdf"
+fig4.savefig(out4); fig4.savefig(out4.replace(".pdf", ".png"))
+print(f"Saved → {out4}")
+plt.close(fig4)
 
 print("Done.")

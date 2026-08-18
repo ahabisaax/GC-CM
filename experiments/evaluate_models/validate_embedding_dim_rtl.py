@@ -49,12 +49,10 @@ N, K, N_TRAIN = 3000, 6, 2000
 N_TEST  = N - N_TRAIN
 N_SEEDS = 15
 ALPHAS  = np.array([0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0])
-DIMS    = [2, 4, 8, 16, 32, 64, 128]
+DIMS    = [8, 16, 32, 64, 128]
 
 # Colour + marker per dim (match validate_embedding_dim_paper.py)
 STYLES = {
-    2:   dict(color="#a50026", marker="o",  ls=(0, (1, 1)),    lw=1.5),
-    4:   dict(color="#d73027", marker="v",  ls=(0, (3, 1)),    lw=1.5),
     8:   dict(color="#fc8d59", marker="^",  ls="--",           lw=1.6),
     16:  dict(color="#222222", marker="D",  ls="-",            lw=2.1),
     32:  dict(color="#4575b4", marker="s",  ls="-.",           lw=1.6),
@@ -103,12 +101,17 @@ rcl_sum_means   = np.zeros_like(rtl_sum_means)
 rcl_sum_stds    = np.zeros_like(rtl_sum_means)
 rcl_norm_means  = np.zeros_like(rtl_sum_means)
 rcl_norm_stds   = np.zeros_like(rtl_sum_means)
+# global-norm / m variants
+rtl_gm_means    = np.zeros_like(rtl_sum_means)
+rtl_gm_stds     = np.zeros_like(rtl_sum_means)
+rcl_gm_means    = np.zeros_like(rtl_sum_means)
+rcl_gm_stds     = np.zeros_like(rtl_sum_means)
 
 for di, m in enumerate(DIMS):
     print(f"m={m}")
     for ai, alpha in enumerate(ALPHAS):
-        rtl_s_vals, rtl_n_vals = [], []
-        rcl_s_vals, rcl_n_vals = [], []
+        rtl_s_vals, rtl_n_vals, rtl_gm_vals = [], [], []
+        rcl_s_vals, rcl_n_vals, rcl_gm_vals = [], [], []
 
         for seed in range(N_SEEDS):
             # RTL: task leakage only
@@ -116,12 +119,16 @@ for di, m in enumerate(DIMS):
             r = compute_RTL_RCL(*a)
             rtl_s_vals.append(r["RTL_sum"])
             rtl_n_vals.append(r["RTL_norm"])
+            rg = compute_RTL_RCL(*a, global_norm=True)
+            rtl_gm_vals.append(rg["RTL_sum"] / m)
 
             # RCL: inter-concept leakage only
             b = make_embeddings(m, 0.0, alpha, seed)
             r2 = compute_RTL_RCL(*b)
             rcl_s_vals.append(r2["RCL_sum"])
             rcl_n_vals.append(r2["RCL_norm"])
+            rg2 = compute_RTL_RCL(*b, global_norm=True)
+            rcl_gm_vals.append(rg2["RCL_sum"] / m)
 
         rtl_sum_means[di, ai]  = np.mean(rtl_s_vals)
         rtl_sum_stds[di, ai]   = np.std(rtl_s_vals)
@@ -131,11 +138,17 @@ for di, m in enumerate(DIMS):
         rcl_sum_stds[di, ai]   = np.std(rcl_s_vals)
         rcl_norm_means[di, ai] = np.mean(rcl_n_vals)
         rcl_norm_stds[di, ai]  = np.std(rcl_n_vals)
+        rtl_gm_means[di, ai]   = np.mean(rtl_gm_vals)
+        rtl_gm_stds[di, ai]    = np.std(rtl_gm_vals)
+        rcl_gm_means[di, ai]   = np.mean(rcl_gm_vals)
+        rcl_gm_stds[di, ai]    = np.std(rcl_gm_vals)
 
         print(f"  α/β={alpha:.2f}  RTL_sum={rtl_sum_means[di,ai]:.4f}"
               f"  RTL_norm={rtl_norm_means[di,ai]:.4f}"
+              f"  RTL/m(gl)={rtl_gm_means[di,ai]:.4f}"
               f"  RCL_sum={rcl_sum_means[di,ai]:.4f}"
-              f"  RCL_norm={rcl_norm_means[di,ai]:.4f}")
+              f"  RCL_norm={rcl_norm_means[di,ai]:.4f}"
+              f"  RCL/m(gl)={rcl_gm_means[di,ai]:.4f}")
 
 
 # ---------------------------------------------------------------------------
@@ -311,5 +324,62 @@ out6 = PLOT_DIR + "paper_rtl_rcl_dim_sweep_norm_combined.pdf"
 fig6.savefig(out6); fig6.savefig(out6.replace(".pdf", ".png"))
 print(f"Saved combined norm → {out6}")
 plt.close(fig6)
+
+# ===========================================================================
+# FIGURE 7: RTL/m (global norm) — key dimensionality-robustness test
+# ===========================================================================
+fig7, axes7 = plt.subplots(1, 2, figsize=(6.8, 2.8))
+
+panel_cfg_gm = [
+    (axes7[0], rtl_gm_means, rtl_gm_stds,
+     r"Task-leakage strength $\alpha$", "RTL", "(a)"),
+    (axes7[1], rcl_gm_means, rcl_gm_stds,
+     r"Inter-concept leakage strength $\beta$", "RCL", "(b)"),
+]
+
+for ax, means, stds, xlabel, ylabel, letter in panel_cfg_gm:
+    for di, m in enumerate(DIMS):
+        s = STYLES[m]
+        ax.plot(ALPHAS, means[di],
+                color=s["color"], ls=s["ls"], lw=s["lw"],
+                marker="o", ms=3.5, zorder=3, label=f"$m={m}$")
+        ax.fill_between(ALPHAS, means[di] - stds[di], means[di] + stds[di],
+                        color=s["color"], alpha=0.08, zorder=2)
+    ax.axhline(0, color="0.6", lw=0.7, ls=":", zorder=1)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_xlim(*xlim)
+    ax.set_ylim(bottom=-0.01)
+    ax.text(-0.18, 1.13, letter, transform=ax.transAxes,
+            fontsize=11, fontweight="bold", va="top")
+
+handles, labels = axes7[0].get_legend_handles_labels()
+fig7.legend(handles, labels,
+            loc="lower center", ncol=len(DIMS),
+            bbox_to_anchor=(0.5, -0.16),
+            framealpha=0.9, edgecolor="0.75",
+            fontsize=7.5, handlelength=1.8,
+            title="Embedding dimension $m$",
+            title_fontsize=7.5)
+
+fig7.tight_layout(w_pad=1.8)
+fig7.subplots_adjust(top=0.88, bottom=0.28)
+out7 = PLOT_DIR + "paper_rtl_rcl_dim_sweep_global_m.pdf"
+fig7.savefig(out7); fig7.savefig(out7.replace(".pdf", ".png"))
+print(f"Saved RTL/m global → {out7}")
+plt.close(fig7)
+
+# Print summary table: RTL/m (global) at each alpha for each m
+print("\nRTL/m (global norm) — curves should collapse if metric is m-invariant")
+print(f"  {'alpha':>6}  " + "  ".join(f"m={m:>3}" for m in DIMS))
+for ai, alpha in enumerate(ALPHAS):
+    row = "  ".join(f"{rtl_gm_means[di, ai]:.4f}" for di in range(len(DIMS)))
+    print(f"  {alpha:>6.2f}  {row}")
+
+print("\nRCL/m (global norm)")
+print(f"  {'alpha':>6}  " + "  ".join(f"m={m:>3}" for m in DIMS))
+for ai, alpha in enumerate(ALPHAS):
+    row = "  ".join(f"{rcl_gm_means[di, ai]:.4f}" for di in range(len(DIMS)))
+    print(f"  {alpha:>6.2f}  {row}")
 
 print("Done.")

@@ -67,6 +67,9 @@ def main():
                     help="Recompute even if already cached in results dict")
     ap.add_argument("--skip_mlp", action="store_true",
                     help="Skip MLP variant (useful for CUB K=112 speed test)")
+    ap.add_argument("--global_norm", action="store_true",
+                    help="Use scalar (global) normalisation; results stored under "
+                         "'ridge_global' key alongside existing per-dim 'ridge' results")
     args = ap.parse_args()
 
     results = joblib.load(SAVE_PATH) if os.path.exists(SAVE_PATH) else {}
@@ -86,17 +89,20 @@ def main():
         keys = sorted(emb_cache.keys())
         print(f"  {len(keys)} cached entries: {keys[:3]} ...")
 
+        ridge_key = "ridge_global" if args.global_norm else "ridge"
+
         for i, key in enumerate(keys, 1):
             entry = results[dataset].get(key, {})
-            need_ridge = "ridge" not in entry or args.rerun
-            need_mlp   = ("mlp" not in entry or args.rerun) and not args.skip_mlp
+            mlp_key    = "mlp_global" if args.global_norm else "mlp"
+            need_ridge = ridge_key not in entry or args.rerun
+            need_mlp   = (mlp_key not in entry or args.rerun) and not args.skip_mlp
 
             if not need_ridge and not need_mlp:
-                r = entry.get("ridge", {})
-                m = entry.get("mlp", {})
+                r = entry.get(ridge_key, {})
+                m_res = entry.get(mlp_key, {})
                 print(f"  [{i:2d}/{len(keys)}] {key}  [cached]"
-                      f"  ridge RTL={r.get('RTL_sum','?'):.4f}"
-                      f"  mlp RTL={m.get('RTL_sum','?'):.4f}")
+                      f"  {ridge_key} RTL={r.get('RTL_sum','?'):.4f}"
+                      + (f"  {mlp_key} RTL={m_res.get('RTL_sum','?'):.4f}" if m_res else ""))
                 continue
 
             print(f"\n  [{i:2d}/{len(keys)}] {key}")
@@ -109,18 +115,19 @@ def main():
 
             if need_ridge:
                 t0 = time.time()
-                print(f"    Ridge ...", end=" ", flush=True)
-                entry["ridge"] = compute_RTL_RCL(*args_tuple)
-                r = entry["ridge"]
+                print(f"    Ridge ({ridge_key}) ...", end=" ", flush=True)
+                entry[ridge_key] = compute_RTL_RCL(*args_tuple, global_norm=args.global_norm)
+                r = entry[ridge_key]
                 print(f"RTL_sum={r['RTL_sum']:.4f}  RTL_norm={r['RTL_norm']:.4f}"
                       f"  RCL_sum={r['RCL_sum']:.4f}  RCL_norm={r['RCL_norm']:.4f}"
                       f"  ({time.time()-t0:.1f}s)", flush=True)
 
             if need_mlp:
                 t0 = time.time()
-                print(f"    MLP{MLP_HIDDEN} ...", end=" ", flush=True)
-                entry["mlp"] = compute_RTL_RCL_mlp(*args_tuple, hidden=MLP_HIDDEN)
-                r = entry["mlp"]
+                print(f"    MLP{MLP_HIDDEN} ({mlp_key}) ...", end=" ", flush=True)
+                entry[mlp_key] = compute_RTL_RCL_mlp(*args_tuple, hidden=MLP_HIDDEN,
+                                                      global_norm=args.global_norm)
+                r = entry[mlp_key]
                 print(f"RTL_sum={r['RTL_sum']:.4f}  RTL_norm={r['RTL_norm']:.4f}"
                       f"  RCL_sum={r['RCL_sum']:.4f}  RCL_norm={r['RCL_norm']:.4f}"
                       f"  ({time.time()-t0:.1f}s)", flush=True)
@@ -137,7 +144,7 @@ def main():
         print(f"\n  {ds}")
         for key, entry in sorted(results[ds].items()):
             parts = []
-            for probe in ["ridge", "mlp"]:
+            for probe in ["ridge", "ridge_global", "mlp", "mlp_global"]:
                 if probe in entry:
                     r = entry[probe]
                     parts.append(

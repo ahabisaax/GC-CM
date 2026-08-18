@@ -10,12 +10,16 @@ from sklearn.neural_network import MLPClassifier, MLPRegressor
 from sklearn.preprocessing import StandardScaler, label_binarize
 
 
-def compute_RTL_RCL(c_mix_tr, c_mix_te, c_true_tr, c_true_te, y_tr, y_te, alpha=1.0):
+def compute_RTL_RCL(
+    c_mix_tr, c_mix_te, c_true_tr, c_true_te, y_tr, y_te,
+    alpha=1.0, global_norm=False,
+):
     """
     Residual Task Leakage (RTL) and Residual Concept Leakage (RCL) for CEM embeddings.
 
     Per concept k:
-      1. Per-dim normalise embedding to unit variance (train stats).
+      1. Normalise embedding (train stats). global_norm=False: per-dimension unit
+         variance. global_norm=True: single scalar mean/std over all elements.
       2. Ridge(c_k → emb_k_norm) → residual r_k.
       3. RTL_k_sum  = Σᵢ max(0, R²ᵢ(Y→r_k) × varᵢ(r_k))
          RTL_k_norm = RTL_k_sum / Σᵢ varᵢ(r_k)  ∈ [0,1]
@@ -27,6 +31,8 @@ def compute_RTL_RCL(c_mix_tr, c_mix_te, c_true_tr, c_true_te, y_tr, y_te, alpha=
     c_mix_tr/te  : (N, K, m)  — concept embeddings
     c_true_tr/te : (N, K)     — binary ground-truth concept labels
     y_tr/te      : (N,)       — integer task labels
+    global_norm  : bool — if True use scalar (global) normalisation; if False
+                   use per-dimension normalisation (default)
     """
     c_mix_tr  = np.asarray(c_mix_tr,  dtype=np.float64)
     c_mix_te  = np.asarray(c_mix_te,  dtype=np.float64)
@@ -46,7 +52,10 @@ def compute_RTL_RCL(c_mix_tr, c_mix_te, c_true_tr, c_true_te, y_tr, y_te, alpha=
         tr_k = c_mix_tr[:, k, :]
         te_k = c_mix_te[:, k, :]
 
-        mu, sigma = tr_k.mean(0, keepdims=True), tr_k.std(0, keepdims=True) + 1e-8
+        if global_norm:
+            mu, sigma = tr_k.mean(), tr_k.std() + 1e-8
+        else:
+            mu, sigma = tr_k.mean(0, keepdims=True), tr_k.std(0, keepdims=True) + 1e-8
         tr_n = (tr_k - mu) / sigma
         te_n = (te_k - mu) / sigma
 
@@ -93,7 +102,7 @@ def compute_RTL_RCL(c_mix_tr, c_mix_te, c_true_tr, c_true_te, y_tr, y_te, alpha=
 
 def compute_RTL_RCL_mlp(
     c_mix_tr, c_mix_te, c_true_tr, c_true_te, y_tr, y_te,
-    hidden=(64,), max_iter=500, alpha_ridge=1.0,
+    hidden=(64,), max_iter=500, alpha_ridge=1.0, global_norm=False,
 ):
     """
     MLP variant of RTL / RCL.
@@ -150,7 +159,10 @@ def compute_RTL_RCL_mlp(
         tr_k = c_mix_tr[:, k, :]
         te_k = c_mix_te[:, k, :]
 
-        mu, sigma = tr_k.mean(0, keepdims=True), tr_k.std(0, keepdims=True) + 1e-8
+        if global_norm:
+            mu, sigma = tr_k.mean(), tr_k.std() + 1e-8
+        else:
+            mu, sigma = tr_k.mean(0, keepdims=True), tr_k.std(0, keepdims=True) + 1e-8
         tr_n = (tr_k - mu) / sigma
         te_n = (te_k - mu) / sigma
 
