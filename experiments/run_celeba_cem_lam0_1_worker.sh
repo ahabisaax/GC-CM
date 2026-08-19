@@ -3,7 +3,7 @@
 #$ -o ~/Scratch/xai-crcbm/logs/CelebA_CEM_lam0_1_$JOB_ID.out
 #$ -e ~/Scratch/xai-crcbm/logs/CelebA_CEM_lam0_1_$JOB_ID.err
 #$ -pe smp 8
-#$ -l h_rt=10:00:00
+#$ -l h_rt=32:30:00
 #$ -l mem=4G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
@@ -46,6 +46,7 @@ export PYTHONPATH="$LOCAL_WORKSPACE:$PYTHONPATH"
 LOCAL_CONFIG="experiments/configs/celeba_cem_39c.yaml"
 LOCAL_RESULTS="$TMPDIR/results_temp"
 
+export WANDB_MODE=online
 $CONDA_PREFIX/bin/python -u experiments/run_experiments.py \
     --config "$LOCAL_CONFIG" \
     --project_name "CelebA_CEM" \
@@ -53,3 +54,7 @@ $CONDA_PREFIX/bin/python -u experiments/run_experiments.py \
 
 mkdir -p "$FINAL_RESULTS_DIR"
 rsync -a "$LOCAL_RESULTS/" "$FINAL_RESULTS_DIR/"
+
+echo "Syncing wandb offline runs..."
+mkdir -p "$PROJECT_ROOT/wandb"
+rsync -a "$LOCAL_WORKSPACE/wandb/" "$PROJECT_ROOT/wandb/"
