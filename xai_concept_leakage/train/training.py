@@ -467,9 +467,6 @@ def train_end_to_end_model(
             )
             eval_results["training_time"] = training_time
             eval_results["num_epochs"] = num_epochs
-            _add_rtl_rcl(model, config, train_dl, test_dl, eval_results)
-            if eval_results.get("RTL_norm") is not None:
-                wandb.log({k: eval_results[k] for k in ("RTL_sum", "RTL_norm", "RCL_sum", "RCL_norm")})
             if test_dl is not None:
                 print(
                     f'c_acc: {eval_results["test_acc_c"] * 100:.2f}%, '
@@ -593,7 +590,6 @@ def train_end_to_end_model(
         )
         eval_results["training_time"] = training_time
         eval_results["num_epochs"] = num_epochs
-        _add_rtl_rcl(model, config, train_dl, test_dl, eval_results)
         if test_dl is not None:
             print(
                 f'c_acc: {eval_results["test_acc_c"]*100:.2f}%, '
