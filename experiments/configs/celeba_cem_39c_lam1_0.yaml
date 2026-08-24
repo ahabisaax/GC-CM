@@ -54,12 +54,24 @@ shared_params:
 
 runs:
 
-  - architecture: "ConceptEmbeddingModel"
+  - architecture: "CriticRegularisedConceptEmbeddingModel"
     run_name: "auto"
     sigmoidal_prob: true
     training_intervention_prob: 0
     embedding_activation: "leakyrelu"
     cbm_optimizer: adam
-    learning_rate: 0.001
+    cbm_learning_rate: 0.0005
+    adv_learning_rate: 0.0001
+    use_adversarial: true
+    max_adversarial_lambda: 1
+    adversarial_delay: 0
+    adversarial_lambda_scheduler_warmup: null
+    adversarial_scheduler: "none"
+    adversarial_loss_type: "grl"
+    n_critic_steps: 1
+    shared_critic: true
+    shared_prob_gen: false
+    concept_vector_regularisation: false
+    entropy_maximisation: false
     concept_loss_weight: 1.0
 
