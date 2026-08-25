@@ -54,15 +54,6 @@ shared_params:
 
 runs:
 
-  - architecture: "ConceptEmbeddingModel"
-    run_name: "auto"
-    sigmoidal_prob: true
-    training_intervention_prob: 0
-    embedding_activation: "leakyrelu"
-    cbm_optimizer: adam
-    learning_rate: 0.001
-    concept_loss_weight: 0.1
-
   - architecture: "CriticRegularisedConceptEmbeddingModel"
     run_name: "auto"
     sigmoidal_prob: true
