@@ -1,9 +1,9 @@
 #!/bin/bash -l
-#$ -N CelebA_CEM_lam0_5
-#$ -o ~/Scratch/xai-crcbm/logs/CelebA_CEM_lam0_5_$JOB_ID.out
-#$ -e ~/Scratch/xai-crcbm/logs/CelebA_CEM_lam0_5_$JOB_ID.err
+#$ -N CelebA_CRCEM_lam0_5
+#$ -o ~/Scratch/xai-crcbm/logs/CelebA_CRCEM_lam0_5_$JOB_ID.out
+#$ -e ~/Scratch/xai-crcbm/logs/CelebA_CRCEM_lam0_5_$JOB_ID.err
 #$ -pe smp 8
-#$ -l h_rt=20:00:00
+#$ -l h_rt=34:30:00
 #$ -l mem=4G
 #$ -l tmpfs=20G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
@@ -26,7 +26,7 @@ export OMP_NUM_THREADS=$NSLOTS
 export MKL_NUM_THREADS=$NSLOTS
 
 PROJECT_ROOT=~/Scratch/xai-crcbm
-FINAL_RESULTS_DIR=$PROJECT_ROOT/results/celeba_cem_39c_lam0_5
+FINAL_RESULTS_DIR=$PROJECT_ROOT/results/celeba_crcem_39c_lam0_5
 DATASET_TAR="celeba.tar"
 
 LOCAL_WORKSPACE="$TMPDIR/$JOB_ID"
