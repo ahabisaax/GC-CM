@@ -30,8 +30,8 @@ shared_params:
   weight_loss: false
   use_task_class_weights: false
   c_extractor_arch: "resnet34"
-  optimizer: sgd
-  cbm_optimizer: sgd
+  optimizer: adam
+  cbm_optimizer: adam
   learning_rate: 0.005
   bool: false
   momentum: 0.9
