@@ -58,5 +58,4 @@ runs:
     run_name: "auto"
     sigmoidal_prob: true
     embedding_activation: "leakyrelu"
-    grid_variables: [concept_loss_weight]
-    concept_loss_weight: [0.1, 0.5, 1]
+    concept_loss_weight: 0.1
