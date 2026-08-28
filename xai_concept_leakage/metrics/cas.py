@@ -2,7 +2,10 @@ import xai_concept_leakage.metrics.oracle as purity
 import numpy as np
 import warnings
 
-from sklearn_extra.cluster import KMedoids
+try:
+    from sklearn_extra.cluster import KMedoids
+except ImportError:
+    KMedoids = None
 from sklearn.metrics import homogeneity_score
 from tqdm import tqdm
 

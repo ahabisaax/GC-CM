@@ -12,7 +12,10 @@ Mahinpei et al.'s "Promises and Pitfalls of Black-Box Concept Learning Models"
 import numpy as np
 import scipy
 import sklearn
-import tensorflow as tf
+try:
+    import tensorflow as tf
+except ImportError:
+    tf = None
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 

@@ -220,6 +220,8 @@ def _generate_dataset_and_update_config(experiment_config):
         import data.CUB200.cub_loader as data_module
     elif dataset_config['dataset'] == 'synthetic_toy':
         import xai_concept_leakage.data.synthetic_toy_loader as data_module
+    elif dataset_config['dataset'] == 'waterbirds':
+        import xai_concept_leakage.data.waterbirds_loader as data_module
     else:
         raise ValueError(f"Unsupported dataset {dataset_config['dataset']}!")
 

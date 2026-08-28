@@ -11,7 +11,10 @@ from pytorch_lightning import seed_everything
 from scipy.special import expit
 from sklearn.metrics import accuracy_score
 from tqdm import tqdm
-import tensorflow as tf
+try:
+    import tensorflow as tf
+except ImportError:
+    tf = None
 
 import xai_concept_leakage.metrics.niching as niching
 import xai_concept_leakage.metrics.oracle as oracle
