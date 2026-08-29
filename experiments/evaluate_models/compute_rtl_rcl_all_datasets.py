@@ -52,6 +52,7 @@ CACHE_PATHS = {
     "tabulartoy": master + "results/embeddings_tabulartoy_all.joblib",
     "dsprites":   master + "results/embeddings_dsprites_all.joblib",
     "cub":        master + "results/embeddings_cub_all.joblib",
+    "celeba":     master + "results/embeddings_celeba_all.joblib",
 }
 SAVE_PATH = master + "results/results_rtl_rcl_all_datasets.dict"
 
@@ -62,7 +63,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--datasets", nargs="+",
                     default=["tabulartoy", "dsprites", "cub"],
-                    choices=["tabulartoy", "dsprites", "cub"])
+                    choices=["tabulartoy", "dsprites", "cub", "celeba"])
     ap.add_argument("--rerun", action="store_true",
                     help="Recompute even if already cached in results dict")
     ap.add_argument("--skip_mlp", action="store_true",

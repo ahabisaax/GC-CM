@@ -42,6 +42,7 @@ SPLIT_SIZES = {
     "tabulartoy": (2000, 900),   # pool val(2000)+test(1000) → tr=2100 te=900
     "dsprites":   (5000, 1000),
     "cub":        (5992, 1000),
+    "celeba":     (30000, 9000), # pool val(~19k)+test(~20k) → tr=30k te=9k
 }
 
 
@@ -140,10 +141,56 @@ def setup_cub():
     return val_dl, test_dl, x2c, model_specs
 
 
+def setup_celeba():
+    import torch.utils.data as tud
+    import xai_concept_leakage.data.celeba_loader as celeba
+
+    class CelebADatasetWrapper(tud.Dataset):
+        def __init__(self, ds):
+            self.ds = ds
+        def __len__(self):
+            return len(self.ds)
+        def __getitem__(self, idx):
+            x, (y, c) = self.ds[idx]
+            return x, y, c
+
+    def wrap(dl):
+        return tud.DataLoader(
+            CelebADatasetWrapper(dl.dataset),
+            batch_size=dl.batch_size,
+            shuffle=False,
+            num_workers=0,
+            pin_memory=False,
+        )
+
+    cfg = {
+        "dataset": "celeba", "num_workers": 0, "batch_size": 256,
+        "root_dir": master + "data/",
+        "label_attr_idx": 20, "num_concepts": 39, "num_classes": 2,
+        "image_size": 64, "weight_loss": False, "train_augment": False,
+    }
+    _, val_dl, test_dl, _, _ = celeba.generate_data(
+        config=cfg, seed=SEED, output_dataset_vars=True,
+    )
+    val_dl  = wrap(val_dl)
+    test_dl = wrap(test_dl)
+    x2c = None
+
+    cem_folder  = master + "results/celeba_cem_39c/"
+    gcem_folder = cem_folder  # same folder
+
+    model_specs = [
+        ("CEM",    cem_folder,  "CEM_"),
+        ("GC-CEM", gcem_folder, "CRCEM_"),
+    ]
+    return val_dl, test_dl, x2c, model_specs
+
+
 SETUP_FN = {
     "tabulartoy": setup_tabulartoy,
     "dsprites":   setup_dsprites,
     "cub":        setup_cub,
+    "celeba":     setup_celeba,
 }
 
 
@@ -154,7 +201,7 @@ SETUP_FN = {
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", required=True,
-                    choices=["tabulartoy", "dsprites", "cub"])
+                    choices=["tabulartoy", "dsprites", "cub", "celeba"])
     ap.add_argument("--folds", nargs="+", default=ALL_FOLDS)
     ap.add_argument("--lam_c", nargs="+", default=LAM_C_LIST)
     ap.add_argument("--output", default=None)
