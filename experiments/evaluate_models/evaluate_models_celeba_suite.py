@@ -69,24 +69,19 @@ def wrap_celeba_dl(dl):
 # ---------------------------------------------------------------------------
 TRIAL_RUN      = False
 RERUN_TASK     = False
-RERUN_RTL_RCL  = False
+RERUN_RTL_RCL  = True   # recompute with corrected 5k subsample
 RERUN_CTL_ICL  = False
 RERUN_INTERV   = False
 
 INTERVENTION_POLICIES = ["random"]
 INTERVENTION_REPEATS  = 3
+MAX_PROBE_SAMPLES     = 5000    # subsample train for RTL/RCL — matches dSprites cache_embeddings split
 
-# Per-model folder mapping — CEM has no lam_c0.5 config
+# All CelebA CEM/CRCEM models live in one folder
+_CELEBA_FOLDER = master_folder + "results/celeba_cem_39c/"
 MODEL_FOLDERS = {
-    "cem": {
-        "lam_c0.1": master_folder + "results/celeba_cem_39c/",
-        "lam_c1":   master_folder + "results/celeba_cem_39c_lam1_0/",
-    },
-    "crcem": {
-        "lam_c0.1": master_folder + "results/celeba_cem_39c/",
-        "lam_c0.5": master_folder + "results/celeba_crcem_39c_lam0_5/",
-        "lam_c1":   master_folder + "results/celeba_cem_39c_lam1_0/",
-    },
+    "cem":   {"lam_c0.1": _CELEBA_FOLDER, "lam_c0.5": _CELEBA_FOLDER, "lam_c1": _CELEBA_FOLDER},
+    "crcem": {"lam_c0.1": _CELEBA_FOLDER, "lam_c0.5": _CELEBA_FOLDER, "lam_c1": _CELEBA_FOLDER},
 }
 
 FOLDS     = ["fold_1"] if TRIAL_RUN else ALL_FOLDS
@@ -179,15 +174,20 @@ for label, lam_folders in MODEL_FOLDERS.items():
 
             # --- RTL / RCL (Ridge + MLP, global norm) ---
             if todo["rtl_rcl"]:
+                # Subsample train to MAX_PROBE_SAMPLES — full CelebA train (162k) is
+                # too slow for sklearn MLP; consistent with cache_embeddings_all.py split sizes.
+                rng = np.random.RandomState(42)
+                n_tr = len(train_preds["y_true"])
+                idx  = rng.permutation(n_tr)[:MAX_PROBE_SAMPLES]
                 args = (
-                    train_preds["c_mix"], test_preds["c_mix"],
-                    train_preds["c_true"], test_preds["c_true"],
-                    train_preds["y_true"], test_preds["y_true"],
+                    train_preds["c_mix"][idx], test_preds["c_mix"],
+                    train_preds["c_true"][idx], test_preds["c_true"],
+                    train_preds["y_true"][idx], test_preds["y_true"],
                 )
                 print(f"  Computing RTL/RCL Ridge (global norm, {N_CONCEPTS}×{EMB_SIZE}-dim)...")
                 ridge = compute_RTL_RCL(*args, global_norm=True)
                 print(f"  Computing RTL/RCL MLP (global norm)...")
-                mlp   = compute_RTL_RCL_mlp(*args, global_norm=True)
+                mlp   = compute_RTL_RCL_mlp(*args, global_norm=True, hidden=(64,), max_iter=200)
                 r["rtl_rcl"] = {"ridge_global": ridge, "mlp_global": mlp}
             rr = r["rtl_rcl"]
             print(f"  Ridge: RTL_sum={rr['ridge_global']['RTL_sum']:.4f}  RTL_norm={rr['ridge_global']['RTL_norm']:.4f}"

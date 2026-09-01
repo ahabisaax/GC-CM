@@ -178,7 +178,6 @@ def compute_icl(c_mix_flat, n_concepts, repeats=3, n_neighbors=3, n_jobs=-1):
     for _ in range(repeats):
         tril = compute_mi_matrix_parallel(
             c_mix_flat,
-            n_concepts=n_concepts,
             n_neighbors=n_neighbors,
             normalise=True,
             flatten=True,
