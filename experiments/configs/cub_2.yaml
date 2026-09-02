@@ -274,7 +274,7 @@ runs:
 #    calibration_epochs: 30
 
  # CR-CBM:
-#     - architecture: 'CriticRegularisedConceptBottleneckModel'
+#     - architecture: 'GCConceptBottleneckModel'
 #       run_name: "auto"
 #       bool: False
 #       extra_dims: 0

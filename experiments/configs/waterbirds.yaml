@@ -4,7 +4,7 @@ trials: 5
 shared_params:
   dataset_config:
     dataset: waterbirds
-    num_workers: 4
+    num_workers: 0
     batch_size: 64
     root_dir: data/
     train_augment: true
@@ -71,7 +71,7 @@ runs:
     concept_loss_weight: 1.0
 
   # ── GC-CEM (shared critic, GRL) ───────────────────────────────────────────
-  - architecture: "CriticRegularisedConceptEmbeddingModel"
+  - architecture: "GCConceptEmbeddingModel"
     run_name: "auto"
     embedding_activation: "leakyrelu"
     cbm_learning_rate: 1.0e-04
@@ -89,7 +89,7 @@ runs:
     entropy_maximisation: false
     concept_loss_weight: 0.1
 
-  - architecture: "CriticRegularisedConceptEmbeddingModel"
+  - architecture: "GCConceptEmbeddingModel"
     run_name: "auto"
     embedding_activation: "leakyrelu"
     cbm_learning_rate: 1.0e-04
@@ -107,7 +107,7 @@ runs:
     entropy_maximisation: false
     concept_loss_weight: 0.5
 
-  - architecture: "CriticRegularisedConceptEmbeddingModel"
+  - architecture: "GCConceptEmbeddingModel"
     run_name: "auto"
     embedding_activation: "leakyrelu"
     cbm_learning_rate: 1.0e-04

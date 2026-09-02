@@ -38,8 +38,8 @@ _CEM_ARCHITECTURES = {
     "ConceptEmbeddingModel",
     "MixtureEmbModel",
     "GCConceptEmbeddingModel",
-    "AdversarialConceptEmbeddingModel",
-    "CriticRegularisedConceptEmbeddingModel",
+    "AdversarialConceptEmbeddingModel",    # legacy
+    "CriticRegularisedConceptEmbeddingModel",  # legacy
     "IntAwareConceptEmbeddingModel",
     "IntCEM",
 }

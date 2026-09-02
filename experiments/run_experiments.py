@@ -342,16 +342,20 @@ def generate_auto_run_name(config):
         components.append("HardCBM")
     elif architecture == 'ConceptBottleneckModel':
         components.append("SoftCBM")
-    elif architecture in ('GCConceptBottleneckModel', 'AdversarialConceptBottleneckModel'):
-        components.append("ACBM")
+    elif architecture == 'GCConceptBottleneckModel':
+        components.append("GCCBM")
+    elif architecture == 'AdversarialConceptBottleneckModel':
+        components.append("ACBM")  # legacy
     elif architecture == 'CriticRegularisedConceptBottleneckModel':
-        components.append("CRCBM")
+        components.append("CRCBM")  # legacy
     elif architecture == 'ConceptEmbeddingModel':
         components.append('CEM')
-    elif architecture in ('GCConceptEmbeddingModel', 'AdversarialConceptEmbeddingModel'):
-        components.append('ACEM')
+    elif architecture == 'GCConceptEmbeddingModel':
+        components.append('GCCEM')
+    elif architecture == 'AdversarialConceptEmbeddingModel':
+        components.append('ACEM')  # legacy
     elif architecture == 'CriticRegularisedConceptEmbeddingModel':
-        components.append('CRCEM')
+        components.append('CRCEM')  # legacy
     elif architecture == 'SequentialConceptBottleneckModel':
         components.append('SeqCBM')
     else:

@@ -85,8 +85,8 @@ def predict_c_y(
         "IntAwareConceptEmbeddingModel",
         "IntCEM",
         "GCConceptEmbeddingModel",
-        "CriticRegularisedConceptEmbeddingModel",
-        "AdversarialConceptEmbeddingModel"
+        "CriticRegularisedConceptEmbeddingModel",  # legacy
+        "AdversarialConceptEmbeddingModel"  # legacy
     ]
     with torch.no_grad():
         if model_type_vec:

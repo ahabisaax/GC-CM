@@ -69,7 +69,7 @@ runs:
     #grid_variables: [concept_loss_weight]
     concept_loss_weight: 0.1
 
-  - architecture: "CriticRegularisedConceptEmbeddingModel"
+  - architecture: "GCConceptEmbeddingModel"
     run_name: "auto"
     sigmoidal_prob: true
     training_intervention_prob: 0

@@ -49,7 +49,7 @@ shared_params:
   c2y_max_epochs: 150
 
 runs:
-  - architecture: "CriticRegularisedConceptEmbeddingModel"
+  - architecture: "GCConceptEmbeddingModel"
     run_name: "GCEM-emb16-lam01"
     sigmoidal_prob: True
     training_intervention_prob: 0

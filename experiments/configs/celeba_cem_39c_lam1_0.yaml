@@ -54,7 +54,7 @@ shared_params:
 
 runs:
 
-  - architecture: "CriticRegularisedConceptEmbeddingModel"
+  - architecture: "GCConceptEmbeddingModel"
     run_name: "auto"
     sigmoidal_prob: true
     training_intervention_prob: 0

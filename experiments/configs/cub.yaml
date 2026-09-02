@@ -306,7 +306,7 @@ runs:
 #    calibration_epochs: 30
 
  # CR-CBM:
-#     - architecture: 'CriticRegularisedConceptBottleneckModel'
+#     - architecture: 'GCConceptBottleneckModel'
 #       run_name: "auto"
 #       bool: False
 #       extra_dims: 0
@@ -349,7 +349,7 @@ runs:
 #    early_stopping_mode: max
 #    early_stopping_delta: 0.0
 
-  - architecture: 'CriticRegularisedConceptEmbeddingModel'
+  - architecture: 'GCConceptEmbeddingModel'
     run_name: "auto"
     sigmoidal_prob: True
     training_intervention_prob: 0
