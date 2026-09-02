@@ -40,6 +40,29 @@ from experiments.evaluate_models.eval_suite import (
     compute_ctl, compute_icl,
 )
 
+# Match cache_embeddings_all.py clean-split protocol: pool val+test, split for RTL/RCL probes
+RTL_N_TR = 30000   # probe train — matches dSprites/CelebA cache_embeddings split size
+RTL_N_TE = 9000    # probe test
+
+def pool_and_split(preds_val, preds_test, n_tr=RTL_N_TR, n_te=RTL_N_TE, seed=42):
+    """Pool val+test predictions, shuffle, split into RTL/RCL probe train/test."""
+    c_mix  = np.concatenate([preds_val["c_mix"],  preds_test["c_mix"]],  axis=0)
+    c_true = np.concatenate([preds_val["c_true"], preds_test["c_true"]], axis=0)
+    y      = np.concatenate([preds_val["y_true"], preds_test["y_true"]], axis=0)
+    N = len(y)
+    rng = np.random.RandomState(seed)
+    idx = rng.permutation(N)
+    n_tr_actual = min(n_tr, N - n_te)
+    tr_idx = idx[:n_tr_actual]
+    te_idx = idx[n_tr_actual:n_tr_actual + n_te]
+    print(f"    RTL/RCL pool: total={N} → probe_train={n_tr_actual}  probe_test={n_te}")
+    return (
+        c_mix[tr_idx].astype(np.float32),  c_true[tr_idx].astype(np.float32),
+        y[tr_idx].astype(np.int64),
+        c_mix[te_idx].astype(np.float32),  c_true[te_idx].astype(np.float32),
+        y[te_idx].astype(np.int64),
+    )
+
 # ---------------------------------------------------------------------------
 # CelebA DataLoader wrapper  (x,(y,c)) → (x,y,c)
 # ---------------------------------------------------------------------------
@@ -69,13 +92,14 @@ def wrap_celeba_dl(dl):
 # ---------------------------------------------------------------------------
 TRIAL_RUN      = False
 RERUN_TASK     = False
-RERUN_RTL_RCL  = True   # recompute with corrected 5k subsample
+RERUN_RTL_RCL  = True   # recompute with larger ridge subsample
 RERUN_CTL_ICL  = False
 RERUN_INTERV   = False
 
 INTERVENTION_POLICIES = ["random"]
 INTERVENTION_REPEATS  = 3
-MAX_PROBE_SAMPLES     = 5000    # subsample train for RTL/RCL — matches dSprites cache_embeddings split
+MAX_RIDGE_SAMPLES     = 30000   # ridge is fast; match dSprites cache_embeddings train split size
+MAX_MLP_SAMPLES       = 5000    # MLP is slow on high-dim CelebA embeddings (39×16=624 dims)
 
 # All CelebA CEM/CRCEM models live in one folder
 _CELEBA_FOLDER = master_folder + "results/celeba_cem_39c/"
@@ -102,16 +126,15 @@ dataset_config = {
     "weight_loss": False,
     "train_augment": False,
 }
-train_dl, val_dl, test_dl, imbalance, (n_concepts, n_tasks, concept_map) = (
+_, val_dl, test_dl, imbalance, (n_concepts, n_tasks, concept_map) = (
     celeba_data_module.generate_data(
         config=dataset_config, seed=42,
         output_dataset_vars=True,
         root_dir=dataset_config["root_dir"],
     )
 )
-train_dl = wrap_celeba_dl(train_dl)
-val_dl   = wrap_celeba_dl(val_dl)
-test_dl  = wrap_celeba_dl(test_dl)
+val_dl  = wrap_celeba_dl(val_dl)
+test_dl = wrap_celeba_dl(test_dl)
 x2c_extractor = None
 print(f"CelebA: n_concepts={n_concepts}, n_tasks={n_tasks}")
 
@@ -160,8 +183,8 @@ for label, lam_folders in MODEL_FOLDERS.items():
             print(f"{'='*60}")
 
             print("  Loading predictions...")
-            test_preds  = load_predictions(ckpt, x2c_extractor, test_dl)
-            train_preds = load_predictions(ckpt, x2c_extractor, train_dl)
+            test_preds = load_predictions(ckpt, x2c_extractor, test_dl)
+            val_preds  = load_predictions(ckpt, x2c_extractor, val_dl)
 
             N_CONCEPTS = test_preds["n_concepts"]
             EMB_SIZE   = test_preds["emb_size"]
@@ -173,21 +196,23 @@ for label, lam_folders in MODEL_FOLDERS.items():
             print(f"  task_acc={r['task_acc']:.4f}  c_acc={r['c_acc']:.4f}")
 
             # --- RTL / RCL (Ridge + MLP, global norm) ---
+            # Pool val+test and split clean — matches cache_embeddings_all.py protocol
+            # used for TabularToy/dSprites/CUB. Never uses training data for the probe.
             if todo["rtl_rcl"]:
-                # Subsample train to MAX_PROBE_SAMPLES — full CelebA train (162k) is
-                # too slow for sklearn MLP; consistent with cache_embeddings_all.py split sizes.
-                rng = np.random.RandomState(42)
-                n_tr = len(train_preds["y_true"])
-                idx  = rng.permutation(n_tr)[:MAX_PROBE_SAMPLES]
-                args = (
-                    train_preds["c_mix"][idx], test_preds["c_mix"],
-                    train_preds["c_true"][idx], test_preds["c_true"],
-                    train_preds["y_true"][idx], test_preds["y_true"],
+                c_mix_tr, c_true_tr, y_tr, c_mix_te, c_true_te, y_te = pool_and_split(
+                    val_preds, test_preds,
                 )
-                print(f"  Computing RTL/RCL Ridge (global norm, {N_CONCEPTS}×{EMB_SIZE}-dim)...")
-                ridge = compute_RTL_RCL(*args, global_norm=True)
-                print(f"  Computing RTL/RCL MLP (global norm)...")
-                mlp   = compute_RTL_RCL_mlp(*args, global_norm=True, hidden=(64,), max_iter=200)
+                # MLP probe-train capped at 5k — MLPRegressor is slow in 624-dim space
+                rng = np.random.RandomState(42)
+                mlp_idx = rng.permutation(len(y_tr))[:5000]
+                ridge_args = (c_mix_tr, c_mix_te, c_true_tr, c_true_te, y_tr, y_te)
+                mlp_args   = (c_mix_tr[mlp_idx], c_mix_te,
+                              c_true_tr[mlp_idx], c_true_te,
+                              y_tr[mlp_idx], y_te)
+                print(f"  Computing RTL/RCL Ridge (global norm, {N_CONCEPTS}×{EMB_SIZE}-dim, n={len(y_tr)})...")
+                ridge = compute_RTL_RCL(*ridge_args, global_norm=True)
+                print(f"  Computing RTL/RCL MLP (global norm, n={mlp_idx.shape[0]})...")
+                mlp   = compute_RTL_RCL_mlp(*mlp_args, global_norm=True, hidden=(64,), max_iter=200)
                 r["rtl_rcl"] = {"ridge_global": ridge, "mlp_global": mlp}
             rr = r["rtl_rcl"]
             print(f"  Ridge: RTL_sum={rr['ridge_global']['RTL_sum']:.4f}  RTL_norm={rr['ridge_global']['RTL_norm']:.4f}"
@@ -197,9 +222,7 @@ for label, lam_folders in MODEL_FOLDERS.items():
 
             # --- CTL / ICL at concept probability level ---
             if todo["ctl_icl"]:
-                # c_prob is [N, K] — pass directly as c_mix_flat (m=1 per concept)
-                c_prob_test  = test_preds["c_prob"]
-                c_prob_train = train_preds["c_prob"]
+                c_prob_test = test_preds["c_prob"]
                 print(f"  Computing CTL (KSG, c_prob [{c_prob_test.shape}])...")
                 ctl_mean, ctl_se = compute_ctl(
                     c_prob_test, test_preds["y_true"], N_CONCEPTS,
@@ -217,7 +240,7 @@ for label, lam_folders in MODEL_FOLDERS.items():
             if todo["interv"]:
                 print(f"  Computing intervention curve ({INTERVENTION_POLICIES}, {INTERVENTION_REPEATS} repeats)...")
                 r["interv"] = run_intervention_curve(
-                    ckpt, x2c_extractor, train_dl, val_dl, test_dl,
+                    ckpt, x2c_extractor, val_dl, val_dl, test_dl,
                     policies=INTERVENTION_POLICIES,
                     repeats=INTERVENTION_REPEATS,
                 )
