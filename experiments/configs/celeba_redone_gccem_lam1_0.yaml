@@ -40,6 +40,7 @@ shared_params:
   adv_optimizer: adam
   check_val_every_n_epoch: 5
   compute_mi_on_gpu: false
+  project_name: "CelebA_redone"
   compute_mi_mode: 'cpu'
   accumulate_grad_batches: 1
   c2y_max_epochs: 150
