@@ -61,21 +61,9 @@ MODELS = [
     dict(label="cem",    lam_c="lam_c0.1", last_ckpt=False,
          folder=CEM_FOLDER + "CEM_adam_lr1e-03_bs512_lam_c0.1/",
          prefix="CEM_adam_lr1e-03_bs512_lam_c0.1"),
-    dict(label="cem",    lam_c="lam_c0.5", last_ckpt=False,
-         folder=CEM_FOLDER + "CEM_adam_lr1e-03_bs512_lam_c0.5/",
-         prefix="CEM_adam_lr1e-03_bs512_lam_c0.5"),
-    dict(label="cem",    lam_c="lam_c1",   last_ckpt=False,
-         folder=CEM_FOLDER + "CEM_adam_lr1e-03_bs512_lam_c1.0/",
-         prefix="CEM_adam_lr1e-03_bs512_lam_c1.0"),
     dict(label="gc_cem", lam_c="lam_c0.1", last_ckpt=True,
          folder=CEM_FOLDER + "CRCEM_adam_lr5e-04_bs512_lam1_none_lam_c0.1_shared_critic/",
          prefix="CRCEM_adam_lr5e-04_bs512_lam1_none_lam_c0.1_shared_critic"),
-    dict(label="gc_cem", lam_c="lam_c0.5", last_ckpt=True,
-         folder=CEM_FOLDER + "CRCEM_adam_lr5e-04_bs512_lam1_none_lam_c0.5_shared_critic/",
-         prefix="CRCEM_adam_lr5e-04_bs512_lam1_none_lam_c0.5_shared_critic"),
-    dict(label="gc_cem", lam_c="lam_c1",   last_ckpt=True,
-         folder=CEM_FOLDER + "CRCEM_adam_lr5e-04_bs512_lam1_none_lam_c1.0_shared_critic/",
-         prefix="CRCEM_adam_lr5e-04_bs512_lam1_none_lam_c1.0_shared_critic"),
 ]
 
 # ---------------------------------------------------------------------------

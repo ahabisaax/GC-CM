@@ -1,0 +1,60 @@
+results_dir: "results/celeba_redone/"
+trials: 5
+
+shared_params:
+  dataset_config:
+    dataset: celeba
+    batch_size: 512
+    num_workers: 8
+    root_dir: data/
+    label_attr_idx: 20
+    num_concepts: 39
+    num_classes: 2
+    image_size: 64
+
+  intervention_config:
+    competence_levels: [1]
+    intervention_freq: 1
+    intervention_batch_size: 256
+    intervention_policies:
+      - policy: "random"
+        group_level: True
+        use_prior: False
+
+  skip_repr_evaluation: true
+  max_epochs: 150
+  top_k_accuracy: null
+  save_model: true
+  emb_size: 16
+  extra_dims: 0
+  weight_decay: 4.0e-06
+  weight_loss: false
+  use_task_class_weights: false
+  c_extractor_arch: "resnet34"
+  bool: false
+  momentum: 0.9
+  sigmoidal_prob: false
+  training_intervention_prob: 0
+  n_hidden: 512
+  linear_c2y: true
+  check_val_every_n_epoch: 5
+  compute_mi_on_gpu: false
+  compute_mi_mode: 'cpu'
+  accumulate_grad_batches: 1
+  c2y_max_epochs: 150
+  early_stopping_monitor: 'val_loss'
+  early_stopping_mode: min
+  early_stopping_delta: 0.0
+  patience: 30
+  gradient_clip_val: 1.0
+
+runs:
+
+  - architecture: "ConceptEmbeddingModel"
+    run_name: "auto"
+    sigmoidal_prob: true
+    training_intervention_prob: 0
+    embedding_activation: "leakyrelu"
+    cbm_optimizer: adam
+    learning_rate: 0.001
+    concept_loss_weight: 0.5

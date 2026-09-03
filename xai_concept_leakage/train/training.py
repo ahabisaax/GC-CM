@@ -26,7 +26,7 @@ import xai_concept_leakage.metrics.oracle as oracle
 import xai_concept_leakage.train.utils as utils
 
 from xai_concept_leakage.metrics.cas import concept_alignment_score
-from xai_concept_leakage.metrics.leakage import compute_RTL_RCL
+from xai_concept_leakage.metrics.leakage import compute_RTL_RCL, compute_RTL_RCL_mlp
 from xai_concept_leakage.models.construction import (
     construct_model,
     construct_sequential_models,
@@ -76,20 +76,65 @@ def _collect_cem_embeddings(model, dl):
 
 
 def _add_rtl_rcl(model, config, train_dl, test_dl, eval_results):
-    """Compute RTL/RCL for CEM models and update eval_results in-place."""
+    """Compute RTL/RCL for CEM models (global_norm=True, Ridge + MLP) and update eval_results.
+
+    Probe is trained on the full training set and evaluated on the test set.
+    Adds flat keys (test_ridge_rtl_norm, etc.) and nested dicts (rtl_rcl_ridge_global,
+    rtl_rcl_mlp_global) to eval_results. Logs to W&B if a run is active.
+    """
     if config.get("architecture", "") not in _CEM_ARCHITECTURES:
         return
     if test_dl is None or train_dl is None:
         return
     try:
-        c_mix_tr, c_true_tr, y_tr = _collect_cem_embeddings(model, train_dl)
-        c_mix_te, c_true_te, y_te = _collect_cem_embeddings(model, test_dl)
-        rtl_rcl = compute_RTL_RCL(c_mix_tr, c_mix_te, c_true_tr, c_true_te, y_tr, y_te)
-        eval_results.update(rtl_rcl)
-        print(
-            f"RTL_norm={rtl_rcl['RTL_norm']:.4f}  RTL_sum={rtl_rcl['RTL_sum']:.4f}  "
-            f"RCL_norm={rtl_rcl['RCL_norm']:.4f}  RCL_sum={rtl_rcl['RCL_sum']:.4f}"
+        c_mix_tr_p, c_true_tr_p, y_tr_p = _collect_cem_embeddings(model, train_dl)
+        c_mix_te_p, c_true_te_p, y_te_p = _collect_cem_embeddings(model, test_dl)
+        n_tr = len(y_tr_p)
+        print(f"RTL/RCL: probe_train={n_tr}  probe_test={len(y_te_p)}")
+        print("RTL/RCL Ridge (global_norm=True)...")
+        ridge = compute_RTL_RCL(
+            c_mix_tr_p, c_mix_te_p, c_true_tr_p, c_true_te_p, y_tr_p, y_te_p,
+            global_norm=True,
         )
+        mlp_n = min(2000, n_tr)
+        mlp_idx = np.random.RandomState(42).permutation(n_tr)[:mlp_n]
+        print(f"RTL/RCL MLP   (global_norm=True, n_tr={mlp_n})...")
+        mlp = compute_RTL_RCL_mlp(
+            c_mix_tr_p[mlp_idx], c_mix_te_p,
+            c_true_tr_p[mlp_idx], c_true_te_p,
+            y_tr_p[mlp_idx], y_te_p,
+            global_norm=True, hidden=(64,), max_iter=200,
+        )
+        # Store nested dicts (matching post-hoc pipeline key names)
+        eval_results["rtl_rcl_ridge_global"] = ridge
+        eval_results["rtl_rcl_mlp_global"] = mlp
+        # Flat keys for easy downstream access
+        for suffix, r in [("ridge", ridge), ("mlp", mlp)]:
+            for k in ["RTL_sum", "RTL_norm", "RCL_sum", "RCL_norm"]:
+                eval_results[f"test_{suffix}_{k.lower()}"] = r[k]
+        print(
+            f"Ridge: RTL_norm={ridge['RTL_norm']:.4f}  RTL_sum={ridge['RTL_sum']:.4f}  "
+            f"RCL_norm={ridge['RCL_norm']:.4f}  RCL_sum={ridge['RCL_sum']:.4f}"
+        )
+        print(
+            f"MLP:   RTL_norm={mlp['RTL_norm']:.4f}  RTL_sum={mlp['RTL_sum']:.4f}  "
+            f"RCL_norm={mlp['RCL_norm']:.4f}  RCL_sum={mlp['RCL_sum']:.4f}"
+        )
+        try:
+            import wandb as _wandb
+            if _wandb.run is not None:
+                _wandb.run.log({
+                    "test_ridge_rtl_norm": ridge["RTL_norm"],
+                    "test_ridge_rcl_norm": ridge["RCL_norm"],
+                    "test_ridge_rtl_sum":  ridge["RTL_sum"],
+                    "test_ridge_rcl_sum":  ridge["RCL_sum"],
+                    "test_mlp_rtl_norm":   mlp["RTL_norm"],
+                    "test_mlp_rcl_norm":   mlp["RCL_norm"],
+                    "test_mlp_rtl_sum":    mlp["RTL_sum"],
+                    "test_mlp_rcl_sum":    mlp["RCL_sum"],
+                })
+        except Exception:
+            pass
     except Exception as e:
         logging.warning(f"RTL/RCL computation failed: {e}")
 
@@ -467,7 +512,9 @@ def train_end_to_end_model(
                 rerun=rerun,
                 test_dl=test_dl,
                 val_dl=val_dl,
+                best_model=not config.get("eval_from_last", False),
             )
+            _add_rtl_rcl(model, config, train_dl, test_dl, eval_results)
             eval_results["training_time"] = training_time
             eval_results["num_epochs"] = num_epochs
             if test_dl is not None:
@@ -590,7 +637,9 @@ def train_end_to_end_model(
             rerun=rerun,
             test_dl=test_dl,
             val_dl=val_dl,
+            best_model=not config.get("eval_from_last", False),
         )
+        _add_rtl_rcl(model, config, train_dl, test_dl, eval_results)
         eval_results["training_time"] = training_time
         eval_results["num_epochs"] = num_epochs
         if test_dl is not None:

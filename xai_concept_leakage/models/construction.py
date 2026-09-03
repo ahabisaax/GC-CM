@@ -421,7 +421,7 @@ def load_trained_model(
     elif config["architecture"].startswith("Independent"):
         independent = True
     if model_saved_path is None:
-        model_saved_path = os.path.join(result_dir or ".", f"{full_run_name}.pt")
+        model_saved_path = config.get("_model_saved_path") or os.path.join(result_dir or ".", f"{full_run_name}.pt")
 
     if (
         ((intervention_policy is not None) or intervene)
@@ -555,6 +555,9 @@ def external_load_model_trainer(dl, model_path, x2c_extractor, output_config=Fal
         config["split"] = int(model_path.split("fold")[-1][1]) - 1
     else:
         config["split"] = 0  # last-checkpoint; model_saved_path overrides the path anyway
+    # Store the exact path so intervene_in_cbm's internal load_trained_model call
+    # uses the same checkpoint rather than reconstructing a .pt path.
+    config["_model_saved_path"] = model_path
     if config["dataset_config"]["dataset"] == "tabulartoy":
         input_dim, _, _ = utils.extract_dims(dl)
         config["c_extractor_arch"] = x2c_extractor(input_dim, config)

@@ -264,27 +264,13 @@ for m in MODELS:
         joblib.dump(results, SAVE_PATH)
 
         # --- Intervention curve ---
-        # For last-checkpoint models, the intervention code needs a standard .pt path
-        # (intervention internals reconstruct the path from config). Use the .pt file
-        # in the model folder root if it exists; otherwise skip.
         if todo["interv"]:
-            fold_n = fold.replace("fold_", "")
-            interv_ckpt = ckpt  # default: use the same ckpt
-            if use_last:
-                pt_path = os.path.join(folder, f"{prefix}_fold_{fold_n}.pt")
-                if os.path.exists(pt_path):
-                    interv_ckpt = pt_path
-                    print(f"  Using .pt for intervention: {os.path.basename(pt_path)}")
-                else:
-                    print(f"  WARNING: no .pt found for intervention ({prefix}_fold_{fold_n}.pt) — skipping")
-                    todo["interv"] = False
-            if todo["interv"]:
-                print(f"  Intervention curve ({INTERVENTION_POLICIES}, {INTERVENTION_REPEATS} repeats)...")
-                r["interv"] = run_intervention_curve(
-                    interv_ckpt, x2c_extractor, val_dl, val_dl, test_dl,
-                    policies=INTERVENTION_POLICIES,
-                    repeats=INTERVENTION_REPEATS,
-                )
+            print(f"  Intervention curve ({INTERVENTION_POLICIES}, {INTERVENTION_REPEATS} repeats)...")
+            r["interv"] = run_intervention_curve(
+                ckpt, x2c_extractor, val_dl, val_dl, test_dl,
+                policies=INTERVENTION_POLICIES,
+                repeats=INTERVENTION_REPEATS,
+            )
         if "interv" in r:
             for policy, runs in r["interv"].items():
                 mean_curve = np.mean(runs, axis=0)
