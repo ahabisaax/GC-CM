@@ -397,6 +397,7 @@ def intervene_in_cbm(
         output_latent=True,
         output_interventions=True,
         external_loader=external_loader,
+        model_saved_path=config.get("_model_saved_path"),
     )
     construct_time = time.time()
     if isinstance(policy_params, Callable):
