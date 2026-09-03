@@ -48,6 +48,7 @@ shared_params:
   early_stopping_delta: 0.0
   patience: 30
   gradient_clip_val: 1.0
+  eval_from_last: true
 
 runs:
 
