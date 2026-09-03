@@ -533,7 +533,14 @@ def load_trained_model(
 
 
 def load_config(model_path):
-    return joblib.load(model_path.split("_fold", -1)[0] + "_experiment_config.joblib")
+    if "_fold" in model_path:
+        return joblib.load(model_path.split("_fold", -1)[0] + "_experiment_config.joblib")
+    # Last-checkpoint path (.ckpt inside a checkpoints/ sub-dir):
+    # .../MODEL_DIR/checkpoints/last-vN.ckpt  →  config at .../MODEL_DIR/MODEL_DIR_name_experiment_config.joblib
+    import os as _os
+    model_dir = _os.path.dirname(_os.path.dirname(model_path))
+    name = _os.path.basename(model_dir)
+    return joblib.load(_os.path.join(model_dir, name + "_experiment_config.joblib"))
 
 
 def external_load_model_trainer(dl, model_path, x2c_extractor, output_config=False, config_path=None):
@@ -544,7 +551,10 @@ def external_load_model_trainer(dl, model_path, x2c_extractor, output_config=Fal
         config = joblib.load(config_path)
     data_folder = config["dataset_config"]["root_dir"]
 
-    config["split"] = int(model_path.split("fold")[-1][1]) - 1
+    if "_fold" in model_path:
+        config["split"] = int(model_path.split("fold")[-1][1]) - 1
+    else:
+        config["split"] = 0  # last-checkpoint; model_saved_path overrides the path anyway
     if config["dataset_config"]["dataset"] == "tabulartoy":
         input_dim, _, _ = utils.extract_dims(dl)
         config["c_extractor_arch"] = x2c_extractor(input_dim, config)

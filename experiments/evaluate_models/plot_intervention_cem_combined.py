@@ -30,11 +30,13 @@ def load_tt():
         for r in d.get("cem", {}).get(lam, {}).values():
             iv = r.get("interv", {}).get("random", [[]])[0]
             if iv:
-                cem_curves.append(np.array(iv) * 100)
+                curve = np.array(iv) * 100
+                cem_curves.append(curve)
         for r in d.get("acem", {}).get(lam, {}).values():
             iv = r.get("interv", {}).get("random", [[]])[0]
             if iv:
-                gc_curves.append(np.array(iv) * 100)
+                curve = np.array(iv) * 100
+                gc_curves.append(curve)
         curves[lam] = (np.array(cem_curves) if cem_curves else None,
                        np.array(gc_curves)  if gc_curves  else None)
     return steps, curves
@@ -49,11 +51,17 @@ def load_dsprites():
         for r in d.get("cem", {}).get(lam, {}).values():
             iv = r.get("interv", {}).get("random", [[]])[0]
             if iv:
-                cem_curves.append(np.array(iv) * 100)
+                curve = np.array(iv) * 100
+                if "task_acc" in r:
+                    curve[0] = r["task_acc"] * 100
+                cem_curves.append(curve)
         for r in d.get("crcem", {}).get(lam, {}).values():
             iv = r.get("interv", {}).get("random", [[]])[0]
             if iv:
-                gc_curves.append(np.array(iv) * 100)
+                curve = np.array(iv) * 100
+                if "task_acc" in r:
+                    curve[0] = r["task_acc"] * 100
+                gc_curves.append(curve)
         curves[lam] = (np.array(cem_curves) if cem_curves else None,
                        np.array(gc_curves)  if gc_curves  else None)
     return steps, curves
@@ -82,7 +90,10 @@ def load_cub():
                     sr = joblib.load(p)
                     iv = sr.get(IV_KEY)
                     if iv:
-                        lst.append(np.array(iv) * 100)
+                        curve = np.array(iv) * 100
+                        if "test_acc_y" in sr:
+                            curve[0] = sr["test_acc_y"] * 100
+                        lst.append(curve)
         curves[lam] = (np.array(cem_curves) if cem_curves else None,
                        np.array(gc_curves)  if gc_curves  else None)
     return steps, curves
@@ -107,10 +118,7 @@ for ax, (title, steps, curves, xlabel, ylim) in zip(axes, datasets):
         cem_c, _ = curves[lam]
         if cem_c is not None and len(cem_c):
             mean = cem_c.mean(axis=0)
-            std  = cem_c.std(axis=0)
             line, = ax.plot(steps, mean, color=color, linewidth=1.8, zorder=2)
-            ax.fill_between(steps, mean - std, mean + std,
-                            color=color, alpha=0.15, linewidth=0, zorder=1)
             if ax is axes[0]:
                 legend_handles.append(line)
                 legend_labels.append(f"CEM {llab}")
@@ -119,10 +127,7 @@ for ax, (title, steps, curves, xlabel, ylim) in zip(axes, datasets):
         _, gc_c = curves[lam]
         if gc_c is not None and len(gc_c):
             mean = gc_c.mean(axis=0)
-            std  = gc_c.std(axis=0)
             line, = ax.plot(steps, mean, color=color, linewidth=1.8, zorder=2)
-            ax.fill_between(steps, mean - std, mean + std,
-                            color=color, alpha=0.15, linewidth=0, zorder=1)
             if ax is axes[0]:
                 legend_handles.append(line)
                 legend_labels.append(f"GC-CEM {llab}")
@@ -130,6 +135,8 @@ for ax, (title, steps, curves, xlabel, ylim) in zip(axes, datasets):
     ax.set_title(title, fontsize=11, fontweight="bold")
     ax.set_xlabel(xlabel, fontsize=10)
     ax.set_ylim(*ylim)
+    if ax is axes[0]:
+        ax.set_xticks([0, 1, 2, 3])
     ax.grid(True, alpha=0.3, linewidth=0.5)
     ax.tick_params(labelsize=9)
 

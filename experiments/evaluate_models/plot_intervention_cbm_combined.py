@@ -23,7 +23,11 @@ def get_curves(suite, model_key, lam_key):
     for fold_r in suite.get(model_key, {}).get(lam_key, {}).values():
         iv = fold_r.get("interv", {}).get("random", [])
         if iv and len(iv[0]) > 0:
-            curves.append(np.mean(iv, axis=0))
+            curve = np.mean(iv, axis=0).copy()
+            # anchor y-intercept to test_acc_y so plot matches the table
+            if "task_acc" in fold_r:
+                curve[0] = fold_r["task_acc"]
+            curves.append(curve)
     return np.array(curves) * 100 if curves else None
 
 
@@ -37,8 +41,6 @@ def draw_panel(ax, suite, gc_key, steps, xlabel, ylim):
         std  = curves.std(axis=0)
         line, = ax.plot(steps, mean, color=color,
                         linestyle=ls, linewidth=lw, zorder=2)
-        ax.fill_between(steps, mean - std, mean + std,
-                        color=color, alpha=0.15, linewidth=0, zorder=1)
         if label:
             handles.append(line)
             labels.append(label)
@@ -75,9 +77,11 @@ datasets = [
 
 legend_handles, legend_labels = None, None
 
-for ax, suite, gc_key, steps, xlabel, ylim, title in datasets:
+for i, (ax, suite, gc_key, steps, xlabel, ylim, title) in enumerate(datasets):
     h, l = draw_panel(ax, suite, gc_key, steps, xlabel, ylim)
     ax.set_title(title, fontsize=11, fontweight="bold")
+    if i == 0:
+        ax.set_xticks([0, 1, 2, 3])
     if legend_handles is None:
         legend_handles, legend_labels = h, l
 

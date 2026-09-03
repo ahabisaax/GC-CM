@@ -1,0 +1,61 @@
+results_dir: "results/cub_cem_randint/"
+trials: 5
+
+shared_params:
+  dataset_config:
+    dataset: "cub"
+    num_workers: 8
+    batch_size: 256
+    root_dir: data/CUB200/
+    sampling_percent: 1
+    sampling_groups: true
+    test_subsampling: 1
+    weight_loss: true
+
+  intervention_config:
+    competence_levels: [1]
+    intervention_freq: 1
+    intervention_batch_size: 64
+    intervention_policies:
+      - policy: "random"
+        group_level: True
+        use_prior: False
+
+  skip_repr_evaluation: true
+  max_epochs: 300
+  top_k_accuracy: null
+  save_model: true
+  patience: 400
+  emb_size: 16
+  extra_dims: 0
+  weight_decay: 4.0e-06
+  weight_loss: true
+  c_extractor_arch: "resnet18"
+  bool: false
+  momentum: 0.9
+  sigmoidal_prob: false
+  n_hidden: 512
+  linear_c2y: True
+  project_name: "cub CEM randint"
+  check_val_every_n_epoch: 5
+  compute_mi_on_gpu: False
+  compute_mi_mode: 'cpu'
+  accumulate_grad_batches: 1
+  use_task_class_weights: True
+  c2y_max_epochs: 150
+  early_stopping_monitor: 'val_y_accuracy'
+  early_stopping_mode: max
+  early_stopping_delta: 0.0
+  gradient_clip_val: 1.0
+
+runs:
+
+  - architecture: "ConceptEmbeddingModel"
+    run_name: "auto"
+    sigmoidal_prob: True
+    training_intervention_prob: 0.25
+    embedding_activation: "leakyrelu"
+    cbm_optimizer: adam
+    learning_rate: 0.001
+    concept_loss_weight: 0.1
+    accumulate_grad_batches: 1

@@ -30,7 +30,10 @@ def get_curves(suite, model_key, lam_key):
     for fold_r in suite.get(model_key, {}).get(lam_key, {}).values():
         iv = fold_r.get("interv", {}).get("random", [])
         if iv and len(iv[0]) > 0:
-            curves.append(np.mean(iv, axis=0))
+            curve = np.mean(iv, axis=0).copy()
+            if "task_acc" in fold_r:
+                curve[0] = fold_r["task_acc"]
+            curves.append(curve)
     return np.array(curves) * 100 if curves else None
 
 
