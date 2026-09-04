@@ -820,6 +820,34 @@ def main(
                         run_name=run_name,
                         prefix="",
                     )
+                    # Log intervention curves to W&B by resuming the training run
+                    _wandb_run_id = results[f"{split}"][run_name].get("_wandb_run_id")
+                    _wandb_project = results[f"{split}"][run_name].get("_wandb_project")
+                    if _wandb_run_id and _wandb_project:
+                        try:
+                            import wandb as _wandb
+                            with _wandb.init(
+                                id=_wandb_run_id,
+                                project=_wandb_project,
+                                resume="must",
+                            ):
+                                _interv_log = {}
+                                for _k, _v in results[f"{split}"][run_name].items():
+                                    if _k.endswith("_ints") and isinstance(_v, list):
+                                        _policy = _k.replace("test_acc_y_", "").replace("_ints", "")
+                                        _curve_table = _wandb.Table(
+                                            columns=["n_interventions", "acc"],
+                                            data=[[i, float(a)] for i, a in enumerate(_v)],
+                                        )
+                                        _interv_log[f"interv/{_policy}/curve"] = _wandb.plot.line(
+                                            _curve_table, "n_interventions", "acc",
+                                            title=f"Intervention curve — {_policy}",
+                                        )
+                                        _interv_log[f"interv/{_policy}/acc_0"] = float(_v[0])
+                                        _interv_log[f"interv/{_policy}/acc_final"] = float(_v[-1])
+                                _wandb.log(_interv_log)
+                        except Exception as _e:
+                            logging.warning(f"W&B intervention logging failed: {_e}")
 
                 # Finally, evaluate various representation metrics
                 training.update_statistics(

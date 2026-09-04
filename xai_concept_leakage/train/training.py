@@ -517,6 +517,8 @@ def train_end_to_end_model(
             _add_rtl_rcl(model, config, train_dl, test_dl, eval_results)
             eval_results["training_time"] = training_time
             eval_results["num_epochs"] = num_epochs
+            eval_results["_wandb_run_id"] = run.id
+            eval_results["_wandb_project"] = project_name
             if test_dl is not None:
                 print(
                     f'c_acc: {eval_results["test_acc_c"] * 100:.2f}%, '
