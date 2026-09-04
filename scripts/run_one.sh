@@ -82,9 +82,22 @@ fi
 mkdir -p "$OUT_DIR" "$LOGS_DIR"
 
 # ------------------------------------------------------------------- wandb
-if [ -z "${WANDB_API_KEY:-}" ]; then
-    echo "WARNING: WANDB_API_KEY not set — running W&B in offline mode" >&2
+# Non-interactive shells (nohup/ssh) don't read .bashrc, so pick the key up
+# from the persistent env file. Note ~/.netrc lives on container disk and is
+# lost on pod stop, whereas $WORKSPACE persists — so the env file is the
+# durable source of truth.
+for _envf in "${SWEEP_ENV:-}" "$WORKSPACE/.sweep_env" /workspace/.sweep_env; do
+    if [ -n "$_envf" ] && [ -f "$_envf" ]; then
+        # shellcheck disable=SC1090
+        source "$_envf"; break
+    fi
+done
+# netrc is equally valid auth for wandb — only go offline if neither exists.
+if [ -z "${WANDB_API_KEY:-}" ] && ! grep -qs "api.wandb.ai" "$HOME/.netrc"; then
+    echo "WARNING: no W&B credentials (env or netrc) — running offline" >&2
     export WANDB_MODE=offline
+else
+    export WANDB_MODE="${WANDB_MODE:-online}"
 fi
 PROJECT_ARGS=()
 if [ -n "${WANDB_PROJECT:-}" ]; then
