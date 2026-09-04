@@ -27,7 +27,28 @@ if [ -z "${VIRTUAL_ENV:-}" ]; then
 fi
 echo "python: $(command -v python)"
 
-export WANDB_MODE=offline
+# Online by default so test-time metrics (CTL/ICL, RTL/RCL, intervention
+# curves) can be inspected in W&B — validating the logging path is a core
+# purpose of this test, and the intervention logging uses wandb resume,
+# which does not work offline. Logs to the "smoke_test" project, never a
+# real results project. Set SMOKE_OFFLINE=1 to opt out.
+if [ "${SMOKE_OFFLINE:-0}" = "1" ]; then
+    export WANDB_MODE=offline
+else
+    for _envf in "${SWEEP_ENV:-}" "$WORKSPACE/.sweep_env" /workspace/.sweep_env; do
+        if [ -n "$_envf" ] && [ -f "$_envf" ]; then
+            # shellcheck disable=SC1090
+            source "$_envf"; break
+        fi
+    done
+    if [ -z "${WANDB_API_KEY:-}" ] && ! grep -qs "api.wandb.ai" "$HOME/.netrc"; then
+        echo "WARNING: no W&B credentials — smoke test running offline" >&2
+        export WANDB_MODE=offline
+    else
+        export WANDB_MODE=online
+    fi
+fi
+echo "WANDB_MODE=$WANDB_MODE"
 SMOKE_OUT="$RESULTS_DIR/smoke"
 mkdir -p "$SMOKE_OUT" "$LOGS_DIR"
 
@@ -41,12 +62,8 @@ echo "===================================================="
 echo "SMOKE 1/2: TabularToy, 2 epochs, 1 seed"
 echo "===================================================="
 python scripts/smoke_test.py \
-    --config experiments/configs/tabulartoy.yaml \
+    --config experiments/configs/smoke_tabulartoy.yaml \
     --output_dir "$SMOKE_OUT/tabulartoy" \
-    --filter_in "lam_c1" \
-    -p trials 1 \
-    -p max_epochs 2 \
-    -p check_val_every_n_epoch 1 \
     2>&1 | tee "$LOGS_DIR/smoke_tabulartoy.log"
 
 echo "===================================================="
