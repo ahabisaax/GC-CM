@@ -316,11 +316,19 @@ def train_end_to_end_model(
 
 
 
+            # Checkpoint selection criterion: defaults to the early-stopping
+            # metric, but can be overridden independently (e.g.
+            # checkpoint_monitor: val_c_accuracy to select the best checkpoint
+            # on validation concept accuracy rather than task accuracy/loss).
             checkpoint_callback = ModelCheckpoint(
                 dirpath=os.path.join(result_dir, "checkpoints"),
                 filename="{epoch}-val_constrained_score={val_pareto_score:.4f}",
-                monitor=config["early_stopping_monitor"],
-                mode=config["early_stopping_mode"],
+                monitor=config.get(
+                    "checkpoint_monitor", config["early_stopping_monitor"]
+                ),
+                mode=config.get(
+                    "checkpoint_mode", config["early_stopping_mode"]
+                ),
                 save_top_k=1,
                 save_last=True,
             )

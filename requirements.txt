@@ -1,27 +1,33 @@
-importlib-metadata>=4.8.2
-importlib-resources>=5.4.0
-ipykernel>=6.5.0
-ipython-genutils>=0.2.0
-ipython>=7.29.0
-ipywidgets>=7.6.5
-joblib>=1.1.0
-matplotlib-inline>=0.1.3
-matplotlib>=3.5.0
-notebook>=6.4.5
-numpy>=1.21.0,<1.26.1
-pytorch-lightning>=1.6.0,<2.0.0
-scikit-learn-extra>=0.2.0
-scikit-learn>=1.0.1
-seaborn>=0.11.2
-torch>=1.11.0,<=2.3.1
-torchmetrics>=0.6.2
-torchvision==0.18.1
-mergedeep>=1.3.4
-prettytable>=3.5.0
-tensorboard>=2.11.0
-setuptools<70.0.0
-tensorboard-data-server>=0.6.1
-tensorflow>=2.11.0
-tensorflow-datasets>=4.8.0
-tensorflow-metadata>=1.12.0
-wandb
+# Runtime dependencies for training + evaluation, pinned to versions verified
+# working locally (macOS, Python 3.9-3.12). On Linux, `pip install torch` pulls
+# the CUDA build by default — correct for RunPod RTX 4090 pods.
+#
+# NOT included (only needed for dSprites/3dshapes dataset *generation*, not
+# training): tensorflow, tensorflow-datasets. scripts/setup_pod.sh installs
+# tensorflow-cpu on demand if it has to regenerate dSprites.
+
+torch==2.11.0
+torchvision==0.26.0
+pytorch-lightning==2.6.1
+torchmetrics==1.9.0
+
+numpy==1.26.4
+scipy==1.13.1
+scikit-learn==1.5.1
+pandas==2.2.2
+joblib==1.4.2
+h5py==3.11.0
+Pillow==10.4.0
+
+matplotlib==3.9.2
+seaborn==0.13.2
+
+PyYAML==6.0.1
+mergedeep==1.3.4
+prettytable==3.17.0
+tqdm==4.66.5
+
+# W&B is used on HPC/RunPod but is not installed in the local dev env, so this
+# is the one dependency not pinned from a verified version. Any 0.18+ release
+# works with the wandb.init/log/finish + WandbLogger APIs this codebase uses.
+wandb>=0.18,<1.0

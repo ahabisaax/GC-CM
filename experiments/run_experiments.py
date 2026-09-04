@@ -204,6 +204,12 @@ def _generate_dataset_and_update_config(experiment_config):
     dataset_config = experiment_config["dataset_config"]
     logging.debug(f"The dataset's root directory is {dataset_config.get('root_dir')}")
     intervention_config = experiment_config.get("intervention_config", {})
+    # For CelebA, default the checkpoint-selection criterion to validation
+    # concept accuracy (overridable via checkpoint_monitor/checkpoint_mode in
+    # the YAML config or with `-p checkpoint_monitor <metric>`).
+    if dataset_config["dataset"] == "celeba":
+        experiment_config.setdefault("checkpoint_monitor", "val_c_accuracy")
+        experiment_config.setdefault("checkpoint_mode", "max")
     if dataset_config["dataset"] == "celeba":
         import xai_concept_leakage.data.celeba_loader as data_module
     elif dataset_config["dataset"] in ["xor", "vector", "dot", "trig"]:
