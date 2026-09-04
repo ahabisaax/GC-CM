@@ -13,6 +13,10 @@ import sys
 
 REPO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(REPO_DIR)
+# run_experiments.py imports sibling modules (experiment_utils) as top-level.
+# Running it directly puts experiments/ on sys.path[0]; runpy.run_path does
+# not, so add both the repo root and experiments/ explicitly.
+sys.path.insert(0, os.path.join(REPO_DIR, "experiments"))
 sys.path.insert(0, REPO_DIR)
 
 import torch  # noqa: E402
