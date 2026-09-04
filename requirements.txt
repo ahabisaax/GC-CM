@@ -6,12 +6,23 @@
 # training): tensorflow, tensorflow-datasets. scripts/setup_pod.sh installs
 # tensorflow-cpu on demand if it has to regenerate dSprites.
 
-torch==2.11.0
-torchvision==0.26.0
-pytorch-lightning==2.6.1
-torchmetrics==1.9.0
+# PINNED TO LIGHTNING 1.x DELIBERATELY — DO NOT BUMP TO 2.x.
+# gc_cbm.py / gc_cem.py use `training_step(..., optimizer_idx=...)`, the
+# Lightning 1.x automatic multi-optimizer API that 2.0 removed. Under
+# Lightning 2.x the adversarial GC models crash with "Training with multiple
+# optimizers is only supported with manual optimization". Moving to 2.x needs
+# a real refactor of the adversarial step, not a version bump.
+# torch is capped at 2.3.1 per the original setup.py; torchvision 0.18.1 is
+# its matching release. All have cp312 wheels.
+torch==2.3.1
+torchvision==0.18.1
+pytorch-lightning==1.9.5
+torchmetrics==0.11.4
 
-numpy==1.26.4
+numpy==1.26.0
+# Lightning 1.9.5 calls pkg_resources.declare_namespace, removed in
+# setuptools 70. Python 3.12 also no longer bundles setuptools at all.
+setuptools<70.0.0
 scipy==1.13.1
 scikit-learn==1.5.1
 pandas==2.2.2
