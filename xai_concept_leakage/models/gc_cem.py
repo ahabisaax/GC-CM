@@ -1081,7 +1081,7 @@ class GCConceptEmbeddingModel(ConceptBottleneckModel):
                     momentum=self.momentum,
                     weight_decay=self.weight_decay,
                 )
-            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True)
+            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
             return {"optimizer": optimizer, "lr_scheduler": lr_scheduler, "monitor": "loss"}
 
         elif self.use_adversarial and self.shared_critic:
@@ -1110,7 +1110,7 @@ class GCConceptEmbeddingModel(ConceptBottleneckModel):
                     momentum=self.momentum,
                     weight_decay=self.weight_decay,
                 )
-            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True)
+            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
             return {"optimizer": optimizer, "lr_scheduler": lr_scheduler, "monitor": "loss"}
 
         elif self.use_adversarial:
@@ -1189,7 +1189,6 @@ class GCConceptEmbeddingModel(ConceptBottleneckModel):
 
             lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 cem_optimizer,
-                verbose=True,
             )
 
             return {

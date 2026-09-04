@@ -797,7 +797,6 @@ class ConceptBottleneckModel(pl.LightningModule):
             )
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
-            verbose=True,
         )
         return {
             "optimizer": optimizer,

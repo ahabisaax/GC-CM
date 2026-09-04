@@ -1170,7 +1170,6 @@ class GCConceptBottleneckModel(pl.LightningModule):
 
             lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 cbm_optimizer,
-                verbose=True,
             )
 
             return {
