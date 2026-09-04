@@ -35,6 +35,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$REPO_DIR"
 
+# Activate the venv if the caller has not — otherwise a bare `python` silently
+# resolves to system Python and fails on the first missing import.
+if [ -z "${VIRTUAL_ENV:-}" ]; then
+    for _v in "${VENV_DIR:-}" /root/venv "$WORKSPACE/venv"; do
+        if [ -n "$_v" ] && [ -f "$_v/bin/activate" ]; then
+            # shellcheck disable=SC1091
+            source "$_v/bin/activate"; break
+        fi
+    done
+fi
+
 # ------------------------------------------------------------ config lookup
 if [ -z "${CONFIG:-}" ]; then
     case "$DATASET" in
