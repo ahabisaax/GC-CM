@@ -1,85 +1,87 @@
-# Smoke-test config: GC-CEM on TabularToy, a handful of epochs.
+# Smoke-test config — GENERATED FROM tabulartoy.yaml, do not hand-edit.
+# Regenerate by copying tabulartoy.yaml's shared_params/run and overriding
+# only: project_name, trials, max_epochs, patience, concept_loss_weight.
 #
-# Purpose is to exercise the FULL pipeline end to end quickly —
-#   train (adversarial, two optimizers) -> eval -> CTL/ICL -> RTL/RCL
-#   -> intervention curve -> W&B logging
-# — not to produce meaningful numbers. Uses GCConceptEmbeddingModel because
-# that is the path most likely to break (multi-optimizer + critic).
-#
-# max_epochs/patience live in the RUN block, not shared_params: run values
-# overwrite shared_params, so `-p max_epochs N` on the CLI cannot lower them.
-#
-# Logs to its own W&B project so it never pollutes real result projects.
-
+# Exercises the full pipeline quickly: adversarial two-optimizer training ->
+# eval -> CTL/ICL -> RTL/RCL -> intervention curve -> W&B logging.
+# max_epochs/patience must live in the RUN block: run values overwrite
+# shared_params, so `-p max_epochs N` cannot lower them.
 results_dir: results/smoke/
 trials: 1
-
 shared_params:
   dataset_config:
     dataset: tabulartoy
     batch_size: 64
     num_workers: 8
     root_dir: data/TabularToy/tabulartoy_25_10k/
-    considered_concepts: ['0', '1', '2']
+    considered_concepts:
+    - '0'
+    - '1'
+    - '2'
     sampling_percent: 1
     test_subsampling: 1
-
   intervention_config:
-    competence_levels: [1]
+    competence_levels:
+    - 1
     intervention_freq: 1
     intervention_batch_size: 1024
     intervention_policies:
-      - policy: "random"
-        group_level: True
-        use_prior: False
-
-  project_name: "smoke_test"
+    - policy: random
+      group_level: true
+      use_prior: false
   skip_repr_evaluation: true
+  learning_rate: 0.05
+  bool: false
+  sigmoidal_prob: false
+  hidden_size: 64
+  dropout_prob: 0.2
+  all_dropout: false
+  learning_rate_c2y: 0.05
+  optimizer_c2y: adam
+  c2y_max_epochs: 5
+  linear_c2y: true
+  compute_mi_on_gpu: false
+  compute_mi_mode: cpu
+  n_hidden: 64
+  emb_size: 16
+  weight_loss: true
   top_k_accuracy: null
   save_model: true
-  emb_size: 16
   extra_dims: 0
+  scheduler_step: 20
   weight_decay: 0
-  weight_loss: true
-  use_task_class_weights: false
-  c_extractor_arch: "tabulartoy_extractor"
-  bool: false
-  momentum: 0.9
-  n_hidden: 64
-  linear_c2y: true
-  check_val_every_n_epoch: 1
-  compute_mi_on_gpu: false
-  compute_mi_mode: 'cpu'
-  accumulate_grad_batches: 1
-  c2y_max_epochs: 5
-  early_stopping_monitor: 'val_loss'
-  early_stopping_mode: min
+  c_extractor_arch: tabulartoy_extractor
+  cbm_learning_rate: 0.05
+  early_stopping_monitor: val_y_accuracy
+  early_stopping_mode: max
   early_stopping_delta: 0.0
-  gradient_clip_val: 1.0
+  momentum: 0.9
+  project_name: smoke_test
+  max_epochs: 240
+  check_val_every_n_epoch: 1
   eval_from_last: true
-
 runs:
-  - architecture: GCConceptEmbeddingModel
-    run_name: auto
-    sigmoidal_prob: true
-    training_intervention_prob: 0
-    embedding_activation: leakyrelu
-    cbm_optimizer: adam
-    adv_optimizer: adam
-    cbm_learning_rate: 0.001
-    adv_learning_rate: 0.001
-    use_adversarial: true
-    max_adversarial_lambda: 1
-    adversarial_delay: 0
-    adversarial_lambda_scheduler_warmup: None
-    adversarial_scheduler: none
-    adversarial_loss_type: grl
-    n_critic_steps: 1
-    shared_critic: true
-    shared_prob_gen: false
-    concept_vector_regularisation: false
-    entropy_maximisation: false
-    concept_loss_weight: 1
-    # Deliberately tiny — smoke test, not a real run.
-    max_epochs: 3
-    patience: 3
+- architecture: GCConceptEmbeddingModel
+  run_name: auto
+  sigmoidal_prob: true
+  training_intervention_prob: 0
+  embedding_activation: leakyrelu
+  cbm_learning_rate: 0.001
+  concept_loss_weight: 1
+  use_adversarial: true
+  max_adversarial_lambda: 1
+  adversarial_delay: 0
+  adversarial_lambda_scheduler_warmup: None
+  adversarial_scheduler: none
+  adversarial_loss_type: grl
+  n_critic_steps: 1
+  accumulate_grad_batches: 1
+  cbm_optimizer: adam
+  adv_optimizer: adam
+  max_epochs: 3
+  patience: 3
+  gradient_clip_val: 1.0
+  concept_vector_regularisation: false
+  entropy_maximisation: false
+  shared_critic: true
+  shared_prob_gen: false
