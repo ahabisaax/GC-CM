@@ -96,13 +96,16 @@ def _add_rtl_rcl(model, config, train_dl, test_dl, eval_results):
             c_mix_tr_p, c_mix_te_p, c_true_tr_p, c_true_te_p, y_tr_p, y_te_p,
             global_norm=True,
         )
-        mlp_n = min(2000, n_tr)
-        mlp_idx = np.random.RandomState(42).permutation(n_tr)[:mlp_n]
-        print(f"RTL/RCL MLP   (global_norm=True, n_tr={mlp_n})...")
+        # Full training set for the MLP probe too — same arrays as Ridge.
+        # This matches compute_rtl_rcl_all_datasets.py, which passes one
+        # args_tuple to both probes; subsampling here would make the
+        # training-time MLP numbers incomparable to the canonical
+        # results_rtl_rcl_all_datasets.dict values.
+        print(f"RTL/RCL MLP   (global_norm=True, n_tr={n_tr})...")
         mlp = compute_RTL_RCL_mlp(
-            c_mix_tr_p[mlp_idx], c_mix_te_p,
-            c_true_tr_p[mlp_idx], c_true_te_p,
-            y_tr_p[mlp_idx], y_te_p,
+            c_mix_tr_p, c_mix_te_p,
+            c_true_tr_p, c_true_te_p,
+            y_tr_p, y_te_p,
             global_norm=True, hidden=(64,), max_iter=200,
         )
         # Store nested dicts (matching post-hoc pipeline key names)
