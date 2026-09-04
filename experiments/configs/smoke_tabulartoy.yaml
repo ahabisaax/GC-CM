@@ -39,13 +39,13 @@ shared_params:
   save_model: true
   emb_size: 16
   extra_dims: 0
-  weight_decay: 4.0e-06
-  weight_loss: false
+  weight_decay: 0
+  weight_loss: true
   use_task_class_weights: false
-  c_extractor_arch: "synth_extractor"
+  c_extractor_arch: "tabulartoy_extractor"
   bool: false
   momentum: 0.9
-  n_hidden: 128
+  n_hidden: 64
   linear_c2y: true
   check_val_every_n_epoch: 1
   compute_mi_on_gpu: false
