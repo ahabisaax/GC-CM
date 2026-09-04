@@ -112,6 +112,9 @@ echo "     config=$CONFIG  out=$OUT_DIR  log=$LOG_FILE"
 # seed maps to the split index: run exactly split $SEED.
 # checkpoint_monitor/mode: apply the same checkpoint-selection criterion
 # (validation concept accuracy) to every model in a sweep.
+# NUM_WORKERS: dataloader parallelism only — affects throughput, never
+# results. CelebA is JPEG-decode bound; the config's default of 8 leaves the
+# GPU idle (~0% util) on a many-core host. Overridable via the env var.
 python -u experiments/run_experiments.py \
     --config "$CONFIG" \
     --output_dir "$OUT_DIR" \
@@ -120,6 +123,7 @@ python -u experiments/run_experiments.py \
     -p trials "$((SEED + 1))" \
     -p checkpoint_monitor val_c_accuracy \
     -p checkpoint_mode max \
+    -p dataset_config.num_workers "${NUM_WORKERS:-8}" \
     2>&1 | tee "$LOG_FILE"
 
 touch "$SENTINEL"
