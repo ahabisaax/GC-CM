@@ -39,6 +39,32 @@ echo "== sweep complete: $DATASET =="
 if [ "${#failures[@]}" -gt 0 ]; then
     echo "FAILED RUNS (${#failures[@]}):" >&2
     printf '  %s\n' "${failures[@]}" >&2
+fi
+
+# ------------------------------------------------------------------ autostop
+# Opt-in: AUTOSTOP=1 stops this pod once the sweep finishes, so an unattended
+# run does not idle-bill after the last job. Results live on the network
+# volume and survive the stop; restart the pod to resume.
+# Stops on success AND on partial failure — a half-finished sweep idling is
+# the exact case this protects against. run_sweep.sh is resumable, so
+# restarting the pod and rerunning picks up where it left off.
+if [ "${AUTOSTOP:-0}" = "1" ]; then
+    POD_ID="${RUNPOD_POD_ID:-}"
+    if [ -z "$POD_ID" ]; then
+        echo "AUTOSTOP set but RUNPOD_POD_ID is empty — not stopping" >&2
+    else
+        echo "AUTOSTOP: stopping pod $POD_ID in 60s (Ctrl-C to cancel)"
+        sleep 60
+        if command -v runpodctl >/dev/null 2>&1; then
+            runpodctl stop pod "$POD_ID" || \
+                echo "runpodctl stop failed — stop the pod manually" >&2
+        else
+            echo "runpodctl not found — stop the pod manually" >&2
+        fi
+    fi
+fi
+
+if [ "${#failures[@]}" -gt 0 ]; then
     exit 1
 fi
-echo "all 30 runs done (or already complete)"
+echo "all runs done (or already complete)"

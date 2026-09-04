@@ -52,6 +52,19 @@ pip install -q -r "$REPO_DIR/requirements.txt"
 # Package itself, editable, deps already satisfied above
 pip install -q -e "$REPO_DIR" --no-deps
 
+# ------------------------------------------- runpodctl (for AUTOSTOP in sweep)
+# Only needed so run_sweep.sh can stop the pod when it finishes. Harmless if
+# the key is absent — autostop is opt-in and degrades to a warning.
+if ! command -v runpodctl >/dev/null 2>&1; then
+    echo "-- installing runpodctl"
+    curl -sSL https://cli.runpod.net | bash >/dev/null 2>&1 || \
+        echo "!! runpodctl install failed (AUTOSTOP will not work)"
+fi
+if [ -n "${RUNPOD_API_KEY:-}" ] && command -v runpodctl >/dev/null 2>&1; then
+    runpodctl config --apiKey "$RUNPOD_API_KEY" >/dev/null 2>&1 && \
+        echo "-- runpodctl configured"
+fi
+
 # ------------------------------------------------- symlink payloads into repo
 # link <repo/data NAME> -> <DATA_DIR NAME>
 link_payload() {
