@@ -27,6 +27,10 @@ DATA_DIR="${DATA_DIR:-$WORKSPACE/data}"
 RESULTS_DIR="${RESULTS_DIR:-$WORKSPACE/results}"
 LOGS_DIR="${LOGS_DIR:-$WORKSPACE/logs}"
 VENV_DIR="${VENV_DIR:-$WORKSPACE/venv}"
+# Comma-separated subset of datasets to fetch: celeba,cub,dsprites,tabulartoy
+# (default: all). E.g.  DATASETS=celeba,tabulartoy bash scripts/setup_pod.sh
+DATASETS="${DATASETS:-all}"
+want() { [ "$DATASETS" = "all" ] || [[ ",$DATASETS," == *",$1,"* ]]; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
@@ -70,7 +74,9 @@ link_payload CUB200/class_attr_data_10
 cd "$REPO_DIR"
 
 # --- CUB images (Caltech canonical link)
-if [ -z "$(ls -A "$DATA_DIR/CUB200/CUB_200_2011" 2>/dev/null)" ]; then
+if ! want cub; then
+    echo "-- skipping CUB (not in DATASETS=$DATASETS)"
+elif [ -z "$(ls -A "$DATA_DIR/CUB200/CUB_200_2011" 2>/dev/null)" ]; then
     echo "-- fetching CUB_200_2011 images (~1.1 GB)"
     wget -q --show-progress -O "$DATA_DIR/CUB200/CUB_200_2011.tgz" \
         "https://data.caltech.edu/records/65de6-vp158/files/CUB_200_2011.tgz"
@@ -88,7 +94,9 @@ if [ ! -f "$REPO_DIR/data/CUB200/attributes.txt" ] && \
 fi
 
 # --- CUB processed concept splits (train/val/test pkl, CBM-paper CodaLab bundle)
-if [ -z "$(ls -A "$DATA_DIR/CUB200/class_attr_data_10" 2>/dev/null)" ]; then
+if ! want cub; then
+    :
+elif [ -z "$(ls -A "$DATA_DIR/CUB200/class_attr_data_10" 2>/dev/null)" ]; then
     echo "-- fetching CUB class_attr_data_10 splits"
     wget -q --show-progress -O "$DATA_DIR/CUB200/CUB_processed.tar.gz" \
         "https://worksheets.codalab.org/rest/bundles/0xd013a7ba2e88481bbc07e787f73109f5/contents/blob/"
@@ -105,7 +113,9 @@ else
 fi
 
 # --- CelebA (torchvision layout: $DATA_DIR/celeba/{img_align_celeba,...})
-if [ -z "$(ls -A "$DATA_DIR/celeba" 2>/dev/null)" ]; then
+if ! want celeba; then
+    echo "-- skipping CelebA (not in DATASETS=$DATASETS)"
+elif [ -z "$(ls -A "$DATA_DIR/celeba" 2>/dev/null)" ]; then
     if [ -f "$DATA_DIR/celeba.tar" ]; then
         echo "-- extracting celeba.tar"
         tar -xf "$DATA_DIR/celeba.tar" -C "$DATA_DIR/"
@@ -125,7 +135,9 @@ else
 fi
 
 # --- dSprites (raw npz, then generate the dep_0 dataset the configs expect)
-if [ ! -f "$DATA_DIR/dsprites/dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz" ]; then
+if ! want dsprites; then
+    echo "-- skipping dSprites (not in DATASETS=$DATASETS)"
+elif [ ! -f "$DATA_DIR/dsprites/dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz" ]; then
     echo "-- fetching raw dSprites npz"
     wget -q --show-progress \
         -O "$DATA_DIR/dsprites/dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz" \
@@ -133,7 +145,9 @@ if [ ! -f "$DATA_DIR/dsprites/dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz" ];
 else
     echo "-- raw dSprites npz present, skipping"
 fi
-if [ ! -f "$DATA_DIR/dsprites/dsprites_dep_0.npz" ]; then
+if ! want dsprites; then
+    :
+elif [ ! -f "$DATA_DIR/dsprites/dsprites_dep_0.npz" ]; then
     echo "-- generating dSprites datasets (installs tensorflow-cpu on demand)"
     python -c "import tensorflow" 2>/dev/null || pip install -q tensorflow-cpu
     python data/generate_dsprites_datasets.py
@@ -142,7 +156,9 @@ else
 fi
 
 # --- TabularToy (generated; configs expect tabulartoy_25_10k)
-if [ ! -d "$DATA_DIR/TabularToy/tabulartoy_25_10k" ]; then
+if ! want tabulartoy; then
+    echo "-- skipping TabularToy (not in DATASETS=$DATASETS)"
+elif [ ! -d "$DATA_DIR/TabularToy/tabulartoy_25_10k" ]; then
     echo "-- generating TabularToy (delta=0.25, n=10000)"
     python data/generate_tabulartoy_dataset.py 0.25 10000
 else

@@ -40,13 +40,17 @@ python scripts/smoke_test.py \
 echo "===================================================="
 echo "SMOKE 2/2: CUB, 1 epoch, 1 seed"
 echo "===================================================="
-python scripts/smoke_test.py \
-    --config experiments/configs/cub.yaml \
-    --output_dir "$SMOKE_OUT/cub" \
-    -p trials 1 \
-    -p max_epochs 1 \
-    -p check_val_every_n_epoch 1 \
-    2>&1 | tee "$LOGS_DIR/smoke_cub.log"
+if [ -z "$(ls -A "data/CUB200/class_attr_data_10" 2>/dev/null)" ]; then
+    echo "-- CUB data not present (celeba-only setup?) — skipping CUB smoke test"
+else
+    python scripts/smoke_test.py \
+        --config experiments/configs/cub.yaml \
+        --output_dir "$SMOKE_OUT/cub" \
+        -p trials 1 \
+        -p max_epochs 1 \
+        -p check_val_every_n_epoch 1 \
+        2>&1 | tee "$LOGS_DIR/smoke_cub.log"
+fi
 
 echo "===================================================="
 echo "SMOKE TEST PASSED"

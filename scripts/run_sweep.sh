@@ -16,9 +16,12 @@ fi
 DATASET="$1"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-MODELS=(cem gc_cem)
-LAMBDAS=(0.1 0.5 1.0)
-SEEDS=(0 1 2 3 4)
+# Overridable to split a sweep across pods, e.g.:
+#   MODELS=cem bash scripts/run_sweep.sh celeba        (pod 1)
+#   MODELS=gc_cem bash scripts/run_sweep.sh celeba     (pod 2)
+read -ra MODELS <<< "${MODELS:-cem gc_cem}"
+read -ra LAMBDAS <<< "${LAMBDAS:-0.1 0.5 1.0}"
+read -ra SEEDS <<< "${SEEDS:-0 1 2 3 4}"
 
 failures=()
 for model in "${MODELS[@]}"; do
