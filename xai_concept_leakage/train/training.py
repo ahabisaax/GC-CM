@@ -96,18 +96,27 @@ def _add_rtl_rcl(model, config, train_dl, test_dl, eval_results):
             c_mix_tr_p, c_mix_te_p, c_true_tr_p, c_true_te_p, y_tr_p, y_te_p,
             global_norm=True,
         )
-        # Full training set for the MLP probe too — same arrays as Ridge.
-        # This matches compute_rtl_rcl_all_datasets.py, which passes one
-        # args_tuple to both probes; subsampling here would make the
-        # training-time MLP numbers incomparable to the canonical
-        # results_rtl_rcl_all_datasets.dict values.
-        print(f"RTL/RCL MLP   (global_norm=True, n_tr={n_tr})...")
+        # Ridge always uses the full training set (cheap, closed form).
+        # The MLP probe is capped: on CelebA the full 141,819-sample fit ran
+        # >3h per run, which is not affordable across a sweep. 20k is ample
+        # for a 16->64->1 probe and costs ~1/7 as much. Test set is never
+        # subsampled. Set RTL_MLP_MAX_N=0 for the uncapped full-set fit.
+        mlp_cap = int(os.environ.get("RTL_MLP_MAX_N", "20000"))
+        if mlp_cap and n_tr > mlp_cap:
+            idx = np.random.RandomState(42).permutation(n_tr)[:mlp_cap]
+            mlp_tr = (c_mix_tr_p[idx], c_true_tr_p[idx], y_tr_p[idx])
+            n_mlp = mlp_cap
+        else:
+            mlp_tr = (c_mix_tr_p, c_true_tr_p, y_tr_p)
+            n_mlp = n_tr
+        print(f"RTL/RCL MLP   (global_norm=True, n_tr={n_mlp} of {n_tr})...")
         mlp = compute_RTL_RCL_mlp(
-            c_mix_tr_p, c_mix_te_p,
-            c_true_tr_p, c_true_te_p,
-            y_tr_p, y_te_p,
+            mlp_tr[0], c_mix_te_p,
+            mlp_tr[1], c_true_te_p,
+            mlp_tr[2], y_te_p,
             global_norm=True, hidden=(64,), max_iter=200,
         )
+        eval_results["rtl_rcl_mlp_n_train"] = n_mlp
         # Store nested dicts (matching post-hoc pipeline key names)
         eval_results["rtl_rcl_ridge_global"] = ridge
         eval_results["rtl_rcl_mlp_global"] = mlp
