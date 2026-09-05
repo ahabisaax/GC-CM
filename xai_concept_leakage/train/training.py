@@ -534,7 +534,10 @@ def train_end_to_end_model(
                 val_dl=val_dl,
                 best_model=not config.get("eval_from_last", False),
             )
-            _add_rtl_rcl(model, config, train_dl, test_dl, eval_results)
+            # RTL/RCL deliberately NOT computed during training — see commit 359fd0a.
+            # The MLP probe is O(K^2) fits (1,521 on CelebA, 12,544 on CUB) and caused
+            # OOM/slowdowns in-training. Compute post-hoc instead:
+            #   cache_embeddings_all.py -> compute_rtl_rcl_all_datasets.py
             eval_results["training_time"] = training_time
             eval_results["num_epochs"] = num_epochs
             eval_results["_wandb_run_id"] = run.id
@@ -661,7 +664,10 @@ def train_end_to_end_model(
             val_dl=val_dl,
             best_model=not config.get("eval_from_last", False),
         )
-        _add_rtl_rcl(model, config, train_dl, test_dl, eval_results)
+        # RTL/RCL deliberately NOT computed during training — see commit 359fd0a.
+        # The MLP probe is O(K^2) fits (1,521 on CelebA, 12,544 on CUB) and caused
+        # OOM/slowdowns in-training. Compute post-hoc instead:
+        #   cache_embeddings_all.py -> compute_rtl_rcl_all_datasets.py
         eval_results["training_time"] = training_time
         eval_results["num_epochs"] = num_epochs
         if test_dl is not None:
