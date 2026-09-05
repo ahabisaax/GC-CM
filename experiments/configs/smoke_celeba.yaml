@@ -1,6 +1,6 @@
 # CelebA smoke: 1 epoch, real dataset. Times the eval chain
 # (CTL/ICL + RTL/RCL + interventions) at true CelebA scale.
-# Generated from celeba_redone_cem_lam0_1.yaml.
+# check_val_every_n_epoch=1 so ModelCheckpoint has a val metric in a 1-epoch run.
 results_dir: results/smoke_celeba/
 trials: 1
 shared_params:
@@ -38,7 +38,7 @@ shared_params:
   training_intervention_prob: 0
   n_hidden: 512
   linear_c2y: true
-  check_val_every_n_epoch: 5
+  check_val_every_n_epoch: 1
   compute_mi_on_gpu: false
   project_name: smoke_test
   compute_mi_mode: cpu
