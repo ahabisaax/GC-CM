@@ -96,12 +96,15 @@ def _add_rtl_rcl(model, config, train_dl, test_dl, eval_results):
             c_mix_tr_p, c_mix_te_p, c_true_tr_p, c_true_te_p, y_tr_p, y_te_p,
             global_norm=True,
         )
-        # Ridge always uses the full training set (cheap, closed form).
-        # The MLP probe is capped: on CelebA the full 141,819-sample fit ran
-        # >3h per run, which is not affordable across a sweep. 20k is ample
-        # for a 16->64->1 probe and costs ~1/7 as much. Test set is never
-        # subsampled. Set RTL_MLP_MAX_N=0 for the uncapped full-set fit.
-        mlp_cap = int(os.environ.get("RTL_MLP_MAX_N", "20000"))
+        # Ridge always uses the FULL training set (closed form, seconds).
+        #
+        # The MLP probe is capped at 2000 by default. It performs K^2 fits
+        # (1,521 on CelebA, 12,544 on CUB), so cost scales as K^2 * n. At the
+        # full 141,819 samples this took >3h per run; at 2000 it is ~minutes,
+        # which is what the HPC runs used (commit 1d755aa) to land at ~3h/fold.
+        # The TEST set is never subsampled.
+        # Override with RTL_MLP_MAX_N (0 = uncapped full training set).
+        mlp_cap = int(os.environ.get("RTL_MLP_MAX_N", "2000"))
         if mlp_cap and n_tr > mlp_cap:
             idx = np.random.RandomState(42).permutation(n_tr)[:mlp_cap]
             mlp_tr = (c_mix_tr_p[idx], c_true_tr_p[idx], y_tr_p[idx])
@@ -534,10 +537,7 @@ def train_end_to_end_model(
                 val_dl=val_dl,
                 best_model=not config.get("eval_from_last", False),
             )
-            # RTL/RCL deliberately NOT computed during training — see commit 359fd0a.
-            # The MLP probe is O(K^2) fits (1,521 on CelebA, 12,544 on CUB) and caused
-            # OOM/slowdowns in-training. Compute post-hoc instead:
-            #   cache_embeddings_all.py -> compute_rtl_rcl_all_datasets.py
+            _add_rtl_rcl(model, config, train_dl, test_dl, eval_results)
             eval_results["training_time"] = training_time
             eval_results["num_epochs"] = num_epochs
             eval_results["_wandb_run_id"] = run.id
@@ -664,10 +664,7 @@ def train_end_to_end_model(
             val_dl=val_dl,
             best_model=not config.get("eval_from_last", False),
         )
-        # RTL/RCL deliberately NOT computed during training — see commit 359fd0a.
-        # The MLP probe is O(K^2) fits (1,521 on CelebA, 12,544 on CUB) and caused
-        # OOM/slowdowns in-training. Compute post-hoc instead:
-        #   cache_embeddings_all.py -> compute_rtl_rcl_all_datasets.py
+        _add_rtl_rcl(model, config, train_dl, test_dl, eval_results)
         eval_results["training_time"] = training_time
         eval_results["num_epochs"] = num_epochs
         if test_dl is not None:
