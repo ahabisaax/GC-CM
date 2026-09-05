@@ -49,6 +49,18 @@ fi
 # the exact case this protects against. run_sweep.sh is resumable, so
 # restarting the pod and rerunning picks up where it left off.
 if [ "${AUTOSTOP:-0}" = "1" ]; then
+    # Pull RUNPOD_POD_ID / RUNPOD_API_KEY from the persistent env file — a
+    # tmux/nohup session does not inherit them, and without both the stop
+    # silently no-ops and the pod idles at full price.
+    for _envf in "${SWEEP_ENV:-}" "${WORKSPACE:-/workspace}/.sweep_env" /workspace/.sweep_env; do
+        if [ -n "$_envf" ] && [ -f "$_envf" ]; then
+            # shellcheck disable=SC1090
+            source "$_envf"; break
+        fi
+    done
+    if [ -n "${RUNPOD_API_KEY:-}" ] && command -v runpodctl >/dev/null 2>&1; then
+        runpodctl config --apiKey "$RUNPOD_API_KEY" >/dev/null 2>&1 || true
+    fi
     POD_ID="${RUNPOD_POD_ID:-}"
     if [ -z "$POD_ID" ]; then
         echo "AUTOSTOP set but RUNPOD_POD_ID is empty — not stopping" >&2
