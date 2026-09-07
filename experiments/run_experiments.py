@@ -228,6 +228,8 @@ def _generate_dataset_and_update_config(experiment_config):
         import xai_concept_leakage.data.synthetic_toy_loader as data_module
     elif dataset_config['dataset'] == 'waterbirds':
         import xai_concept_leakage.data.waterbirds_loader as data_module
+    elif dataset_config['dataset'] == 'awa2':
+        import xai_concept_leakage.data.awa2_loader as data_module
     else:
         raise ValueError(f"Unsupported dataset {dataset_config['dataset']}!")
 

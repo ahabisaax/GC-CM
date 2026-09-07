@@ -80,6 +80,7 @@ link_payload() {
 link_payload celeba
 link_payload dsprites
 link_payload TabularToy
+link_payload AwA2
 link_payload CUB200/CUB_200_2011
 link_payload CUB200/class_attr_data_10
 
@@ -166,6 +167,20 @@ elif [ ! -f "$DATA_DIR/dsprites/dsprites_dep_0.npz" ]; then
     python data/generate_dsprites_datasets.py
 else
     echo "-- generated dSprites datasets present, skipping"
+fi
+
+# --- AwA2 (37k images, 50 classes, 85 class-level attributes; ~13 GB zip)
+if ! want awa2; then
+    echo "-- skipping AwA2 (not in DATASETS=$DATASETS)"
+elif [ ! -d "$DATA_DIR/AwA2/Animals_with_Attributes2/JPEGImages" ]; then
+    echo "-- fetching AwA2 (~13 GB, this takes a while)"
+    mkdir -p "$DATA_DIR/AwA2"
+    wget -q --show-progress -O "$DATA_DIR/AwA2/AwA2-data.zip" \
+        "https://cvml.ista.ac.at/AwA2/AwA2-data.zip"
+    unzip -q "$DATA_DIR/AwA2/AwA2-data.zip" -d "$DATA_DIR/AwA2/"
+    rm -f "$DATA_DIR/AwA2/AwA2-data.zip"
+else
+    echo "-- AwA2 present, skipping"
 fi
 
 # --- TabularToy (generated; configs expect tabulartoy_25_10k)
