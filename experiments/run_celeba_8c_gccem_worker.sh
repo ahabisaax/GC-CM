@@ -1,0 +1,60 @@
+#!/bin/bash -l
+#$ -N CelebA_8c_GCCEM
+#$ -o ~/Scratch/xai-crcbm/logs/CelebA_8c_GCCEM_$JOB_ID.out
+#$ -e ~/Scratch/xai-crcbm/logs/CelebA_8c_GCCEM_$JOB_ID.err
+#$ -pe smp 8
+#$ -l h_rt=6:00:00
+#$ -l mem=4G
+#$ -l tmpfs=20G
+#$ -wd /home/ucakais/Scratch/xai-crcbm
+#$ -l gpu=1
+#$ -P Gold
+#$ -A hpc.28
+
+module purge
+module unload compilers mpi gcc-libs
+module load python3/3.9-gnu-10.2.0
+module load gcc-libs/10.2.0
+
+export CC=$(which gcc)
+export CXX=$(which g++)
+
+conda activate xai2
+
+export XLA_FLAGS="--xla_cpu_multi_thread_eigen=true intra_op_parallelism_threads=${NSLOTS}"
+export OMP_NUM_THREADS=$NSLOTS
+export MKL_NUM_THREADS=$NSLOTS
+
+PROJECT_ROOT=~/Scratch/xai-crcbm
+FINAL_RESULTS_DIR=$PROJECT_ROOT/results/celeba_8c
+DATASET_TAR="celeba.tar"
+
+LOCAL_WORKSPACE="$TMPDIR/$JOB_ID"
+mkdir -p "$LOCAL_WORKSPACE/data"
+
+rsync -a \
+    --exclude '/results' --exclude '/logs' --exclude '/wandb' \
+    --exclude '/data' --exclude '.git' \
+    "$PROJECT_ROOT/" "$LOCAL_WORKSPACE/"
+
+cp "$PROJECT_ROOT/data/$DATASET_TAR" "$LOCAL_WORKSPACE/data/"
+cd "$LOCAL_WORKSPACE/data" && tar -xf $DATASET_TAR
+
+cd "$LOCAL_WORKSPACE"
+export PYTHONPATH="$LOCAL_WORKSPACE:$PYTHONPATH"
+
+LOCAL_CONFIG="experiments/configs/celeba_8c_gccem.yaml"
+LOCAL_RESULTS="$TMPDIR/results_temp"
+
+export WANDB_MODE=online
+$CONDA_PREFIX/bin/python -u experiments/run_experiments.py \
+    --config "$LOCAL_CONFIG" \
+    --project_name "CelebA_8c_interventions" \
+    --output_dir "$LOCAL_RESULTS"
+
+mkdir -p "$FINAL_RESULTS_DIR"
+rsync -a "$LOCAL_RESULTS/" "$FINAL_RESULTS_DIR/"
+
+echo "Syncing wandb offline runs..."
+mkdir -p "$PROJECT_ROOT/wandb"
+rsync -a "$LOCAL_WORKSPACE/wandb/" "$PROJECT_ROOT/wandb/"
