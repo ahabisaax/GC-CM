@@ -1,14 +1,15 @@
 # AwA2: 37,322 images, 50 classes, 85 CLASS-LEVEL attributes.
-# c_true is a deterministic function of y, so ICL/RCL are NOT directly
-# comparable to per-image datasets (CUB, CelebA). See awa2_loader.py.
-# K=85 -> the MLP RTL/RCL probe does 85^2 = 7,225 fits (~4.7x CelebA).
-# UNVERIFIED against real data - smoke test with -p max_epochs 1 first.
+# c_true is a deterministic function of y -> ICL/RCL NOT comparable to
+# per-image datasets (CUB, CelebA). See awa2_loader.py.
+# Interventions: random + optimal_greedy. optimal_greedy is O(K^2) --
+# ~7,225 scored passes at K=85 vs 85 for random; it dominates eval time.
+# batch_size 1012 assumes an A100. UNVERIFIED against real data.
 results_dir: results/awa2/
 trials: 1
 shared_params:
   dataset_config:
     dataset: awa2
-    batch_size: 128
+    batch_size: 1012
     num_workers: 8
     root_dir: data/
     image_size: 128
@@ -20,9 +21,12 @@ shared_params:
     competence_levels:
     - 1
     intervention_freq: 1
-    intervention_batch_size: 256
+    intervention_batch_size: 512
     intervention_policies:
     - policy: random
+      group_level: true
+      use_prior: false
+    - policy: optimal_greedy
       group_level: true
       use_prior: false
   skip_repr_evaluation: true
