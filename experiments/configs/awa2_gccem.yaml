@@ -10,7 +10,7 @@ trials: 1
 shared_params:
   dataset_config:
     dataset: awa2
-    batch_size: 256
+    batch_size: 1024
     num_workers: 8
     root_dir: data/
     image_size: 224
