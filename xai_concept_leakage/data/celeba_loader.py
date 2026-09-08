@@ -409,12 +409,37 @@ def generate_data(
         f"Data split is: {total_samples} = {train_samples} (train) + "
         f"{test_samples} (test) + {val_samples} (validation)"
     )
-    celeba_train_data, celeba_test_data, celeba_val_data = (
-        torch.utils.data.random_split(
-            celeba_train_data,
-            [train_samples, test_samples, val_samples],
+    # Split determinism.
+    #
+    # Historically this used the ambient torch RNG, which generate_data seeds
+    # via seed_everything(seed). With seed=None (what run_experiments.py
+    # passes) Lightning draws a RANDOM seed, so the partition differed on every
+    # run and could not be reconstructed afterwards - post-hoc evaluation then
+    # scored models on a split whose "test" portion was ~70% their own training
+    # data.
+    #
+    # Set dataset_config["split_seed"] to make the partition deterministic and
+    # independent of the run seed (recommended for all new runs). Omit it to
+    # keep the legacy behaviour, which is only useful for reproducing an
+    # existing model's split by passing that run's seed as `seed`.
+    split_seed = config.get("split_seed", None)
+    if split_seed is not None:
+        split_gen = torch.Generator().manual_seed(int(split_seed))
+        logging.debug(f"[celeba_loader] deterministic split, split_seed={split_seed}")
+        celeba_train_data, celeba_test_data, celeba_val_data = (
+            torch.utils.data.random_split(
+                celeba_train_data,
+                [train_samples, test_samples, val_samples],
+                generator=split_gen,
+            )
         )
-    )
+    else:
+        celeba_train_data, celeba_test_data, celeba_val_data = (
+            torch.utils.data.random_split(
+                celeba_train_data,
+                [train_samples, test_samples, val_samples],
+            )
+        )
     train_dl = torch.utils.data.DataLoader(
         celeba_train_data,
         batch_size=config["batch_size"],
