@@ -6,6 +6,7 @@ trials: 1
 shared_params:
   dataset_config:
     dataset: celeba
+    split_seed: 42          # deterministic train/val/test split
     batch_size: 512
     num_workers: 8
     root_dir: data/
