@@ -46,8 +46,19 @@ _CEM_ARCHITECTURES = {
 
 
 def _collect_cem_embeddings(model, dl):
-    """Collect c_mix (N, K, emb_size), c_true (N, K), y (N,) for a CEM model."""
-    device = next(model.parameters()).device
+    """Collect c_mix (N, K, emb_size), c_true (N, K), y (N,) for a CEM model.
+
+    Pins the model to GPU explicitly. Lightning may leave it on CPU after
+    trainer.test(), and inheriting that silently makes this collection run a
+    resnet forward pass over the whole training set on CPU — observed at >2h
+    per run on CelebA versus ~20s on GPU.
+    """
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        model = model.to(device)
+    else:
+        device = next(model.parameters()).device
+    logging.info(f"_collect_cem_embeddings: device={device}")
     model.eval()
     c_mix_all, c_true_all, y_all = [], [], []
     with torch.no_grad():
