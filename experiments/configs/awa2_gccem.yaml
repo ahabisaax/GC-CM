@@ -1,13 +1,16 @@
 # AwA2: 37,322 images, 50 classes, 85 attributes.
-# NOTE: attributes are CLASS-level, not per-image — c_true is a
+# NOTE: attributes are CLASS-level, not per-image - c_true is a
 # deterministic function of y, so ICL/RCL here are not directly
 # comparable to per-image datasets (CUB, CelebA). See awa2_loader.py.
+# LRs follow the CUB precedent (CEM 1e-3, GC-CEM 5e-4/1e-4): AwA2 is
+# fine-grained with many concepts and classes, so CUB is the closer
+# analogue than CelebA.
 results_dir: results/awa2/
 trials: 1
 shared_params:
   dataset_config:
     dataset: awa2
-    batch_size: 128
+    batch_size: 256
     num_workers: 8
     root_dir: data/
     image_size: 224
@@ -25,7 +28,7 @@ shared_params:
       group_level: true
       use_prior: false
   skip_repr_evaluation: true
-  max_epochs: 150
+  max_epochs: 60
   top_k_accuracy: null
   save_model: true
   emb_size: 16
@@ -46,7 +49,7 @@ shared_params:
   project_name: AwA2
   compute_mi_mode: cpu
   accumulate_grad_batches: 1
-  c2y_max_epochs: 150
+  c2y_max_epochs: 60
   early_stopping_monitor: val_y_accuracy
   early_stopping_mode: max
   early_stopping_delta: 0.0
