@@ -1,0 +1,52 @@
+#!/bin/bash -l
+#$ -N AwA2_SMOKE
+#$ -o ~/Scratch/xai-crcbm/logs/AwA2_SMOKE_$JOB_ID.out
+#$ -e ~/Scratch/xai-crcbm/logs/AwA2_SMOKE_$JOB_ID.err
+#$ -pe smp 8
+#$ -l h_rt=2:00:00
+#$ -l mem=4G
+#$ -l tmpfs=40G
+#$ -wd /home/ucakais/Scratch/xai-crcbm
+#$ -l gpu=1
+#$ -P Gold
+#$ -A hpc.28
+
+module purge
+module unload compilers mpi gcc-libs
+module load python3/3.9-gnu-10.2.0
+module load gcc-libs/10.2.0
+
+export CC=$(which gcc)
+export CXX=$(which g++)
+
+conda activate xai2
+
+export XLA_FLAGS="--xla_cpu_multi_thread_eigen=true intra_op_parallelism_threads=${NSLOTS}"
+export OMP_NUM_THREADS=$NSLOTS
+export MKL_NUM_THREADS=$NSLOTS
+
+PROJECT_ROOT=~/Scratch/xai-crcbm
+FINAL_RESULTS_DIR=$PROJECT_ROOT/results/awa2
+# AwA2 is a ~26GB directory tree — symlink it rather than copying into TMPDIR.
+# Fetch it first on a LOGIN node:  bash experiments/fetch_awa2_hpc.sh
+ln -s "$PROJECT_ROOT/data/AwA2" "$LOCAL_WORKSPACE/data/AwA2"
+
+cd "$LOCAL_WORKSPACE"
+export PYTHONPATH="$LOCAL_WORKSPACE:$PYTHONPATH"
+
+LOCAL_CONFIG="experiments/configs/awa2_gccem.yaml"
+LOCAL_RESULTS="$TMPDIR/results_temp"
+
+export WANDB_MODE=online
+$CONDA_PREFIX/bin/python -u experiments/run_experiments.py \
+    --config "$LOCAL_CONFIG" \
+    --project_name "AwA2" \
+    -p max_epochs 1 -p check_val_every_n_epoch 1 \
+    --output_dir "$LOCAL_RESULTS"
+
+mkdir -p "$FINAL_RESULTS_DIR"
+rsync -a "$LOCAL_RESULTS/" "$FINAL_RESULTS_DIR/"
+
+echo "Syncing wandb offline runs..."
+mkdir -p "$PROJECT_ROOT/wandb"
+rsync -a "$LOCAL_WORKSPACE/wandb/" "$PROJECT_ROOT/wandb/"

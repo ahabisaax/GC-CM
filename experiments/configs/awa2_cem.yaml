@@ -1,19 +1,17 @@
-# AwA2: 37,322 images, 50 classes, 85 attributes.
-# NOTE: attributes are CLASS-level, not per-image - c_true is a
-# deterministic function of y, so ICL/RCL here are not directly
+# AwA2: 37,322 images, 50 classes, 85 CLASS-LEVEL attributes.
+# c_true is a deterministic function of y, so ICL/RCL are NOT directly
 # comparable to per-image datasets (CUB, CelebA). See awa2_loader.py.
-# LRs follow the CUB precedent (CEM 1e-3, GC-CEM 5e-4/1e-4): AwA2 is
-# fine-grained with many concepts and classes, so CUB is the closer
-# analogue than CelebA.
+# K=85 -> the MLP RTL/RCL probe does 85^2 = 7,225 fits (~4.7x CelebA).
+# UNVERIFIED against real data - smoke test with -p max_epochs 1 first.
 results_dir: results/awa2/
 trials: 1
 shared_params:
   dataset_config:
     dataset: awa2
-    batch_size: 1024
+    batch_size: 128
     num_workers: 8
     root_dir: data/
-    image_size: 224
+    image_size: 128
     train_augment: true
     weight_loss: false
     sampling_percent: 1
