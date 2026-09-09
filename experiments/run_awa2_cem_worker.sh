@@ -27,9 +27,14 @@ export MKL_NUM_THREADS=$NSLOTS
 
 PROJECT_ROOT=~/Scratch/xai-crcbm
 FINAL_RESULTS_DIR=$PROJECT_ROOT/results/awa2
-# AwA2 is a ~26GB directory tree — symlink it rather than copying into TMPDIR.
+# Stage AwA2 onto the node's LOCAL scratch ($TMPDIR), not a symlink to Scratch.
+# Measured on RunPod: reading these ~348KB JPEGs from network storage is ~82x
+# slower than local disk, and training is dataloader-bound either way.
+# Extracted AwA2 is ~14GB, so tmpfs must be >= 40G (set above).
 # Fetch it first on a LOGIN node:  bash experiments/fetch_awa2_hpc.sh
-ln -s "$PROJECT_ROOT/data/AwA2" "$LOCAL_WORKSPACE/data/AwA2"
+echo "Staging AwA2 to $LOCAL_WORKSPACE/data (local disk)..."
+cp -r "$PROJECT_ROOT/data/AwA2" "$LOCAL_WORKSPACE/data/AwA2"
+echo "  staged: $(find "$LOCAL_WORKSPACE/data/AwA2" -name '*.jpg' | wc -l) images"
 
 cd "$LOCAL_WORKSPACE"
 export PYTHONPATH="$LOCAL_WORKSPACE:$PYTHONPATH"
