@@ -39,7 +39,11 @@ import os
 
 import numpy as np
 import torch
-from PIL import Image
+from PIL import Image, ImageFile
+
+# A few AwA2 JPEGs are truncated; allow partial decode rather than
+# raising mid-epoch. Genuinely unreadable files are dropped at index time.
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 from pytorch_lightning import seed_everything
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
@@ -94,8 +98,16 @@ def _load_metadata(base):
     return class_names, matrix
 
 
-def _index_images(base, class_names):
-    """Return (paths, labels) over all JPEGImages/<class>/*.jpg."""
+def _index_images(base, class_names, verify=True):
+    """Return (paths, labels) over all JPEGImages/<class>/*.jpg.
+
+    AwA2 ships a small number of corrupt JPEGs (e.g. collie/collie_10770.jpg),
+    which blow up a dataloader worker mid-epoch with PIL.UnidentifiedImageError.
+    Rather than fail a multi-hour run, verify headers once at index time and
+    drop unreadable files. The scan reads headers only, so it costs seconds.
+
+    The dropped list is cached beside the dataset so later runs skip the scan.
+    """
     paths, labels = [], []
     img_root = os.path.join(base, "JPEGImages")
     for label, name in enumerate(class_names):
@@ -109,6 +121,33 @@ def _index_images(base, class_names):
                 labels.append(label)
     if not paths:
         raise RuntimeError(f"No AwA2 images found under {img_root}")
+
+    if verify:
+        cache = os.path.join(base, ".awa2_bad_images.txt")
+        bad = set()
+        if os.path.exists(cache):
+            with open(cache) as f:
+                bad = {ln.strip() for ln in f if ln.strip()}
+            logging.debug(f"[awa2_loader] loaded {len(bad)} known-bad paths from cache")
+        else:
+            for p in paths:
+                try:
+                    with Image.open(p) as im:
+                        im.verify()          # header/structure only
+                except Exception:
+                    bad.add(p)
+            try:
+                with open(cache, "w") as f:
+                    f.write("\n".join(sorted(bad)))
+            except OSError:
+                pass                          # read-only dataset dir is fine
+        if bad:
+            print(f"[awa2_loader] dropping {len(bad)} unreadable image(s), e.g. "
+                  f"{sorted(bad)[0]}")
+            keep = [i for i, p in enumerate(paths) if p not in bad]
+            paths = [paths[i] for i in keep]
+            labels = [labels[i] for i in keep]
+
     return np.array(paths), np.array(labels, dtype=np.int64)
 
 
@@ -145,7 +184,16 @@ class AwA2Dataset(Dataset):
         return len(self.paths)
 
     def __getitem__(self, idx):
-        img = Image.open(self.paths[idx]).convert("RGB")
+        try:
+            img = Image.open(self.paths[idx]).convert("RGB")
+        except Exception as e:
+            # Belt and braces: the index-time scan should have removed these,
+            # but a truncated file can still fail on full decode. Substitute a
+            # neighbour of the same class rather than killing the worker.
+            logging.warning(f"[awa2_loader] unreadable at load: {self.paths[idx]} ({e})")
+            alt = (idx + 1) % len(self.paths)
+            img = Image.open(self.paths[alt]).convert("RGB")
+            idx = alt
         x = self.transform(img)
         y = int(self.labels[idx])
         c = torch.from_numpy(self.predicates[y].copy())
