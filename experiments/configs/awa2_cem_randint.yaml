@@ -1,0 +1,66 @@
+# AwA2 + RANDINT: random interventions during training (p=0.25).
+# Otherwise identical to awa2_cem.yaml. Class-level attributes, so
+# ICL/RCL are not comparable to per-image datasets.
+results_dir: results/awa2/
+trials: 1
+shared_params:
+  dataset_config:
+    dataset: awa2
+    batch_size: 1024
+    num_workers: 8
+    root_dir: data/
+    image_size: 128
+    train_augment: true
+    weight_loss: false
+    sampling_percent: 1
+    test_subsampling: 1
+  intervention_config:
+    competence_levels:
+    - 1
+    intervention_freq: 1
+    intervention_batch_size: 512
+    intervention_policies:
+    - policy: random
+      group_level: true
+      use_prior: false
+    - policy: optimal_greedy
+      group_level: true
+      use_prior: false
+  skip_repr_evaluation: true
+  max_epochs: 35
+  top_k_accuracy: null
+  save_model: true
+  emb_size: 16
+  extra_dims: 0
+  weight_decay: 4.0e-06
+  weight_loss: false
+  use_task_class_weights: false
+  c_extractor_arch: resnet34
+  bool: false
+  momentum: 0.9
+  sigmoidal_prob: false
+  training_intervention_prob: 0.25
+  n_hidden: 512
+  linear_c2y: true
+  check_val_every_n_epoch: 5
+  compute_mi_on_gpu: false
+  project_name: AwA2
+  compute_mi_mode: cpu
+  accumulate_grad_batches: 1
+  c2y_max_epochs: 35
+  early_stopping_monitor: val_loss
+  early_stopping_mode: min
+  early_stopping_delta: 0.0
+  patience: 30
+  gradient_clip_val: 1.0
+  eval_from_last: true
+  compute_rtl_rcl: false
+runs:
+- architecture: ConceptEmbeddingModel
+  run_name: auto
+  sigmoidal_prob: true
+  training_intervention_prob: 0.25
+  embedding_activation: leakyrelu
+  cbm_optimizer: adam
+  learning_rate: 0.001
+  concept_loss_weight: 0.1
