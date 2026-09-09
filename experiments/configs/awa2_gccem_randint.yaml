@@ -1,6 +1,9 @@
-# AwA2 + RANDINT: random interventions during training (p=0.25).
-# Otherwise identical to awa2_gccem.yaml. Class-level attributes, so
-# ICL/RCL are not comparable to per-image datasets.
+# AwA2: 37,322 images, 50 classes, 85 CLASS-LEVEL attributes.
+# c_true is a deterministic function of y -> ICL/RCL not comparable to
+# per-image datasets. See awa2_loader.py.
+# semantic_concept_groups: false -> interventions step one CONCEPT at a
+# time (86-point curve) rather than one semantic family (10 points).
+# optimal_greedy is O(K^2): at K=85 that is ~7,225 scored passes.
 results_dir: results/awa2/
 trials: 1
 shared_params:
@@ -14,6 +17,7 @@ shared_params:
     weight_loss: false
     sampling_percent: 1
     test_subsampling: 1
+    semantic_concept_groups: false
   intervention_config:
     competence_levels:
     - 1

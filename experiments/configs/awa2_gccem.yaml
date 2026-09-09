@@ -1,9 +1,9 @@
 # AwA2: 37,322 images, 50 classes, 85 CLASS-LEVEL attributes.
-# c_true is a deterministic function of y -> ICL/RCL NOT comparable to
-# per-image datasets (CUB, CelebA). See awa2_loader.py.
-# Interventions: random + optimal_greedy (optimal_greedy is O(K^2)).
-# compute_rtl_rcl: false -- skipped for this run; compute post-hoc via
-# cache_embeddings_all.py -> compute_rtl_rcl_all_datasets.py if needed.
+# c_true is a deterministic function of y -> ICL/RCL not comparable to
+# per-image datasets. See awa2_loader.py.
+# semantic_concept_groups: false -> interventions step one CONCEPT at a
+# time (86-point curve) rather than one semantic family (10 points).
+# optimal_greedy is O(K^2): at K=85 that is ~7,225 scored passes.
 results_dir: results/awa2/
 trials: 1
 shared_params:
@@ -17,6 +17,7 @@ shared_params:
     weight_loss: false
     sampling_percent: 1
     test_subsampling: 1
+    semantic_concept_groups: false
   intervention_config:
     competence_levels:
     - 1

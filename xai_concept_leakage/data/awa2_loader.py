@@ -200,7 +200,19 @@ class AwA2Dataset(Dataset):
         return x, y, c
 
 
-def _build_concept_group_map():
+def _build_concept_group_map(semantic=True):
+    """Concept groups used for group-level interventions.
+
+    semantic=True  -> 9 groups by attribute family (colour, pattern, ...).
+                      Interventions then reveal a whole family per step, so a
+                      curve has 10 points.
+    semantic=False -> 85 singleton groups, i.e. one concept per step, giving
+                      an 86-point curve. Much more informative but far more
+                      expensive under optimal_greedy, which scores every
+                      remaining group at every step (O(K^2)).
+    """
+    if not semantic:
+        return {i: [i] for i in range(N_CONCEPTS)}
     return {
         i: list(range(start, end))
         for i, (_, start, end) in enumerate(_CONCEPT_GROUP_BOUNDARIES)
@@ -297,5 +309,6 @@ def generate_data(
         return train_dl, val_dl, test_dl, imbalance
 
     return train_dl, val_dl, test_dl, imbalance, (
-        N_CONCEPTS, N_CLASSES, _build_concept_group_map()
+        N_CONCEPTS, N_CLASSES,
+        _build_concept_group_map(config.get('semantic_concept_groups', True))
     )
