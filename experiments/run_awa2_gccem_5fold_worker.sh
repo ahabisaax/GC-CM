@@ -1,10 +1,9 @@
 #!/bin/bash -l
 #$ -N AwA2_GCCEM_5fold
-#$ -t 1-5
-#$ -o ~/Scratch/xai-crcbm/logs/AwA2_GCCEM_$JOB_ID.$TASK_ID.out
-#$ -e ~/Scratch/xai-crcbm/logs/AwA2_GCCEM_$JOB_ID.$TASK_ID.err
+#$ -o ~/Scratch/xai-crcbm/logs/AwA2_GCCEM_$JOB_ID.out
+#$ -e ~/Scratch/xai-crcbm/logs/AwA2_GCCEM_$JOB_ID.err
 #$ -pe smp 8
-#$ -l h_rt=12:00:00
+#$ -l h_rt=36:00:00
 #$ -l mem=4G
 #$ -l tmpfs=40G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
@@ -47,8 +46,6 @@ export WANDB_MODE=online
 $CONDA_PREFIX/bin/python -u experiments/run_experiments.py \
     --config "$LOCAL_CONFIG" \
     --project_name "AwA2" \
-    -p start_split $((SGE_TASK_ID - 1)) \
-    -p trials $SGE_TASK_ID \
     --output_dir "$LOCAL_RESULTS"
 
 mkdir -p "$FINAL_RESULTS_DIR"
