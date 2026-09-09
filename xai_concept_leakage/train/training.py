@@ -93,6 +93,9 @@ def _add_rtl_rcl(model, config, train_dl, test_dl, eval_results):
     Adds flat keys (test_ridge_rtl_norm, etc.) and nested dicts (rtl_rcl_ridge_global,
     rtl_rcl_mlp_global) to eval_results. Logs to W&B if a run is active.
     """
+    if not config.get("compute_rtl_rcl", True):
+        print("RTL/RCL: skipped (compute_rtl_rcl=False)")
+        return
     if config.get("architecture", "") not in _CEM_ARCHITECTURES:
         return
     if test_dl is None or train_dl is None:

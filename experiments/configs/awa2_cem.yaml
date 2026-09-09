@@ -1,8 +1,9 @@
 # AwA2: 37,322 images, 50 classes, 85 CLASS-LEVEL attributes.
 # c_true is a deterministic function of y -> ICL/RCL NOT comparable to
 # per-image datasets (CUB, CelebA). See awa2_loader.py.
-# Interventions: random + optimal_greedy. optimal_greedy is O(K^2) --
-# ~7,225 scored passes at K=85 vs 85 for random; it dominates eval time.
+# Interventions: random + optimal_greedy (optimal_greedy is O(K^2)).
+# compute_rtl_rcl: false -- skipped for this run; compute post-hoc via
+# cache_embeddings_all.py -> compute_rtl_rcl_all_datasets.py if needed.
 results_dir: results/awa2/
 trials: 1
 shared_params:
@@ -56,6 +57,7 @@ shared_params:
   patience: 30
   gradient_clip_val: 1.0
   eval_from_last: true
+  compute_rtl_rcl: false
 runs:
 - architecture: ConceptEmbeddingModel
   run_name: auto
