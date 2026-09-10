@@ -1,9 +1,9 @@
 # AwA2 GC-CEM, lam_c 0.1, 5 folds, FULL eval.
-# batch 512 + lr 5e-4: same pairing as the CelebA/CUB runs (lr was tuned at
-# 512; it is NOT halved, because moving 1024->512 restores that pairing).
-# interventions: random only, freq 1 -> all 86 concept steps (~3.4h/fold).
-# RTL/RCL enabled: K=85 -> 7,225 MLP fits at the 2000-sample cap (~15min).
-# Est. ~8.3h per fold; run as a 5-task array, one fold per task.
+# batch 512 + lr 5e-4: same pairing as the CelebA/CUB runs.
+# Interventions: random policy over 17 verified semantic concept groups
+# (18-point curve), matching CUB's group-level procedure (28 groups).
+# Groups validated against predicates.txt: all 85 predicates, no overlaps.
+# RTL/RCL enabled: K=85 -> 7,225 MLP fits at the 2000-sample cap.
 results_dir: results/awa2_5fold/
 trials: 5
 shared_params:
@@ -17,7 +17,7 @@ shared_params:
     weight_loss: false
     sampling_percent: 1
     test_subsampling: 1
-    semantic_concept_groups: false
+    semantic_concept_groups: true
   intervention_config:
     competence_levels:
     - 1

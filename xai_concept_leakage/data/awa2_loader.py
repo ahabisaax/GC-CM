@@ -51,19 +51,32 @@ from torchvision import transforms
 N_CONCEPTS = 85
 N_CLASSES = 50
 
-# Predicate groups in predicates.txt are ordered by semantic family; these
-# boundaries follow the grouping used in the original AwA attribute list.
-_CONCEPT_GROUP_BOUNDARIES = [
-    ("colour_texture", 0, 8),
-    ("pattern", 8, 14),
-    ("size_shape", 14, 22),
-    ("body_parts", 22, 34),
-    ("locomotion", 34, 45),
-    ("diet", 45, 54),
-    ("behaviour", 54, 66),
-    ("habitat", 66, 78),
-    ("character", 78, 85),
-]
+# Semantic groups over AwA2's 85 predicates, verified against
+# predicates.txt: every predicate appears exactly once, no gaps.
+# Sizes range 1-15, which mirrors CUB (28 groups, sizes 1-6, incl. 3
+# singletons) - singletons are kept rather than merged into a
+# "miscellaneous" bin, since a group-level intervention should answer
+# one coherent question ("what colour is it?"), not reveal a bundle
+# with no shared meaning.
+_CONCEPT_GROUPS = {
+    "colour": [0, 1, 2, 3, 4, 5, 6, 7],
+    "surface_covering": [8, 9, 10, 11, 12, 13],
+    "body_morphology": [14, 15, 16, 17],
+    "anatomy": [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32],
+    "locomotion_posture": [34, 35, 36, 37, 38, 44, 45],
+    "physical_capability": [39, 40, 41, 42, 43, 50],
+    "activity_temporal": [46, 47, 48, 49],
+    "diet": [51, 52, 53, 54, 55],
+    "foraging_predation": [56, 57, 58, 59, 60, 61],
+    "biogeography": [62, 63],
+    "climate_biome": [64, 65, 66, 67, 68, 69, 70, 71, 72],
+    "substrate": [73, 74, 75, 76, 77],
+    "social": [81, 82],
+    "temperament": [78, 79, 80],
+    "nesting": [83],
+    "domestication": [84],
+    "olfactory": [33],
+}
 
 
 def _awa2_root(root_dir):
@@ -203,9 +216,9 @@ class AwA2Dataset(Dataset):
 def _build_concept_group_map(semantic=True):
     """Concept groups used for group-level interventions.
 
-    semantic=True  -> 9 groups by attribute family (colour, pattern, ...).
-                      Interventions then reveal a whole family per step, so a
-                      curve has 10 points.
+    semantic=True  -> 17 groups by attribute family (colour, anatomy, diet,
+                      habitat, ...), so a curve has 18 points. Comparable in
+                      spirit to CUB, which intervenes over 28 attribute groups.
     semantic=False -> 85 singleton groups, i.e. one concept per step, giving
                       an 86-point curve. Much more informative but far more
                       expensive under optimal_greedy, which scores every
@@ -213,10 +226,7 @@ def _build_concept_group_map(semantic=True):
     """
     if not semantic:
         return {i: [i] for i in range(N_CONCEPTS)}
-    return {
-        i: list(range(start, end))
-        for i, (_, start, end) in enumerate(_CONCEPT_GROUP_BOUNDARIES)
-    }
+    return {i: idxs for i, (_, idxs) in enumerate(_CONCEPT_GROUPS.items())}
 
 
 def generate_data(
