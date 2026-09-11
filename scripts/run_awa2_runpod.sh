@@ -17,8 +17,13 @@
 # early_stopping_monitor (val_y_accuracy) selects the saved checkpoint, and
 # eval_from_last=true means reported metrics come from the last epoch.
 #
-# Writes results to LOCAL disk during the run, then rsyncs to /workspace at
-# the end - same reason as the HPC worker's $TMPDIR staging.
+# Results are written straight to /workspace. The HPC worker stages them in
+# $TMPDIR because that job is guaranteed to finish; a pod can be reclaimed
+# mid-run (community cloud especially), and anything on /root dies with it.
+# The MooseFS penalty is on small-file reads - the dataset - not on a few
+# large joblibs and checkpoints written once per fold, so this costs nothing
+# measurable and makes every completed fold durable.
+# Set LOCAL_RESULTS to stage locally instead, if you want the old behaviour.
 set -euo pipefail
 
 CONFIG="${1:-experiments/configs/awa2_cem_5fold.yaml}"
@@ -26,7 +31,7 @@ REPO="${REPO:-/workspace/GC-CM}"
 VENV="${VENV:-/root/venv}"
 RESULTS_DIR="${RESULTS_DIR:-/workspace/results/awa2_5fold}"
 LOGS_DIR="${LOGS_DIR:-/workspace/logs}"
-LOCAL_RESULTS="${LOCAL_RESULTS:-/root/results_temp}"
+LOCAL_RESULTS="${LOCAL_RESULTS:-$RESULTS_DIR}"
 
 cd "$REPO"
 [ -f "$CONFIG" ] || { echo "config not found: $CONFIG" >&2; exit 2; }
@@ -66,8 +71,10 @@ python -u experiments/run_experiments.py \
 rc=${PIPESTATUS[0]}
 set -e
 
-echo "-- syncing results to $RESULTS_DIR"
-rsync -a "$LOCAL_RESULTS/" "$RESULTS_DIR/"
+if [ "$LOCAL_RESULTS" != "$RESULTS_DIR" ]; then
+    echo "-- syncing results to $RESULTS_DIR"
+    rsync -a "$LOCAL_RESULTS/" "$RESULTS_DIR/"
+fi
 if [ -d "$REPO/wandb" ]; then
     mkdir -p /workspace/wandb && rsync -a "$REPO/wandb/" /workspace/wandb/
 fi
