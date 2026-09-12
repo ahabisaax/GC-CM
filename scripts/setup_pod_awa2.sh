@@ -25,6 +25,20 @@ N_EXPECTED=37322
 echo "== AwA2 pod setup =="
 mkdir -p "$AWA" /workspace/results /workspace/logs
 
+# The RunPod pytorch images ship without unzip (and often without tmux), and
+# set -e turns a missing one into a silent-looking death 13GB into the job.
+missing=""
+for t in unzip wget rsync tmux; do command -v "$t" >/dev/null 2>&1 || missing="$missing $t"; done
+if [ -n "$missing" ]; then
+    echo "-- installing:$missing"
+    apt-get update -qq >/dev/null 2>&1 || true
+    # shellcheck disable=SC2086
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $missing >/dev/null 2>&1 || true
+fi
+for t in unzip wget; do
+    command -v "$t" >/dev/null 2>&1 || { echo "FATAL: $t unavailable and could not be installed" >&2; exit 1; }
+done
+
 # --- venv on local disk (torch 2.3.1 / PL 1.9.5: the GC models use the
 #     optimizer_idx multi-optimizer API removed in Lightning 2.0)
 if [ ! -x "$VENV/bin/python" ]; then
