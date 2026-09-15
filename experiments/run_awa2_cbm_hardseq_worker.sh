@@ -4,7 +4,7 @@
 #$ -e /home/ucakais/Scratch/xai-crcbm/logs/AwA2_CBM_HardSeq_$JOB_ID.err
 #$ -pe smp 8
 #$ -l h_rt=24:00:00
-#$ -l mem=4G
+#$ -l mem=6G
 #$ -l tmpfs=40G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
 #$ -l gpu=1
@@ -15,10 +15,14 @@
 # Results land in results/awa2_5fold_cbm, the same folder name the RunPod
 # CBM runs write to, so the two merge cleanly.
 #
-# WALLTIME WARNING: 24h is likely not enough for both. Measured elsewhere,
-# a 120-epoch CBM fold is ~2.1h on an A40 and HPC folds have run slower;
-# Sequential trains two stages (x2c then c2y, 120 epochs each) so its folds
-# are the longest in the set. Hard CBM runs FIRST so it completes. If the
+# Sequential's c2y stage is cheap: training.py:943 trains the linear head on
+# a TensorDataset of precomputed concept predictions, with no backbone in the
+# loop. Its real overheads are the concept-precompute pass, which runs at
+# batch_size=1 over ~26k images (training.py:930), and the fact that
+# sequential materialises the whole training set in RAM (~5.1GB for AwA2 at
+# 128px, training.py:780) - hence mem=6G per slot rather than 4G.
+#
+# WALLTIME: 24h should now cover both at 100 epochs. Hard CBM runs FIRST. If the
 # job is killed at walltime partway through Sequential, just resubmit:
 # run_experiments loads any split whose results joblib already exists and
 # carries on from the first missing fold.

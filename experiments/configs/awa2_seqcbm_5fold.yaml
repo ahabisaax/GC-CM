@@ -1,4 +1,4 @@
-# AwA2 Sequential CBM, lam_c 1, 5 folds, FULL eval, 120 epochs.
+# AwA2 Sequential CBM, lam_c 1, 5 folds, FULL eval, 100 epochs.
 # CBM arm of the AwA2 suite. shared_params are identical to the CEM/GC-CEM
 # configs (90 epochs, batch 512, 17 semantic groups, intervention_freq 1,
 # eval_from_last, val_y_accuracy checkpointing) so every AwA2 model is
@@ -30,7 +30,7 @@ shared_params:
       group_level: true
       use_prior: false
   skip_repr_evaluation: true
-  max_epochs: 120
+  max_epochs: 100
   top_k_accuracy: null
   save_model: true
   emb_size: 16
@@ -50,7 +50,7 @@ shared_params:
   project_name: AwA2
   compute_mi_mode: cpu
   accumulate_grad_batches: 1
-  c2y_max_epochs: 120
+  c2y_max_epochs: 100
   early_stopping_monitor: val_y_accuracy
   early_stopping_mode: max
   early_stopping_delta: 0.0
