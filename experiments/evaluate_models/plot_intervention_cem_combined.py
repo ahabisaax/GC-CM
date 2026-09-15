@@ -1,11 +1,12 @@
 """
-Combined CEM intervention plot — TabularToy | dSprites | CUB-200 side by side.
+Combined CEM intervention plot — TabularToy | AwA2 | CUB-200 side by side.
 Shared legend below the subplots.
 """
 import os, sys
 import numpy as np
 import matplotlib.pyplot as plt
 import joblib
+import pandas as pd
 
 master = os.getcwd().replace("/experiments/evaluate_models", "") + "/"
 sys.path.insert(0, master + "data/CUB200")
@@ -99,21 +100,60 @@ def load_cub():
     return steps, curves
 
 
+
+def load_awa2():
+    """AwA2 curves from the exported W&B CSV.
+
+    Unlike the other loaders this reads a flat CSV rather than suite dicts:
+    one row per (model, lambda_c, fold, n_interventions). 18 points, 0..17,
+    matching the 17 semantic predicate groups plus the un-intervened point.
+    """
+    csv = master + "experiments/evaluate_models/awa2_intervention_curves_cem_vs_gccem.csv"
+    df = pd.read_csv(csv)
+    df = df[df["strategy"] == "random"]
+    lam_val = {"lam_c0.1": 0.1, "lam_c0.5": 0.5, "lam_c1": 1.0}
+    steps = np.arange(int(df["n_interventions"].max()) + 1)
+    curves = {}
+    for lam in LAMS:
+        arrs = []
+        for model in ("CEM", "GCCEM"):
+            sub = df[(df["model"] == model) & (df["lambda_c"] == lam_val[lam])]
+            if sub.empty:
+                arrs.append(None)
+                continue
+            piv = sub.pivot_table(index="fold", columns="n_interventions",
+                                  values="accuracy").reindex(columns=steps)
+            arrs.append(piv.to_numpy() * 100)
+        curves[lam] = tuple(arrs)
+    return steps, curves
+
+
 # ---------------------------------------------------------------------------
 # Plot
 # ---------------------------------------------------------------------------
 fig, axes = plt.subplots(1, 3, figsize=(13, 3.8))
 
 datasets = [
-    ("TabularToy",  *load_tt(),       "Concepts intervened",        (99.0, 100.2)),
-    ("dSprites",    *load_dsprites(), "Concepts intervened",        (74,   100)),
-    ("CUB-200",     *load_cub(),      "Concept groups intervened",  (65,   92)),
+    ("TabularToy",  *load_tt(),       "Fraction of concepts intervened", (99.0, 100.2)),
+    ("AwA2",        *load_awa2(),     "Fraction of concepts intervened", (81.8, 86.2)),
+    ("CUB-200",     *load_cub(),      "Fraction of concepts intervened", (65,   92)),
 ]
 
 legend_handles = []
 legend_labels  = []
 
 for ax, (title, steps, curves, xlabel, ylim) in zip(axes, datasets):
+    # Plot against the fraction intervened, not the raw count, so panels with
+    # 3, 17 and 28 groups are directly comparable.
+    #
+    # For the group-level panels this is a fraction of *concepts* as well as
+    # of groups: groups are drawn uniformly at random, so after k of G groups
+    # the expected number of concepts revealed is (k/G)*K by linearity, i.e.
+    # exactly the same fraction. That holds despite AwA2 groups being very
+    # uneven in size (1 to 15), because it is an expectation over orderings
+    # and these curves are means over folds.
+    steps = np.asarray(steps, dtype=float)
+    steps = steps / steps.max()
     for lam, color, llab in zip(LAMS, C_CEM, LAM_LABEL):
         cem_c, _ = curves[lam]
         if cem_c is not None and len(cem_c):
@@ -135,8 +175,8 @@ for ax, (title, steps, curves, xlabel, ylim) in zip(axes, datasets):
     ax.set_title(title, fontsize=11, fontweight="bold")
     ax.set_xlabel(xlabel, fontsize=10)
     ax.set_ylim(*ylim)
-    if ax is axes[0]:
-        ax.set_xticks([0, 1, 2, 3])
+    ax.set_xticks([0, 0.25, 0.5, 0.75, 1.0])
+    ax.set_xlim(0, 1)
     ax.grid(True, alpha=0.3, linewidth=0.5)
     ax.tick_params(labelsize=9)
 

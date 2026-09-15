@@ -1,14 +1,11 @@
-# AwA2 Joint CBM, lam_c 1.0, 5 folds, FULL eval.
+# AwA2 Joint CBM, lam_c 1.0, 5 folds, FULL eval, 120 epochs.
 # CBM arm of the AwA2 suite. shared_params are identical to the CEM/GC-CEM
 # configs (90 epochs, batch 512, 17 semantic groups, intervention_freq 1,
 # eval_from_last, val_y_accuracy checkpointing) so every AwA2 model is
 # directly comparable.
-# lr follows the CelebA CBM convention (joint/hard/seq 5e-3, GC-CBM 5e-4):
-# AwA2 has no CBM precedent, and CelebA is the closest match (resnet34,
-# batch 512, same eval pipeline).
-# RTL/RCL does not apply: _add_rtl_rcl returns early for non-CEM
-# architectures because CBMs have no embedding space. Leakage for this arm
-# is CTL/ICL at the concept-probability level.
+# lr 1e-3 for joint/hard/seq, set from the 150-epoch probe that
+# recovered 83.14% task accuracy against 74.05% at 5e-3. GC-CBM keeps
+# cbm_learning_rate 5e-4, which already reached 84.15%.
 results_dir: results/awa2_5fold_cbm/
 trials: 5
 shared_params:
@@ -33,7 +30,7 @@ shared_params:
       group_level: true
       use_prior: false
   skip_repr_evaluation: true
-  max_epochs: 90
+  max_epochs: 120
   top_k_accuracy: null
   save_model: true
   emb_size: 16
@@ -53,7 +50,7 @@ shared_params:
   project_name: AwA2
   compute_mi_mode: cpu
   accumulate_grad_batches: 1
-  c2y_max_epochs: 90
+  c2y_max_epochs: 120
   early_stopping_monitor: val_y_accuracy
   early_stopping_mode: max
   early_stopping_delta: 0.0
@@ -67,5 +64,5 @@ runs:
   sigmoidal_prob: true
   bool: false
   cbm_optimizer: adam
-  learning_rate: 0.005
+  learning_rate: 0.001
   concept_loss_weight: 1.0
