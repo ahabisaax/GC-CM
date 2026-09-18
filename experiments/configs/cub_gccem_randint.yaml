@@ -1,0 +1,80 @@
+# CUB GC-CEM + RandInt, mirroring cub_cem_randint.yaml so the two are
+# directly comparable (300 epochs, emb 16, bs 256, lam_c 0.1,
+# training_intervention_prob 0.25).
+# cbm_learning_rate 5e-4 against CEM's 1e-3, the pairing used by the saved
+# cub_cem configs. learning_rate is still required: construct_model reads
+# config.get("cbm_learning_rate", config["learning_rate"]) and the default
+# is evaluated eagerly.
+# Requires the RandInt gradient-cancellation fix (566261d): before it, the
+# task and GRL branches drew independent substitution masks.
+results_dir: results/cub_gccem_randint/
+trials: 5
+shared_params:
+  dataset_config:
+    dataset: cub
+    num_workers: 8
+    batch_size: 256
+    root_dir: data/CUB200/
+    sampling_percent: 1
+    sampling_groups: true
+    test_subsampling: 1
+    weight_loss: true
+  intervention_config:
+    competence_levels:
+    - 1
+    intervention_freq: 1
+    intervention_batch_size: 64
+    intervention_policies:
+    - policy: random
+      group_level: true
+      use_prior: false
+  skip_repr_evaluation: true
+  max_epochs: 300
+  top_k_accuracy: null
+  save_model: true
+  patience: 400
+  emb_size: 16
+  extra_dims: 0
+  weight_decay: 4.0e-06
+  weight_loss: true
+  c_extractor_arch: resnet18
+  bool: false
+  momentum: 0.9
+  sigmoidal_prob: false
+  n_hidden: 512
+  linear_c2y: true
+  project_name: cub CEM randint
+  check_val_every_n_epoch: 5
+  compute_mi_on_gpu: false
+  compute_mi_mode: cpu
+  accumulate_grad_batches: 1
+  use_task_class_weights: true
+  c2y_max_epochs: 150
+  early_stopping_monitor: val_y_accuracy
+  early_stopping_mode: max
+  early_stopping_delta: 0.0
+  gradient_clip_val: 1.0
+  adv_optimizer: adam
+runs:
+- architecture: GCConceptEmbeddingModel
+  run_name: auto
+  sigmoidal_prob: true
+  training_intervention_prob: 0.25
+  embedding_activation: leakyrelu
+  cbm_optimizer: adam
+  concept_loss_weight: 0.1
+  accumulate_grad_batches: 1
+  learning_rate: 0.001
+  cbm_learning_rate: 0.0005
+  adv_learning_rate: 0.0005
+  use_adversarial: true
+  max_adversarial_lambda: 1
+  adversarial_delay: 0
+  adversarial_lambda_scheduler_warmup: null
+  adversarial_scheduler: none
+  adversarial_loss_type: grl
+  n_critic_steps: 1
+  shared_critic: true
+  shared_prob_gen: false
+  concept_vector_regularisation: false
+  entropy_maximisation: false
