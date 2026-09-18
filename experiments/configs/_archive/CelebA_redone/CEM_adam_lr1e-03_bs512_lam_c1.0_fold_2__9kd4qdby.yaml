@@ -1,0 +1,72 @@
+_wandb:
+  project: CelebA_redone
+  entity: ahabisaac13
+  run_id: 9kd4qdby
+  run_name: CEM_adam_lr1e-03_bs512_lam_c1.0_fold_2
+  state: finished
+  created_at: '2026-09-06T17:40:28Z'
+  url: https://wandb.ai/ahabisaac13/CelebA_redone/runs/9kd4qdby
+config:
+  bool: false
+  split: 1
+  trials: 2
+  n_tasks: 2
+  emb_size: 16
+  momentum: 0.9
+  n_hidden: 512
+  patience: 30
+  run_name: CEM_adam_lr1e-03_bs512_lam_c1.0
+  extra_dims: 0
+  linear_c2y: true
+  max_epochs: 150
+  n_concepts: 39
+  save_model: true
+  concept_map: null
+  num_workers: 8
+  results_dir: /workspace/results/celeba
+  start_split: 1
+  weight_loss: false
+  architecture: ConceptEmbeddingModel
+  project_name: CelebA_redone
+  weight_decay: 4.0e-06
+  cbm_optimizer: adam
+  learning_rate: 0.001
+  c2y_max_epochs: 150
+  dataset_config:
+    dataset: celeba
+    root_dir: data/
+    batch_size: 512
+    image_size: 64
+    num_classes: 2
+    num_workers: 24
+    num_concepts: 39
+    label_attr_idx: 20
+  eval_from_last: true
+  sigmoidal_prob: true
+  top_k_accuracy: null
+  checkpoint_mode: max
+  compute_mi_mode: cpu
+  c_extractor_arch: resnet34
+  time_last_called: 2026/09/06 at 17:40:16
+  compute_mi_on_gpu: false
+  gradient_clip_val: 1
+  checkpoint_monitor: val_c_accuracy
+  concept_loss_weight: 1
+  early_stopping_mode: min
+  intervention_config:
+    competence_levels:
+    - 1
+    intervention_freq: 1
+    intervention_policies:
+    - policy: random
+      use_prior: false
+      group_level: true
+    intervention_batch_size: 256
+  early_stopping_delta: 0
+  embedding_activation: leakyrelu
+  skip_repr_evaluation: true
+  early_stopping_monitor: val_loss
+  use_task_class_weights: false
+  accumulate_grad_batches: 1
+  check_val_every_n_epoch: 5
+  training_intervention_prob: 0

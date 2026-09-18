@@ -1,0 +1,187 @@
+_wandb:
+  project: AwA2
+  entity: ahabisaac13
+  run_id: 7epgj02l
+  run_name: GCCEM_adam_lr5e-04_bs512_lam1_none_lam_c0.1_shared_critic_fold_1
+  state: finished
+  created_at: '2026-09-11T12:16:51Z'
+  url: https://wandb.ai/ahabisaac13/AwA2/runs/7epgj02l
+config:
+  bool: false
+  split: 0
+  trials: 5
+  n_tasks: 50
+  emb_size: 16
+  momentum: 0.9
+  n_hidden: 512
+  patience: 200
+  run_name: GCCEM_adam_lr5e-04_bs512_lam1_none_lam_c0.1_shared_critic
+  extra_dims: 0
+  linear_c2y: true
+  max_epochs: 90
+  n_concepts: 85
+  save_model: true
+  concept_map:
+    '0':
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    '1':
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 13
+    '2':
+    - 14
+    - 15
+    - 16
+    - 17
+    '3':
+    - 18
+    - 19
+    - 20
+    - 21
+    - 22
+    - 23
+    - 24
+    - 25
+    - 26
+    - 27
+    - 28
+    - 29
+    - 30
+    - 31
+    - 32
+    '4':
+    - 34
+    - 35
+    - 36
+    - 37
+    - 38
+    - 44
+    - 45
+    '5':
+    - 39
+    - 40
+    - 41
+    - 42
+    - 43
+    - 50
+    '6':
+    - 46
+    - 47
+    - 48
+    - 49
+    '7':
+    - 51
+    - 52
+    - 53
+    - 54
+    - 55
+    '8':
+    - 56
+    - 57
+    - 58
+    - 59
+    - 60
+    - 61
+    '9':
+    - 62
+    - 63
+    '10':
+    - 64
+    - 65
+    - 66
+    - 67
+    - 68
+    - 69
+    - 70
+    - 71
+    - 72
+    '11':
+    - 73
+    - 74
+    - 75
+    - 76
+    - 77
+    '12':
+    - 81
+    - 82
+    '13':
+    - 78
+    - 79
+    - 80
+    '14':
+    - 83
+    '15':
+    - 84
+    '16':
+    - 33
+  num_workers: 8
+  results_dir: /tmpdir/job/319348.undefined/results_temp
+  weight_loss: false
+  architecture: GCConceptEmbeddingModel
+  project_name: AwA2
+  weight_decay: 4.0e-06
+  adv_optimizer: adam
+  cbm_optimizer: adam
+  shared_critic: true
+  c2y_max_epochs: 90
+  dataset_config:
+    dataset: awa2
+    root_dir: data/
+    batch_size: 512
+    image_size: 128
+    num_workers: 8
+    weight_loss: false
+    train_augment: true
+    sampling_percent: 1
+    test_subsampling: 1
+    semantic_concept_groups: true
+  eval_from_last: true
+  n_critic_steps: 1
+  sigmoidal_prob: true
+  top_k_accuracy: null
+  compute_mi_mode: cpu
+  compute_rtl_rcl: true
+  shared_prob_gen: false
+  use_adversarial: true
+  c_extractor_arch: resnet34
+  time_last_called: 2026/09/11 at 13:04:23
+  adv_learning_rate: 0.0001
+  adversarial_delay: 0
+  cbm_learning_rate: 0.0005
+  compute_mi_on_gpu: false
+  gradient_clip_val: 1
+  concept_loss_weight: 0.1
+  early_stopping_mode: max
+  intervention_config:
+    competence_levels:
+    - 1
+    intervention_freq: 1
+    intervention_policies:
+    - policy: random
+      use_prior: false
+      group_level: true
+    intervention_batch_size: 512
+  early_stopping_delta: 0
+  embedding_activation: leakyrelu
+  entropy_maximisation: false
+  skip_repr_evaluation: true
+  adversarial_loss_type: grl
+  adversarial_scheduler: none
+  early_stopping_monitor: val_y_accuracy
+  max_adversarial_lambda: 1
+  use_task_class_weights: false
+  accumulate_grad_batches: 1
+  check_val_every_n_epoch: 5
+  training_intervention_prob: 0
+  concept_vector_regularisation: false
+  adversarial_lambda_scheduler_warmup: null

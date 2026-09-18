@@ -1,0 +1,14 @@
+_wandb:
+  project: CelebA_redone
+  entity: ahabisaac13
+  run_id: jsketia9
+  run_name: aria-celeba-test-results-csv-export
+  state: finished
+  created_at: '2026-09-07T18:36:00Z'
+  url: https://wandb.ai/ahabisaac13/CelebA_redone/runs/jsketia9
+config:
+  format: long
+  _wb_agent:
+    turn_id: 01a07d25-52db-7bf1-9df7-c2c110d8f921
+    thread_id: 01a07100-0caa-7f12-908a-9959537b47e5
+  source_finished_runs: 29

@@ -1,0 +1,14 @@
+_wandb:
+  project: AwA2
+  entity: ahabisaac13
+  run_id: 2vbsx373
+  run_name: export-cem-gccem-intervention-curves
+  state: finished
+  created_at: '2026-09-15T13:59:56Z'
+  url: https://wandb.ai/ahabisaac13/AwA2/runs/2vbsx373
+config:
+  _wb_agent:
+    turn_id: 01a0a55c-862c-77a0-b09d-12565e304b41
+    thread_id: 01a0a4a0-cbf2-78b1-9084-fe6245d5ba69
+  export_scope: CEM_vs_GCCEM_bs512_lambda_c_0.1_0.5_1.0_folds_1_5
+  curve_strategy: random_group_level_true_use_prior_false
