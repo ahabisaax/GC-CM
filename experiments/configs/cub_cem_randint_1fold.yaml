@@ -28,7 +28,7 @@ shared_params:
       group_level: true
       use_prior: false
   skip_repr_evaluation: true
-  max_epochs: 90
+  max_epochs: 120
   top_k_accuracy: null
   save_model: true
   patience: 400
@@ -48,18 +48,18 @@ shared_params:
   compute_mi_mode: cpu
   accumulate_grad_batches: 1
   use_task_class_weights: true
-  c2y_max_epochs: 90
+  c2y_max_epochs: 120
   early_stopping_monitor: val_y_accuracy
   early_stopping_mode: max
   early_stopping_delta: 0.0
   gradient_clip_val: 1.0
 runs:
 - architecture: ConceptEmbeddingModel
-  run_name: CEM_randint0.25_adam_lr1e-03_bs256_lam_c0.1_1fold
+  run_name: CEM_randint0.25_adam_lr5e-04_bs256_lam_c0.1_1fold
   sigmoidal_prob: true
   training_intervention_prob: 0.25
   embedding_activation: leakyrelu
   cbm_optimizer: adam
-  learning_rate: 0.001
+  learning_rate: 0.0005
   concept_loss_weight: 0.1
   accumulate_grad_batches: 1
