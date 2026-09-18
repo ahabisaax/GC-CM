@@ -615,20 +615,18 @@ class GCConceptEmbeddingModel(ConceptBottleneckModel):
         )
         c_sem, c_logits, y_logits = outputs[0], outputs[1], outputs[2]
         contexts, c_sem  = outputs[3]
-        probs, intervention_idxs = self._after_interventions(
-            c_sem,
-            pos_embeddings=contexts[:, :, : self.emb_size],
-            neg_embeddings=contexts[:, :, self.emb_size:],
-            intervention_idxs=intervention_idxs,
-            c_true=c,
-            train=train,
-            competencies=competencies,
-        )
-        # Then time to mix!
-        c_pred = contexts[:, :, : self.emb_size] * torch.unsqueeze(
-            probs, dim=-1
-        ) + contexts[:, :, self.emb_size:] * (1 - torch.unsqueeze(probs, dim=-1))
-        c_pred = c_pred.view((-1, self.emb_size * self.n_concepts))
+        # Reuse the mixed embedding _forward already produced. Calling
+        # _after_interventions again here drew a SECOND, independent RandInt
+        # mask: _forward does not propagate intervention_idxs out (its
+        # output_interventions defaults to False), so the resample guard
+        # `intervention_idxs is None` was satisfied a second time. The task
+        # branch and the GRL/critic branch then saw different substituted
+        # tensors, and on any concept where the two masks disagreed (~37.5%
+        # of them at p=0.25) the forward and reversed gradients stopped
+        # cancelling, leaving the encoder a residual that flips sign with the
+        # mask. It was a silent no-op whenever training_intervention_prob==0,
+        # which is why only RandInt runs were affected.
+        c_pred = c_logits
         if self.task_loss_weight != 0:
             task_loss = self.loss_task(
                 y_logits if y_logits.shape[-1] > 1 else y_logits.reshape(-1),
@@ -768,20 +766,17 @@ class GCConceptEmbeddingModel(ConceptBottleneckModel):
         )
         c_sem, c_pred, y_logits = outputs[0], outputs[1], outputs[2]
         contexts, c_sem = outputs[3]
-        probs, intervention_idxs = self._after_interventions(
-            c_sem,
-            pos_embeddings=contexts[:, :, : self.emb_size],
-            neg_embeddings=contexts[:, :, self.emb_size:],
-            intervention_idxs=intervention_idxs,
-            c_true=c,
-            train=train,
-            competencies=competencies,
-        )
-        # Then time to mix!
-        c_pred = contexts[:, :, : self.emb_size] * torch.unsqueeze(
-            probs, dim=-1
-        ) + contexts[:, :, self.emb_size:] * (1 - torch.unsqueeze(probs, dim=-1))
-        c_pred = c_pred.view((-1, self.emb_size * self.n_concepts))
+        # Reuse the mixed embedding _forward already produced. Calling
+        # _after_interventions again here drew a SECOND, independent RandInt
+        # mask: _forward does not propagate intervention_idxs out (its
+        # output_interventions defaults to False), so the resample guard
+        # `intervention_idxs is None` was satisfied a second time. The task
+        # branch and the GRL/critic branch then saw different substituted
+        # tensors, and on any concept where the two masks disagreed (~37.5%
+        # of them at p=0.25) the forward and reversed gradients stopped
+        # cancelling, leaving the encoder a residual that flips sign with the
+        # mask. It was a silent no-op whenever training_intervention_prob==0,
+        # which is why only RandInt runs were affected.
 
         # Now, with gradients enabled for the critic, get its prediction
         if self.adversarial_loss_type == 'gradient':
