@@ -1107,11 +1107,17 @@ def train_sequential_model(
                     name=full_run_name,
                     config=config,
                     reinit=True,
-                ):
+                ) as _run:
                     wandb_lib.log(
                         {k: v for k, v in eval_results.items()
                          if isinstance(v, (int, float, np.floating))}
                     )
+                    # run_experiments logs the intervention curves afterwards by
+                    # resuming this run by id. Without these two keys that block
+                    # is silently skipped, which is why sequential and
+                    # independent CBMs had no intervention plots in W&B.
+                    eval_results["_wandb_run_id"] = _run.id
+                    eval_results["_wandb_project"] = project_name
             except Exception as e:
                 logging.warning(f"Failed to log eval results to W&B: {e}")
     if test_dl is not None:
@@ -1512,6 +1518,15 @@ def train_independent_model(
         )
     eval_results["training_time"] = training_time
     eval_results["num_epochs"] = num_epochs
+    # Same reason as the sequential path: run_experiments resumes this run by
+    # id to attach the intervention curves, and skips silently without these.
+    try:
+        import wandb as _wb
+        if project_name and (_wb.run is not None):
+            eval_results["_wandb_run_id"] = _wb.run.id
+            eval_results["_wandb_project"] = project_name
+    except Exception:
+        pass
     if test_dl is not None:
         print(
             f'c_acc: {eval_results["test_acc_c"]*100:.2f}%, '
