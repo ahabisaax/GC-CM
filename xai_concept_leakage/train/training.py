@@ -932,7 +932,7 @@ def train_sequential_model(
                         torch.from_numpy(y_train),
                         torch.from_numpy(c_train),
                     ),
-                    batch_size=1,
+                    batch_size=config["dataset_config"]["batch_size"],
                     num_workers=config.get("num_workers", 5),
                 ),
             )
@@ -959,7 +959,7 @@ def train_sequential_model(
                             torch.from_numpy(y_val),
                             torch.from_numpy(c_val),
                         ),
-                        batch_size=1,
+                        batch_size=config["dataset_config"]["batch_size"],
                         num_workers=config["dataset_config"].get("num_workers", 5),
                     ),
                 )
