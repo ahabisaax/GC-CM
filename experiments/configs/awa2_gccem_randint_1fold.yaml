@@ -60,7 +60,7 @@ shared_params:
   compute_rtl_rcl: true
 runs:
 - architecture: GCConceptEmbeddingModel
-  run_name: GCCEMRandInt_adam_lr5e-04_bs512_lam_c0.1_1fold
+  run_name: GCCEM_randint0.25_adam_lr5e-04_bs512_lam_c0.1_1fold
   sigmoidal_prob: true
   training_intervention_prob: 0.25
   embedding_activation: leakyrelu

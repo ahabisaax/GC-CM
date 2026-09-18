@@ -59,7 +59,7 @@ shared_params:
   compute_rtl_rcl: true
 runs:
 - architecture: ConceptEmbeddingModel
-  run_name: CEMRandInt_adam_lr1e-03_bs512_lam_c0.1_1fold
+  run_name: CEM_randint0.25_adam_lr1e-03_bs512_lam_c0.1_1fold
   sigmoidal_prob: true
   training_intervention_prob: 0.25
   embedding_activation: leakyrelu
