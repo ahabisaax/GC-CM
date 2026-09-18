@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #$ -N CUB_GCCEM_RandInt
-#$ -o ~/Scratch/xai-crcbm/logs/CUB_CEM_randint_$JOB_ID.out
-#$ -e ~/Scratch/xai-crcbm/logs/CUB_CEM_randint_$JOB_ID.err
+#$ -o ~/Scratch/xai-crcbm/logs/CUB_GCCEM_RandInt_$JOB_ID.out
+#$ -e ~/Scratch/xai-crcbm/logs/CUB_GCCEM_RandInt_$JOB_ID.err
 #$ -pe smp 8
 #$ -l h_rt=28:00:00
 #$ -l mem=24G
