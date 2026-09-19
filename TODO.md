@@ -3,6 +3,16 @@
 Outstanding experimental work. Datasets in scope for the paper: TabularToy,
 CUB-200, AwA2.
 
+## Sequence
+
+1. AwA2 CEM/GC-CEM + RandInt, 5 folds x 3 lambda_c  (running)
+2. CUB CEM/GC-CEM + RandInt, 5 folds x 3 lambda_c
+   configs: experiments/configs/cub_{cem,gccem}_randint_5fold_lam*.yaml
+   300 epochs, emb 32, matched to the CUB baselines. ~30 folds, ~$30-37.
+3. The cleanup below.
+
+RandInt is CEM-family only; no CBM RandInt runs are planned.
+
 ## Blocking: consistency defects in results already collected
 
 - [ ] **AwA2 GC-CBM lam_c 0.1: re-run folds 1-4 at 120 epochs.**
@@ -21,8 +31,6 @@ CUB-200, AwA2.
 - [ ] **AwA2 Hard and Seq trained 100 epochs against 120 for Joint and
       GC-CBM.** Decide whether to re-run at 120 or report the difference.
 
-## Deferred by choice
-
 - [ ] **TabularToy CBM arm at 90 epochs.** Currently Joint 250, Hard 250,
       Seq 240+100, GC-CBM 300, so GC-CBM gets 20% more training than the
       baselines it is compared against. Evidence they are unnecessary: TT Seq
@@ -30,6 +38,9 @@ CUB-200, AwA2.
       of 239, and the new 90-epoch CEM runs saturate at 99.5-99.8%.
       8 configs (3 Joint + 3 GC-CBM + 1 Hard + 1 Seq), 40 folds, ~$3.
       TT runs at ~2% GPU utilisation, so a CPU pod would be far cheaper.
+      Also makes TT consistent with its own CEM arm, now at 90 epochs.
+
+## Deferred by choice
 
 - [ ] **CUB CBM epochs** span 200-300 across models (Joint 250, Hard 300,
       Seq 200+150, GC-CBM 300). Judged acceptable for now; the spread
