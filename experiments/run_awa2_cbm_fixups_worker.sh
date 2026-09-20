@@ -3,7 +3,7 @@
 #$ -o /home/ucakais/Scratch/xai-crcbm/logs/AwA2_CBM_Fixups_$JOB_ID.out
 #$ -e /home/ucakais/Scratch/xai-crcbm/logs/AwA2_CBM_Fixups_$JOB_ID.err
 #$ -pe smp 8
-#$ -l h_rt=32:00:00
+#$ -l h_rt=28:00:00
 #$ -l mem=6G
 #$ -l tmpfs=40G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
@@ -27,7 +27,9 @@
 # wrong project).
 #
 # Measured: Seq ~3h/fold, GC-CBM ~2h10/fold.
-# 5*3 + 5*2.17 = ~26h, so 32h walltime.
+# 5*3 + 5*2.17 = ~26h against a 28h walltime, so only ~2h of slack.
+# If it is killed, resubmitting resumes: results write straight to Scratch and
+# run_experiments skips any split whose joblib already exists.
 # Results go straight to Scratch, so a walltime kill costs only the fold in
 # flight and a resubmit resumes from the first missing fold.
 #
