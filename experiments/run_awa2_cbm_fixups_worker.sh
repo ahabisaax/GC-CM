@@ -17,15 +17,16 @@
 #
 # Two fix-ups to the AwA2 CBM results, in one job:
 #   1. Sequential CBM fold 5, missing because the original run hit walltime.
-#   2. GC-CBM lam_c 0.1 folds 1-4 re-trained at 120 epochs, so the config
-#      stops mixing 90-epoch folds with a 120-epoch fold 5.
+#      Goes into the existing folder beside folds 1-4.
+#   2. GC-CBM lam_c 0.1, all 5 folds at 120 epochs, into a new folder. The
+#      existing set mixes 90-epoch folds 1-4 with a 120-epoch fold 5.
 #
-# Both write into results/awa2_5fold_cbm alongside the existing folds and log
-# to the AwA2 W&B project. Sequential now also logs its intervention curves
-# (9243d5d); before that only train_end_to_end_model recorded the W&B run id
-# that run_experiments needs to attach them.
+# Both log to the AwA2 W&B project: that comes from project_name in each
+# config's shared_params, not from the output folder, and a --project_name
+# flag does NOT override shared_params (how the CUB runs ended up in the
+# wrong project).
 #
-# ~1 Seq fold (100 ep) + 4 GC-CBM folds (120 ep) ~= 14h, so 20h walltime.
+# Measured: Seq ~3h/fold, GC-CBM ~2h10/fold. 3 + 5*2.17 = ~14h, so 20h.
 # Results go straight to Scratch, so a walltime kill costs only the fold in
 # flight and a resubmit resumes from the first missing fold.
 #
@@ -68,7 +69,8 @@ export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
 export WANDB_MODE=online
 
 run_cfg () {
-    tag="$1"; cfg="$2"; shift 2      # remaining args are extra -p overrides
+    tag="$1"; cfg="$2"; outdir="$3"; shift 3   # rest are extra -p overrides
+    mkdir -p "$outdir"
     if [ ! -f "$cfg" ]; then echo "SKIP $tag: missing $cfg"; return; fi
     echo "=== $(date -u +%FT%TZ) START $tag ($cfg) $* ==="
     # Both configs set project_name: AwA2 in shared_params, which is what the
@@ -78,7 +80,7 @@ run_cfg () {
     $CONDA_PREFIX/bin/python -u experiments/run_experiments.py \
         --config "$cfg" \
         --project_name "AwA2" \
-        --output_dir "$FINAL_RESULTS_DIR" \
+        --output_dir "$outdir" \
         -p dataset_config.root_dir "$LOCAL_WORKSPACE/data/" \
         -p dataset_config.num_workers "$NSLOTS" \
         "$@"
@@ -86,20 +88,23 @@ run_cfg () {
     echo "=== $(date -u +%FT%TZ) FINISH $tag rc=$rc ==="
 }
 
-# 1) Sequential CBM fold 5. Folds 1-4 exist; the original run hit its
-#    walltime before fold 5. start_split 4 / trials 5 -> split 4 only.
+# No --rerun anywhere. run_experiments loads a split from cache only if its
+# results joblib already exists, so pointing a job at a folder without one
+# forces a fresh train. That is more predictable than --rerun, which would
+# retrain every split in range wherever it pointed.
+#
+# 1) Sequential CBM fold 5, into the EXISTING folder next to folds 1-4.
+#    Split 4 has no joblib there, so it trains; folds 1-4 are untouched.
 run_cfg seqcbm_fold5 experiments/configs/awa2_seqcbm_5fold.yaml \
+        "$FINAL_RESULTS_DIR" \
         -p start_split 4 -p trials 5
 
-# 2) GC-CBM lam_c 0.1 folds 1-4 at 120 epochs. Those folds were trained at
-#    90 while fold 5 (re-run later) got 120, so the 5-fold mean currently
-#    mixes budgets inside one config. start_split 0 / trials 4 -> splits
-#    0,1,2,3. The config is already at 120 epochs; fold 5 is left alone.
-#    --rerun is required: without it run_experiments loads the existing
-#    90-epoch split joblibs from cache and trains nothing. It only applies to
-#    splits in range, so fold 5 (split 4) is untouched.
-run_cfg gccbm_lam0.1_folds1to4 experiments/configs/awa2_gccbm_5fold_lam0_1.yaml \
-        --rerun -p start_split 0 -p trials 4
+# 2) GC-CBM lam_c 0.1, all 5 folds at 120 epochs, into a NEW folder.
+#    The old folder mixes 90-epoch folds 1-4 with a 120-epoch fold 5. Running
+#    all five here gives a self-contained set at one budget, and leaves the
+#    old results intact as a record rather than overwriting them.
+run_cfg gccbm_lam0.1_120ep experiments/configs/awa2_gccbm_5fold_lam0_1_120ep.yaml \
+        "$PROJECT_ROOT/results/awa2_5fold_cbm_120ep"
 
 echo "=== syncing wandb offline runs ==="
 mkdir -p "$PROJECT_ROOT/wandb"
