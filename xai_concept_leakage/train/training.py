@@ -833,6 +833,12 @@ def train_sequential_model(
     else:
         enter_obj = utils.EmptyEnter()
     with enter_obj as run:
+        # Remember the wrapping run so eval metrics can REATTACH to it rather
+        # than opening a second run. PL's WandbLogger reuses wandb.run for
+        # training, but closes it after fit(); re-initialising by name then
+        # created a fresh run, which is why every sequential fold appeared
+        # twice in W&B with its metrics split between the two.
+        _seq_run_id = getattr(run, "id", None)
         trainer = pl.Trainer(
             accelerator=accelerator,
             devices=devices,
@@ -1102,12 +1108,13 @@ def train_sequential_model(
         if project_name and result_dir:
             try:
                 import wandb as wandb_lib
-                with wandb_lib.init(
-                    project=project_name,
-                    name=full_run_name,
-                    config=config,
-                    reinit=True,
-                ) as _run:
+                _init_kwargs = (
+                    dict(id=_seq_run_id, project=project_name, resume="must")
+                    if _seq_run_id
+                    else dict(project=project_name, name=full_run_name,
+                              config=config, reinit=True)
+                )
+                with wandb_lib.init(**_init_kwargs) as _run:
                     wandb_lib.log(
                         {k: v for k, v in eval_results.items()
                          if isinstance(v, (int, float, np.floating))}

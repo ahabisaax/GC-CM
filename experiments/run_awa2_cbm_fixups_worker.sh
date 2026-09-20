@@ -3,7 +3,7 @@
 #$ -o /home/ucakais/Scratch/xai-crcbm/logs/AwA2_CBM_Fixups_$JOB_ID.out
 #$ -e /home/ucakais/Scratch/xai-crcbm/logs/AwA2_CBM_Fixups_$JOB_ID.err
 #$ -pe smp 8
-#$ -l h_rt=20:00:00
+#$ -l h_rt=32:00:00
 #$ -l mem=6G
 #$ -l tmpfs=40G
 #$ -wd /home/ucakais/Scratch/xai-crcbm
@@ -16,8 +16,8 @@
 # CBM runs write to, so the two merge cleanly.
 #
 # Two fix-ups to the AwA2 CBM results, in one job:
-#   1. Sequential CBM fold 5, missing because the original run hit walltime.
-#      Goes into the existing folder beside folds 1-4.
+#   1. Sequential CBM, all 5 folds re-run: the originals each produced two
+#      W&B runs with split metrics and no intervention curves.
 #   2. GC-CBM lam_c 0.1, all 5 folds at 120 epochs, into a new folder. The
 #      existing set mixes 90-epoch folds 1-4 with a 120-epoch fold 5.
 #
@@ -26,7 +26,8 @@
 # flag does NOT override shared_params (how the CUB runs ended up in the
 # wrong project).
 #
-# Measured: Seq ~3h/fold, GC-CBM ~2h10/fold. 3 + 5*2.17 = ~14h, so 20h.
+# Measured: Seq ~3h/fold, GC-CBM ~2h10/fold.
+# 5*3 + 5*2.17 = ~26h, so 32h walltime.
 # Results go straight to Scratch, so a walltime kill costs only the fold in
 # flight and a resubmit resumes from the first missing fold.
 #
@@ -93,11 +94,11 @@ run_cfg () {
 # forces a fresh train. That is more predictable than --rerun, which would
 # retrain every split in range wherever it pointed.
 #
-# 1) Sequential CBM fold 5, into the EXISTING folder next to folds 1-4.
-#    Split 4 has no joblib there, so it trains; folds 1-4 are untouched.
-run_cfg seqcbm_fold5 experiments/configs/awa2_seqcbm_5fold.yaml \
-        "$FINAL_RESULTS_DIR" \
-        -p start_split 4 -p trials 5
+# 1) Sequential CBM, all 5 folds, into a NEW folder. The originals are
+#    unusable in W&B: each fold produced two runs with the same name and its
+#    metrics split between them, and none carried intervention curves.
+run_cfg seqcbm_rerun experiments/configs/awa2_seqcbm_5fold_rerun.yaml \
+        "$PROJECT_ROOT/results/awa2_5fold_cbm_seq_rerun"
 
 # 2) GC-CBM lam_c 0.1, all 5 folds at 120 epochs, into a NEW folder.
 #    The old folder mixes 90-epoch folds 1-4 with a 120-epoch fold 5. Running
