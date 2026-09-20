@@ -1,0 +1,75 @@
+# TabularToy Joint CBM, 5 folds, 90 epochs, eval on the final epoch.
+# Replaces the earlier TT CBM runs (Joint 250, Hard 250, Seq 240+100,
+# GC-CBM 300), where GC-CBM trained 20% longer than the baselines it is
+# compared against. A 239-epoch TT run reached within 0.2pp of its best
+# validation accuracy by epoch 0-13, so the long budgets bought nothing.
+# All four architectures now train for 90 epochs, matching the TT CEM arm.
+# c2y_max_epochs is also 90; only Sequential reads it (training.py:994).
+# Everything else carried over from tabulartoy.yaml.
+results_dir: results/tabulartoy_cbm_redo/
+trials: 5
+shared_params:
+  dataset_config:
+    dataset: tabulartoy
+    batch_size: 64
+    num_workers: 8
+    root_dir: data/TabularToy/tabulartoy_25_10k/
+    considered_concepts:
+    - '0'
+    - '1'
+    - '2'
+    sampling_percent: 1
+    test_subsampling: 1
+  intervention_config:
+    competence_levels:
+    - 1
+    intervention_freq: 1
+    intervention_batch_size: 1024
+    intervention_policies:
+    - policy: random
+      group_level: true
+      use_prior: false
+  skip_repr_evaluation: true
+  learning_rate: 0.05
+  bool: false
+  sigmoidal_prob: false
+  hidden_size: 64
+  dropout_prob: 0.2
+  all_dropout: false
+  learning_rate_c2y: 0.05
+  optimizer_c2y: adam
+  c2y_max_epochs: 90
+  linear_c2y: true
+  compute_mi_on_gpu: false
+  compute_mi_mode: cpu
+  n_hidden: 64
+  emb_size: 16
+  weight_loss: true
+  top_k_accuracy: null
+  save_model: true
+  extra_dims: 0
+  scheduler_step: 20
+  weight_decay: 0
+  c_extractor_arch: tabulartoy_extractor
+  cbm_learning_rate: 0.05
+  early_stopping_monitor: val_y_accuracy
+  early_stopping_mode: max
+  early_stopping_delta: 0.0
+  momentum: 0.9
+  project_name: TabularToy_90ep
+  max_epochs: 90
+  check_val_every_n_epoch: 1
+  eval_from_last: true
+  training_intervention_prob: 0
+runs:
+- architecture: ConceptBottleneckModel
+  sigmoidal_prob: true
+  bool: false
+  cbm_optimizer: adam
+  learning_rate: 0.05
+  concept_loss_weight: 1
+  training_intervention_prob: 0
+  max_epochs: 90
+  patience: 400
+  gradient_clip_val: 1.0
+  run_name: SoftCBM_adam_lr0.05_bs64_lam_c1_90ep
