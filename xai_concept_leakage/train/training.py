@@ -1108,13 +1108,23 @@ def train_sequential_model(
         if project_name and result_dir:
             try:
                 import wandb as wandb_lib
-                _init_kwargs = (
-                    dict(id=_seq_run_id, project=project_name, resume="must")
-                    if _seq_run_id
-                    else dict(project=project_name, name=full_run_name,
+                _fresh = dict(project=project_name, name=full_run_name,
                               config=config, reinit=True)
-                )
-                with wandb_lib.init(**_init_kwargs) as _run:
+                try:
+                    # Reattach to the training run so all metrics land in one
+                    # place. resume="must" raises if it is not resumable.
+                    _ctx = wandb_lib.init(
+                        id=_seq_run_id, project=project_name, resume="must"
+                    ) if _seq_run_id else wandb_lib.init(**_fresh)
+                except Exception as _re:
+                    # Fall back to the old behaviour rather than losing the
+                    # eval metrics entirely: a second run is worse than one
+                    # run, but better than none.
+                    logging.warning(
+                        f"W&B resume failed ({_re}); logging to a new run"
+                    )
+                    _ctx = wandb_lib.init(**_fresh)
+                with _ctx as _run:
                     wandb_lib.log(
                         {k: v for k, v in eval_results.items()
                          if isinstance(v, (int, float, np.floating))}
