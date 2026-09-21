@@ -1,7 +1,13 @@
 """
-Train tiny GC-CEMs on the Gaussian generative model with lambda_c fixed at 1,
-sweeping the adversarial weight lambda_adv from 0 to 1, and measure RTL/RCL
-(concept-vector level) and CTL/ICL (concept-probability level) at test time.
+Train tiny GC-CEMs on the Gaussian generative model with lambda_c fixed at 0.1,
+sweeping the adversarial weight lambda_adv from 0 to 1, and measure RTL/RCL at
+test time.
+
+lambda_c = 0.1 matches concept_loss_weight in the GC-CEM configs for every
+image dataset (AwA2, CelebA, CUB), so the sweep sits at the operating point
+the reported results were trained at. It also leaves more leakage present at
+lambda_adv = 0 than lambda_c = 1 does, giving the adversary something to
+remove.
 
 Why this experiment
 -------------------
@@ -42,6 +48,32 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+
+# Plot style — identical to validate_trained_cem_lambda_c.py so the two
+# sweeps can sit side by side in the paper.
+plt.rcParams.update({
+    "font.family":        "DejaVu Sans",
+    "font.size":          9,
+    "axes.labelsize":     9,
+    "xtick.labelsize":    8,
+    "ytick.labelsize":    8,
+    "legend.fontsize":    8,
+    "axes.linewidth":     0.75,
+    "lines.linewidth":    1.8,
+    "lines.markersize":   5.5,
+    "axes.spines.top":    False,
+    "axes.spines.right":  False,
+    "axes.grid":          True,
+    "grid.alpha":         0.22,
+    "grid.linewidth":     0.5,
+    "figure.dpi":         300,
+    "savefig.dpi":        300,
+    "savefig.bbox":       "tight",
+})
+
+C_RTL = "#0072B2"   # C_CVL in the lambda_c sweep
+C_RCL = "#009E73"   # C_ICVL
 
 from xai_concept_leakage.metrics.leakage import compute_RTL_RCL
 
@@ -54,7 +86,7 @@ GAMMA_EXTRA = 4.0
 _rng42 = np.random.RandomState(42)
 W_PROJ = torch.tensor(_rng42.randn(K_TOTAL, D_IN).astype(np.float32))
 
-LAMBDA_C = 1.0
+LAMBDA_C = 0.1
 LAMBDA_ADV = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 N_SEEDS, EPOCHS, BATCH, LR = 5, 400, 256, 3e-3
 ADV_LR = 3e-3
@@ -165,40 +197,79 @@ def train(lam_adv, seed):
 
 print(f"=== GC-CEM: lambda_c fixed at {LAMBDA_C}, sweeping lambda_adv ===")
 print(f"    K={K} (+1 latent), d={EMB_SIZE}, {N_SEEDS} seeds, {EPOCHS} epochs\n")
-res = {k: [] for k in ("rtl", "rcl", "acc", "cacc")}
-for lam in LAMBDA_ADV:
-    per = {k: [] for k in res}
-    for s in range(N_SEEDS):
-        e_tr, e_te, c_tr, c_te, y_tr, y_te, acc, cacc = train(lam, s)
-        r = compute_RTL_RCL(e_tr, e_te, c_tr, c_te, y_tr, y_te, global_norm=True)
-        per["rtl"].append(r["RTL_norm"])
-        per["rcl"].append(r["RCL_norm"])
-        per["acc"].append(acc)
-        per["cacc"].append(cacc)
-    for k in res:
-        res[k].append((np.mean(per[k]), np.std(per[k], ddof=1)))
-    print(
-        f"  lambda_adv={lam:.1f}  RTL={res['rtl'][-1][0]:.4f}±{res['rtl'][-1][1]:.4f}"
-        f"  RCL={res['rcl'][-1][0]:.4f}±{res['rcl'][-1][1]:.4f}"
-        f"  task={res['acc'][-1][0]*100:.2f}%  concept={res['cacc'][-1][0]*100:.2f}%"
-    )
+CACHE_PATH = "results/cache/trained_gccem_lambda_adv.npz"
+os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
+KEYS = ("rtl", "rcl", "acc", "cacc")
+res = {k: [] for k in KEYS}
+
+if os.path.exists(CACHE_PATH):
+    # Restyling the figure must not cost another full sweep.
+    print(f"Loading cached results from {CACHE_PATH}")
+    _d = np.load(CACHE_PATH)
+    LAMBDA_ADV = list(_d["lambda_adv"])
+    res = {k: list(zip(_d[f"{k}_means"], _d[f"{k}_stds"])) for k in KEYS}
+else:
+    for lam in LAMBDA_ADV:
+        per = {k: [] for k in res}
+        for s in range(N_SEEDS):
+            e_tr, e_te, c_tr, c_te, y_tr, y_te, acc, cacc = train(lam, s)
+            r = compute_RTL_RCL(e_tr, e_te, c_tr, c_te, y_tr, y_te, global_norm=True)
+            per["rtl"].append(r["RTL_norm"])
+            per["rcl"].append(r["RCL_norm"])
+            per["acc"].append(acc)
+            per["cacc"].append(cacc)
+        for k in res:
+            res[k].append((np.mean(per[k]), np.std(per[k], ddof=1)))
+        print(
+            f"  lambda_adv={lam:.1f}  RTL={res['rtl'][-1][0]:.4f}±{res['rtl'][-1][1]:.4f}"
+            f"  RCL={res['rcl'][-1][0]:.4f}±{res['rcl'][-1][1]:.4f}"
+            f"  task={res['acc'][-1][0]*100:.2f}%  concept={res['cacc'][-1][0]*100:.2f}%"
+        )
 
 os.makedirs(PLOT_DIR, exist_ok=True)
-fig, axes = plt.subplots(1, 2, figsize=(8, 3.1))
-for ax, key, lab, col in (
-    (axes[0], "rtl", "RTL", "#0072B2"),
-    (axes[1], "rcl", "RCL", "#009E73"),
-):
-    mu = np.array([v[0] for v in res[key]])
-    sd = np.array([v[1] for v in res[key]])
-    ax.plot(LAMBDA_ADV, mu, "-o", color=col)
-    ax.fill_between(LAMBDA_ADV, mu - sd, mu + sd, color=col, alpha=0.2)
-    ax.set_xlabel(r"$\lambda_{adv}$")
-    ax.set_ylabel(lab)
-    ax.grid(alpha=0.25)
-plt.tight_layout()
-for ext in (".pdf", ".png"):
-    plt.savefig(
-        PLOT_DIR + "paper_trained_gccem_lambda_adv" + ext, bbox_inches="tight", dpi=150
-    )
-print("\nSaved -> " + PLOT_DIR + "paper_trained_gccem_lambda_adv.{pdf,png}")
+
+mu = {k: np.array([v[0] for v in res[k]]) for k in res}
+sd = {k: np.array([v[1] for v in res[k]]) for k in res}
+xs = np.array(LAMBDA_ADV)
+np.savez(CACHE_PATH, lambda_adv=xs, lambda_c=LAMBDA_C,
+         **{f"{k}_means": mu[k] for k in res},
+         **{f"{k}_stds": sd[k] for k in res})
+print(f"Cache saved -> {CACHE_PATH}")
+
+fig, axes = plt.subplots(1, 2, figsize=(6.8, 2.8))
+
+for ax, key, color, ylabel, letter in [
+    (axes[0], "rtl", C_RTL, "RTL", "(a)"),
+    (axes[1], "rcl", C_RCL, "RCL", "(b)"),
+]:
+    means, stds = mu[key], sd[key]
+    ax.plot(xs, means, color=color, lw=1.9, marker="o", ms=5.5, zorder=3)
+    ax.fill_between(xs, means - stds, means + stds,
+                    color=color, alpha=0.15, zorder=2)
+
+    ax.set_xlabel(r"Adversarial weight $\lambda_{\mathrm{adv}}$")
+    ax.set_ylabel(ylabel)
+    ax.set_xlim(xs[0] - 0.05, xs[-1] + 0.05)
+    ax.set_ylim(bottom=0, top=(means + stds).max() * 1.18)
+
+    # Clean y-axis: 4 evenly-spaced ticks from 0 to max
+    ax.set_yticks(np.linspace(0, (means + stds).max(), 4))
+    ax.yaxis.set_major_formatter(ticker.FormatStrFormatter("%.3f"))
+
+    ax.set_xticks(xs)
+    plt.setp(ax.get_xticklabels(), rotation=35, ha="right", fontsize=7.5)
+    ax.text(-0.18, 1.10, letter, transform=ax.transAxes,
+            fontsize=11, fontweight="bold", va="top")
+
+fig.tight_layout(w_pad=1.8)
+fig.subplots_adjust(top=0.92)
+out = PLOT_DIR + "paper_trained_gccem_lambda_adv.pdf"
+fig.savefig(out)
+fig.savefig(out.replace(".pdf", ".png"))
+print(f"Saved -> {out}")
+
+# Summary table
+print(f"\n{'lam_adv':>8}  {'RTL':>8}  {'RCL':>8}  {'task':>8}  {'concept':>8}")
+for i, lam in enumerate(LAMBDA_ADV):
+    print(f"{lam:>8.1f}  {mu['rtl'][i]:>8.4f}  {mu['rcl'][i]:>8.4f}  "
+          f"{mu['acc'][i]:>8.4f}  {mu['cacc'][i]:>8.4f}")
