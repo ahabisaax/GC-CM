@@ -12,6 +12,10 @@ Run from project root:
     python experiments/evaluate_models/test_rtl_sanity.py
 """
 import numpy as np
+import os, sys
+sys.path.insert(0, os.getcwd().replace("/experiments/evaluate_models", ""))
+
+from xai_concept_leakage.metrics.leakage import compute_RTL_RCL
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import label_binarize
 
@@ -90,81 +94,24 @@ def make_data(leakage_rtl: float = 0.0,
 
 def compute_rtl_rcl(c_mix_tr, c_true_tr, y_tr, c_mix_te, c_true_te, y_te):
     """
-    Returns (rtl_sum, rcl_sum, rtl_norm, rcl_norm), each a mean over concepts.
+    Thin wrapper over the canonical implementation in
+    xai_concept_leakage.metrics.leakage so this script can never drift from the
+    metric the paper reports. It previously carried its own copy, which still
+    divided by the total residual variance after 27179a2 corrected the library
+    to the paper's RTL_k = (1/d) Σ_m max(0, R²_m) σ²_m.
 
-    rtl_sum / rcl_sum  — noise-invariant absolute measure (units: variance)
-        RTL_k = Σᵢ max(0, R²ᵢ(Y→r_k) × varᵢ(r_k))
+    Argument order here is (tr, tr, tr, te, te, te) for historical reasons;
+    compute_RTL_RCL takes (c_mix_tr, c_mix_te, c_true_tr, c_true_te, y_tr, y_te).
 
-    rtl_norm / rcl_norm — normalised to [0,1]: fraction of residual variance
-        RTL_norm_k = RTL_sum_k / Σᵢ varᵢ(r_k)
-
-    Pipeline per concept k:
-      1. Per-dim normalise embedding to unit variance (train stats).
-      2. Ridge(c_k → emb_k_norm), take residual r_k.
-      3. Per-dim R² of Ridge(Y → r_k) → RTL.
-      4. Per-dim R² of Ridge(c_j → r_k) for j≠k, average over j → RCL.
+    Returns (rtl_sum, rcl_sum, rtl_norm, rcl_norm), means over concepts, where
+    *_norm = *_sum / d (d = embedding dim). Per-dimension normalisation of the
+    embedding (global_norm=False) matches the original behaviour of this script.
     """
-    N_tr, K_, m = c_mix_tr.shape
-    classes = np.arange(int(y_te.max()) + 1)
-    Y_tr_oh = label_binarize(y_tr, classes=classes).astype(np.float32)
-    Y_te_oh = label_binarize(y_te, classes=classes).astype(np.float32)
-
-    rtl_sum_k, rcl_sum_k = [], []
-    rtl_norm_k, rcl_norm_k = [], []
-
-    for k in range(K_):
-        tr_k = c_mix_tr[:, k, :]
-        te_k = c_mix_te[:, k, :]
-
-        # Per-dim normalise (unit variance per dim)
-        mu    = tr_k.mean(axis=0, keepdims=True)
-        sigma = tr_k.std(axis=0, keepdims=True) + 1e-8
-        tr_n  = (tr_k - mu) / sigma
-        te_n  = (te_k - mu) / sigma
-
-        # Step 1: subtract concept-predictable part
-        reg1 = Ridge(alpha=RIDGE_ALPHA).fit(c_true_tr[:, k:k+1], tr_n)
-        r_tr = tr_n - reg1.predict(c_true_tr[:, k:k+1])
-        r_te = te_n - reg1.predict(c_true_te[:, k:k+1])
-
-        dim_var      = r_te.var(axis=0)              # [m]
-        total_resid  = float(dim_var.sum()) + 1e-12  # denominator for normalisation
-
-        ss_tot = ((r_te - r_te.mean(axis=0)) ** 2).sum(axis=0)  # [m]
-
-        # Step 2a — RTL: Ridge(Y → r)
-        reg2   = Ridge(alpha=RIDGE_ALPHA).fit(Y_tr_oh, r_tr)
-        r_pred = reg2.predict(Y_te_oh)
-        ss_res = ((r_te - r_pred) ** 2).sum(axis=0)
-        r2_y   = np.where(ss_tot > 1e-12, 1 - ss_res / ss_tot, 0.0)
-
-        rtl_k_sum  = float(np.maximum(0.0, r2_y * dim_var).sum())
-        rtl_k_norm = rtl_k_sum / total_resid
-
-        # Step 2b — RCL: Ridge(c_j → r) for j≠k, average over j
-        rcl_j_sum, rcl_j_norm = [], []
-        for j in range(K_):
-            if j == k:
-                continue
-            reg3     = Ridge(alpha=RIDGE_ALPHA).fit(c_true_tr[:, j:j+1], r_tr)
-            rj_pred  = reg3.predict(c_true_te[:, j:j+1])
-            ss_res_j = ((r_te - rj_pred) ** 2).sum(axis=0)
-            r2_j     = np.where(ss_tot > 1e-12, 1 - ss_res_j / ss_tot, 0.0)
-            v        = float(np.maximum(0.0, r2_j * dim_var).sum())
-            rcl_j_sum.append(v)
-            rcl_j_norm.append(v / total_resid)
-
-        rtl_sum_k.append(rtl_k_sum)
-        rtl_norm_k.append(rtl_k_norm)
-        rcl_sum_k.append(float(np.mean(rcl_j_sum)) if rcl_j_sum else 0.0)
-        rcl_norm_k.append(float(np.mean(rcl_j_norm)) if rcl_j_norm else 0.0)
-
-    return (
-        float(np.mean(rtl_sum_k)),
-        float(np.mean(rcl_sum_k)),
-        float(np.mean(rtl_norm_k)),
-        float(np.mean(rcl_norm_k)),
+    r = compute_RTL_RCL(
+        c_mix_tr, c_mix_te, c_true_tr, c_true_te, y_tr, y_te,
+        alpha=RIDGE_ALPHA, global_norm=False,
     )
+    return r["RTL_sum"], r["RCL_sum"], r["RTL_norm"], r["RCL_norm"]
 
 
 # ── Test 1: Zero leakage ──────────────────────────────────────────────────────
@@ -252,7 +199,10 @@ def test_noise_invariance():
     print(f"  RTL(sum) invariant: {'PASS' if rtl_inv else 'FAIL'}")
     print(f"  RCL(sum) invariant: {'PASS' if rcl_inv else 'FAIL'}")
     print(f"  RTL(norm) decreases with noise dims (expected — see note below)")
-    print(f"  Note: norm divides by total residual var, which grows with noise dims.\n")
+    print(f"  Note: sum is the noise-invariant quantity. norm divides by the\n"
+          f"        embedding dim d, which here IS total_m, so appending noise\n"
+          f"        dims dilutes norm by construction. Real CEMs have a fixed d,\n"
+          f"        so norm is comparable across models at matched emb_size.\n")
     return rtl_inv and rcl_inv
 
 

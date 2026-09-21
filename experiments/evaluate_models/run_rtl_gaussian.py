@@ -17,11 +17,12 @@ import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from sklearn.linear_model import Ridge
 from sklearn.preprocessing import label_binarize
 
 master = os.getcwd().replace("/experiments/evaluate_models", "") + "/"
 sys.path.insert(0, master)
+
+from xai_concept_leakage.metrics.leakage import compute_RTL_RCL
 
 # ── Config ────────────────────────────────────────────────────────────────────
 RIDGE_ALPHA = 1.0
@@ -75,54 +76,25 @@ def make_data(leakage_rtl=0.0, leakage_rcl=0.0, n_noise_dims=0, seed=RNG_SEED):
 # ── Metric ────────────────────────────────────────────────────────────────────
 
 def compute_rtl_rcl(c_mix_tr, c_true_tr, y_tr, c_mix_te, c_true_te, y_te):
-    """Returns (rtl_sum, rcl_sum, rtl_norm, rcl_norm) averaged over concepts."""
-    N_tr, K_, m = c_mix_tr.shape
-    classes  = np.arange(int(y_te.max()) + 1)
-    Y_tr_oh  = label_binarize(y_tr, classes=classes).astype(np.float32)
-    Y_te_oh  = label_binarize(y_te, classes=classes).astype(np.float32)
+    """
+    Thin wrapper over the canonical implementation in
+    xai_concept_leakage.metrics.leakage so this script can never drift from the
+    metric the paper reports. It previously carried its own copy, which still
+    divided by the total residual variance after 27179a2 corrected the library
+    to the paper's RTL_k = (1/d) Σ_m max(0, R²_m) σ²_m.
 
-    rtl_s, rcl_s, rtl_n, rcl_n = [], [], [], []
+    Argument order here is (tr, tr, tr, te, te, te) for historical reasons;
+    compute_RTL_RCL takes (c_mix_tr, c_mix_te, c_true_tr, c_true_te, y_tr, y_te).
 
-    for k in range(K_):
-        tr_k = c_mix_tr[:, k, :]
-        te_k = c_mix_te[:, k, :]
-
-        mu    = tr_k.mean(axis=0, keepdims=True)
-        sigma = tr_k.std(axis=0, keepdims=True) + 1e-8
-        tr_n  = (tr_k - mu) / sigma
-        te_n  = (te_k - mu) / sigma
-
-        reg1 = Ridge(alpha=RIDGE_ALPHA).fit(c_true_tr[:, k:k+1], tr_n)
-        r_tr = tr_n - reg1.predict(c_true_tr[:, k:k+1])
-        r_te = te_n - reg1.predict(c_true_te[:, k:k+1])
-
-        dim_var     = r_te.var(axis=0)
-        total_resid = float(dim_var.sum()) + 1e-12
-        ss_tot      = ((r_te - r_te.mean(axis=0)) ** 2).sum(axis=0)
-
-        # RTL: Ridge(Y → r)
-        reg2   = Ridge(alpha=RIDGE_ALPHA).fit(Y_tr_oh, r_tr)
-        ss_res = ((r_te - reg2.predict(Y_te_oh)) ** 2).sum(axis=0)
-        r2_y   = np.where(ss_tot > 1e-12, 1 - ss_res / ss_tot, 0.0)
-        rtl_k  = float(np.maximum(0.0, r2_y * dim_var).sum())
-
-        # RCL: Ridge(c_j → r) for j≠k
-        rcl_j = []
-        for j in range(K_):
-            if j == k:
-                continue
-            reg3     = Ridge(alpha=RIDGE_ALPHA).fit(c_true_tr[:, j:j+1], r_tr)
-            ss_res_j = ((r_te - reg3.predict(c_true_te[:, j:j+1])) ** 2).sum(axis=0)
-            r2_j     = np.where(ss_tot > 1e-12, 1 - ss_res_j / ss_tot, 0.0)
-            rcl_j.append(float(np.maximum(0.0, r2_j * dim_var).sum()))
-
-        rcl_k = float(np.mean(rcl_j)) if rcl_j else 0.0
-
-        rtl_s.append(rtl_k);          rcl_s.append(rcl_k)
-        rtl_n.append(rtl_k / total_resid); rcl_n.append(rcl_k / total_resid)
-
-    return (float(np.mean(rtl_s)), float(np.mean(rcl_s)),
-            float(np.mean(rtl_n)), float(np.mean(rcl_n)))
+    Returns (rtl_sum, rcl_sum, rtl_norm, rcl_norm), means over concepts, where
+    *_norm = *_sum / d (d = embedding dim). Per-dimension normalisation of the
+    embedding (global_norm=False) matches the original behaviour of this script.
+    """
+    r = compute_RTL_RCL(
+        c_mix_tr, c_mix_te, c_true_tr, c_true_te, y_tr, y_te,
+        alpha=RIDGE_ALPHA, global_norm=False,
+    )
+    return r["RTL_sum"], r["RCL_sum"], r["RTL_norm"], r["RCL_norm"]
 
 
 # ── Run experiments ───────────────────────────────────────────────────────────
@@ -241,7 +213,7 @@ ax4.set_title(f"Noise-dim invariance  (λ={FIXED_LEAKAGE})", fontsize=12, fontwe
 ax4.legend(handles=[l1, l2, l3, l4], loc="upper right", fontsize=8, ncol=2)
 
 fig.suptitle("RTL and RCL — synthetic Gaussian experiments\n"
-             "sum = Σᵢ max(0, R²ᵢ × varᵢ)   |   norm = sum / Σᵢ varᵢ(residual)",
+             "sum = Σₘ max(0, R²ₘ × σ²ₘ)   |   norm = sum / d   (d = embedding dim)",
              fontsize=12, y=1.01)
 
 plt.savefig(OUT_PLOT, dpi=150, bbox_inches="tight")

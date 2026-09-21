@@ -58,11 +58,17 @@ RandInt is CEM-family only; no CBM RandInt runs are planned.
 
 ## Open questions
 
-- [ ] **CUB RTL_norm**: the repo's results_rtl_rcl_all_datasets.dict shows no
-      GC-CEM reduction on RTL_norm (0.478 vs CEM 0.473) while RTL_sum halves
-      (6.51 vs 13.31). The paper reports a halved RTL_norm, so a newer dict
-      exists somewhere, probably on the cluster. Locate it and settle which
-      convention the CUB figures use.
+- [x] **CUB RTL_norm** — RESOLVED (27179a2). Not a missing dict: `RTL_norm`
+      divided by the total residual variance, a model-dependent denominator
+      that GC-CEM shrinks by construction, so it cancelled the very reduction
+      `RTL_sum` showed (6.51 vs 13.31). `leakage.py` now divides by the
+      embedding dim d, matching the paper's
+      `RTL_k = (1/d) Σ_m max(0, R²_m) σ²_m`. The old quantity is kept as
+      `RTL_norm_resid` / `RCL_norm_resid` for comparison. After the fix GC-CEM
+      is significantly lower in 22/24 comparisons; the remaining exception is
+      genuine — CUB RCL is *higher* for GC-CEM at λ_c 0.5 and 1.0 (p=0.0014,
+      3e-6), because the GRL critic predicts the task label and so nothing in
+      the objective penalises inter-concept leakage.
 - [ ] **Backfill intervention curves** for sequential/independent runs logged
       before 9243d5d:
       `python experiments/evaluate_models/backfill_intervention_curves.py \

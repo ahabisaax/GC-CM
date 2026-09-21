@@ -2,7 +2,13 @@
 Sanity check: RTL and RCL should be invariant to appending Gaussian noise
 dimensions that are independent of both concepts and task labels.
 
-Tests the current implementation against the invariant (sum) formulation.
+HISTORICAL — this script compares two candidate aggregations (mean vs sum over
+embedding dims) and is what motivated adopting the sum. It deliberately keeps
+its own probe code and does NOT compute the reported metric: the paper's
+RTL_k = (1/d) Σ_m max(0, R²_m) σ²_m lives only in
+xai_concept_leakage/metrics/leakage.py. Do not treat the numbers here as
+RTL/RCL values — see test_rtl_sanity.py and run_rtl_gaussian.py, which now
+call the canonical implementation.
 
 Run from project root:
     python experiments/evaluate_models/test_rtl_noise_invariance.py

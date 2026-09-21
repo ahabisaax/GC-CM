@@ -131,7 +131,6 @@ experiments/evaluate_models/validate_cvl_vs_ctl.py
 experiments/evaluate_models/validate_embedding_dim.py
 experiments/evaluate_models/validate_embedding_dim_paper.py
 experiments/evaluate_models/validate_lambda_c.py
-experiments/evaluate_models/validate_trained_cem_lambda_c.py
 
 # Generated figure outputs in evaluate_models
 experiments/evaluate_models/*.pdf
