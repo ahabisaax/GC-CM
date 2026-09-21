@@ -3,11 +3,15 @@ Train tiny GC-CEMs on the Gaussian generative model with lambda_c fixed at 0.1,
 sweeping the adversarial weight lambda_adv from 0 to 1, and measure RTL/RCL at
 test time.
 
-lambda_c = 0.1 matches concept_loss_weight in the GC-CEM configs for every
-image dataset (AwA2, CelebA, CUB), so the sweep sits at the operating point
-the reported results were trained at. It also leaves more leakage present at
-lambda_adv = 0 than lambda_c = 1 does, giving the adversary something to
-remove.
+lambda_c sets how much leakage exists before the adversary acts at all. From
+the companion lambda_c sweep (validate_trained_cem_lambda_c.py): RTL at
+lambda_adv = 0 is 0.0044 at lambda_c = 1, 0.0153 at 0.1, and 0.1140 at 0.01.
+A weakly supervised bottleneck therefore gives the adversary the most to
+remove and the clearest dynamic range. The trade-off is that concept accuracy
+already starts low there (0.63 at lambda_c = 0.01 vs 0.90 at 0.1), so watch
+the concept column: once it collapses, RTL/RCL rise again, because step 1 of
+the metric regresses the true concept out of the embedding and there is
+nothing left to remove.
 
 Why this experiment
 -------------------
@@ -86,7 +90,7 @@ GAMMA_EXTRA = 4.0
 _rng42 = np.random.RandomState(42)
 W_PROJ = torch.tensor(_rng42.randn(K_TOTAL, D_IN).astype(np.float32))
 
-LAMBDA_C = 0.1
+LAMBDA_C = 0.01
 LAMBDA_ADV = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 N_SEEDS, EPOCHS, BATCH, LR = 5, 400, 256, 3e-3
 ADV_LR = 3e-3
@@ -197,7 +201,7 @@ def train(lam_adv, seed):
 
 print(f"=== GC-CEM: lambda_c fixed at {LAMBDA_C}, sweeping lambda_adv ===")
 print(f"    K={K} (+1 latent), d={EMB_SIZE}, {N_SEEDS} seeds, {EPOCHS} epochs\n")
-CACHE_PATH = "results/cache/trained_gccem_lambda_adv.npz"
+CACHE_PATH = f"results/cache/trained_gccem_lambda_adv_lamc{LAMBDA_C}.npz"
 os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
 KEYS = ("rtl", "rcl", "acc", "cacc")
 res = {k: [] for k in KEYS}
@@ -263,7 +267,7 @@ for ax, key, color, ylabel, letter in [
 
 fig.tight_layout(w_pad=1.8)
 fig.subplots_adjust(top=0.92)
-out = PLOT_DIR + "paper_trained_gccem_lambda_adv.pdf"
+out = PLOT_DIR + f"paper_trained_gccem_lambda_adv_lamc{LAMBDA_C}.pdf"
 fig.savefig(out)
 fig.savefig(out.replace(".pdf", ".png"))
 print(f"Saved -> {out}")
