@@ -22,9 +22,10 @@ def compute_RTL_RCL(
          variance. global_norm=True: single scalar mean/std over all elements.
       2. Ridge(c_k → emb_k_norm) → residual r_k.
       3. RTL_k_sum  = Σᵢ max(0, R²ᵢ(Y→r_k) × varᵢ(r_k))
-         RTL_k_norm = RTL_k_sum / Σᵢ varᵢ(r_k)  ∈ [0,1]
+         RTL_k_norm = RTL_k_sum / d            (d = embedding dim; paper defn)
       4. RCL_k_sum  = mean_{j≠k} Σᵢ max(0, R²ᵢ(c_j→r_k) × varᵢ(r_k))
-         RCL_k_norm = RCL_k_sum / Σᵢ varᵢ(r_k)  ∈ [0,1]
+         RCL_k_norm = RCL_k_sum / d            (paper defn)
+         *_norm_resid divide by Σᵢ varᵢ(r_k) instead (the old behaviour)
 
     Returns mean over concepts.
 
@@ -47,6 +48,7 @@ def compute_RTL_RCL(
 
     K = c_mix_tr.shape[1]
     rtl_sum_k, rcl_sum_k, rtl_norm_k, rcl_norm_k = [], [], [], []
+    rtl_nr_k, rcl_nr_k = [], []
 
     for k in range(K):
         tr_k = c_mix_tr[:, k, :]
@@ -90,13 +92,22 @@ def compute_RTL_RCL(
         rcl_all = np.maximum(0.0, r2_all * dim_var[None, :]).sum(1)   # (K,)
         rcl_k = float(np.mean(np.delete(rcl_all, k))) if K > 1 else 0.0
         rtl_sum_k.append(rtl_k);          rcl_sum_k.append(rcl_k)
-        rtl_norm_k.append(rtl_k / total_resid); rcl_norm_k.append(rcl_k / total_resid)
+        # Paper definition: normalise by the embedding dimension d, a constant.
+        # The previous denominator was the total residual variance, which a
+        # model shrinks by aligning its embedding with its own concept - exactly
+        # what GC-CEM does - so it inflated GC-CEM's score and hid the effect
+        # (on CUB it reversed it). Kept as *_norm_resid for comparison.
+        d_emb = tr_k.shape[1]
+        rtl_norm_k.append(rtl_k / d_emb); rcl_norm_k.append(rcl_k / d_emb)
+        rtl_nr_k.append(rtl_k / total_resid); rcl_nr_k.append(rcl_k / total_resid)
 
     return {
         "RTL_sum":  float(np.mean(rtl_sum_k)),
         "RCL_sum":  float(np.mean(rcl_sum_k)),
         "RTL_norm": float(np.mean(rtl_norm_k)),
         "RCL_norm": float(np.mean(rcl_norm_k)),
+        "RTL_norm_resid": float(np.mean(rtl_nr_k)),
+        "RCL_norm_resid": float(np.mean(rcl_nr_k)),
     }
 
 
@@ -135,6 +146,7 @@ def compute_RTL_RCL_mlp(
 
     K = c_mix_tr.shape[1]
     rtl_sum_k, rcl_sum_k, rtl_norm_k, rcl_norm_k = [], [], [], []
+    rtl_nr_k, rcl_nr_k = [], []
 
     def _mlp_r2(X_tr, X_te, R_tr, R_te, dim_var, ss_tot):
         """Fit MLPRegressor(X → R), return per-dim clipped R²×var sum and norm."""
@@ -190,13 +202,22 @@ def compute_RTL_RCL_mlp(
         rcl_k = float(np.mean(rcl_j)) if rcl_j else 0.0
 
         rtl_sum_k.append(rtl_k);               rcl_sum_k.append(rcl_k)
-        rtl_norm_k.append(rtl_k / total_resid); rcl_norm_k.append(rcl_k / total_resid)
+        # Paper definition: normalise by the embedding dimension d, a constant.
+        # The previous denominator was the total residual variance, which a
+        # model shrinks by aligning its embedding with its own concept - exactly
+        # what GC-CEM does - so it inflated GC-CEM's score and hid the effect
+        # (on CUB it reversed it). Kept as *_norm_resid for comparison.
+        d_emb = tr_k.shape[1]
+        rtl_norm_k.append(rtl_k / d_emb); rcl_norm_k.append(rcl_k / d_emb)
+        rtl_nr_k.append(rtl_k / total_resid); rcl_nr_k.append(rcl_k / total_resid)
 
     return {
         "RTL_sum":  float(np.mean(rtl_sum_k)),
         "RCL_sum":  float(np.mean(rcl_sum_k)),
         "RTL_norm": float(np.mean(rtl_norm_k)),
         "RCL_norm": float(np.mean(rcl_norm_k)),
+        "RTL_norm_resid": float(np.mean(rtl_nr_k)),
+        "RCL_norm_resid": float(np.mean(rcl_nr_k)),
     }
 
 
